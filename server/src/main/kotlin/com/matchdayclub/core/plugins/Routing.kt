@@ -2,6 +2,7 @@ package com.matchdayclub.core.plugins
 
 import com.matchdayclub.common.extension.dbQuery
 import com.matchdayclub.common.response.toSuccessResponse
+import com.matchdayclub.presentation.route.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.ratelimit.*
@@ -22,6 +23,11 @@ fun Application.configureRouting() {
     }
 }
 
-/** Feature routes are attached here (extended in later tasks). */
-fun Route.authRoutes() {}
-fun Route.apiRoutes() {}
+fun Route.authRoutes() {
+    authLoginRoutes()
+}
+
+fun Route.apiRoutes() {
+    authSessionRoutes()
+    meRoutes()
+}
