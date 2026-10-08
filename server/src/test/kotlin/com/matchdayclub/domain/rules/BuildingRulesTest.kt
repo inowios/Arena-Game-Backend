@@ -39,10 +39,10 @@ class BuildingRulesTest {
 
     @Test
     fun `footprints rotate and overlap`() {
-        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 6x4
-        assertEquals(Footprint(0, 0, 6, 4), a)
-        assertEquals(Footprint(0, 0, 4, 6), footprint(BuildingType.PITCH, 0, 0, 90))
-        assertTrue(a.overlaps(Footprint(5, 3, 2, 2))); assertFalse(a.overlaps(Footprint(6, 0, 2, 2)))
+        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 8x6
+        assertEquals(Footprint(0, 0, 8, 6), a)
+        assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.PITCH, 0, 0, 90))
+        assertTrue(a.overlaps(Footprint(7, 5, 2, 2))); assertFalse(a.overlaps(Footprint(8, 0, 2, 2)))
         assertTrue(a.fits(12)); assertFalse(Footprint(10, 0, 3, 1).fits(12))
     }
 }

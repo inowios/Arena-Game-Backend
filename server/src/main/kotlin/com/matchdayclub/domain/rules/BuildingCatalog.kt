@@ -30,7 +30,7 @@ object BuildingCatalog {
     private const val M = 60L
 
     val specs: Map<BuildingType, BuildingSpec> = listOf(
-        BuildingSpec(BuildingType.PITCH, 6, 4, 1, true, listOf(
+        BuildingSpec(BuildingType.PITCH, 8, 6, 1, true, listOf(
             LevelSpec(0, 0, 1, effect = 60, effect2 = 500),
             LevelSpec(2_000, 2 * H, 3, effect = 75, effect2 = 2_000),
             LevelSpec(12_000, 12 * H, 6, effect = 90, effect2 = 8_000),

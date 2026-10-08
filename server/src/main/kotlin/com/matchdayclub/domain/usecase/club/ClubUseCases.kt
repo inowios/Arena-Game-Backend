@@ -52,8 +52,8 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val buildings
         if (clubs.findByUserId(userId) != null) throw ConflictException("Club already exists")
         val now = clock.now()
         val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), null, 1, 0, 2_500, 50, timezone, now, null, now, now))
-        buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, 2, 2, 0, BuildingState.IDLE, null, now, now, now))
-        buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, 9, 2, 0, BuildingState.IDLE, null, now, now, now))
+        buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, 2, 3, 0, BuildingState.IDLE, null, now, now, now))
+        buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, 0, 0, 0, BuildingState.IDLE, null, now, now, now))
         initializers.forEach { it.onClubCreated(club) }
         return club
     }

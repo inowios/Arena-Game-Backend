@@ -40,7 +40,7 @@ class ClubUseCasesTest {
     @Test
     fun `place charges coins starts timer and finalises on read`() = runBlocking {
         newClub()
-        val b = place(user, BuildingType.ACADEMY, 0, 7, 0)
+        val b = place(user, BuildingType.ACADEMY, 0, 10, 0)
         assertEquals(BuildingState.UPGRADING, b.state); assertEquals(2_000, clubs.rows.values.first().coins)
         assertFailsWith<ConflictException> { collect(user, b.id) }
         clock.advanceSeconds(10 * 60)
@@ -50,11 +50,11 @@ class ClubUseCasesTest {
     @Test
     fun `placement validation`() = runBlocking {
         newClub()
-        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 2, 2, 0) }           // overlaps pitch
+        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 3, 4, 0) }           // overlaps pitch
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 11, 11, 0) }       // outside grid
-        assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 0, 8, 0) }         // club level 3 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 0, 8, 0) }    // disabled
-        assertFailsWith<ConflictException> { place(user, BuildingType.TICKET_OFFICE, 0, 8, 0) }     // max 1
+        assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 0, 10, 0) }        // club level 3 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 0, 10, 0) }   // disabled
+        assertFailsWith<ConflictException> { place(user, BuildingType.TICKET_OFFICE, 0, 10, 0) }    // max 1
         Unit
     }
 
@@ -83,7 +83,7 @@ class ClubUseCasesTest {
         val done = speed(user, office.id)
         assertEquals(BuildingState.IDLE, done.state); assertEquals(before - 12, clubs.rows.values.first().gold)   // 2h left = 12 gold
         clubs.update(clubs.rows.values.first().copy(coins = 0))
-        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.CAFE, 0, 8, 0) }
+        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.CAFE, 0, 10, 0) }
         Unit
     }
 }

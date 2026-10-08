@@ -15,7 +15,7 @@ curl -sf -X POST "$B/club" -H "$H" -H "$A" -d '{"name":"Smoke FC","primaryColor"
 step "club state"
 curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['coins']==2500 and len(d['data']['buildings'])==2"
 step "place academy, speed up, claim graduate"
-BID=$(curl -sf -X POST "$B/club/buildings" -H "$H" -H "$A" -d '{"type":"ACADEMY","x":0,"y":7}' | j "print(d['data']['id'])")
+BID=$(curl -sf -X POST "$B/club/buildings" -H "$H" -H "$A" -d '{"type":"ACADEMY","x":0,"y":10}' | j "print(d['data']['id'])")
 curl -sf -X POST "$B/club/buildings/$BID/speedup" -H "$A" | j "assert d['data']['state']=='IDLE'"
 curl -sf -X POST "$B/club/academy/claim" -H "$A" | j "assert d['data']['overall']>0"
 step "second claim must be 409"
