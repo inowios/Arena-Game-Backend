@@ -7,6 +7,7 @@ import com.matchdayclub.data.repository.*
 import com.matchdayclub.domain.model.AuthProvider
 import com.matchdayclub.domain.repository.*
 import com.matchdayclub.domain.usecase.auth.*
+import com.matchdayclub.domain.usecase.club.*
 import com.matchdayclub.presentation.route.ClubExistence
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -44,7 +45,17 @@ val appModule = module {
 
     single<UserRepository> { UserRepositoryImpl() }
     single<RefreshTokenRepository> { RefreshTokenRepositoryImpl() }
-    single<ClubExistence> { ClubExistence { false } }
+    single<ClubRepository> { ClubRepositoryImpl() }
+    single<BuildingRepository> { BuildingRepositoryImpl() }
+    single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it) != null } }
+    single { ClubService(get(), get(), get()) }
+    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>()) }
+    single { GetClubUseCase(get()) }
+    single { PlaceBuildingUseCase(get(), get(), get()) }
+    single { UpgradeBuildingUseCase(get(), get(), get()) }
+    single { CollectIncomeUseCase(get(), get(), get(), get()) }
+    single { SpeedUpUseCase(get(), get(), get()) }
+    single { RemoveBuildingUseCase(get(), get()) }
 
     single { TokenIssuer(get(), get(), get()) }
     single { GuestLoginUseCase(get(), get(), get()) }

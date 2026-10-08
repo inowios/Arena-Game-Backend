@@ -1,0 +1,30 @@
+package com.matchdayclub.data.database
+
+import org.jetbrains.exposed.sql.javatime.timestamp
+
+object ClubTable : BaseTable("clubs") {
+    val userId = uuid("user_id").references(UserTable.id)
+    val name = varchar("name", 40)
+    val primaryColor = char("primary_color", 7)
+    val secondaryColor = char("secondary_color", 7)
+    val emblemJson = text("emblem_json").nullable()
+    val level = integer("level")
+    val reputation = integer("reputation")
+    val coins = long("coins")
+    val gold = integer("gold")
+    val timezone = varchar("timezone", 64)
+    val academyNextAt = timestamp("academy_next_at").nullable()
+    val medicalNextAt = timestamp("medical_next_at").nullable()
+}
+
+object BuildingTable : BaseTable("buildings") {
+    val clubId = uuid("club_id").references(ClubTable.id)
+    val type = varchar("type", 32)
+    val level = integer("level")
+    val gridX = integer("grid_x")
+    val gridY = integer("grid_y")
+    val rotation = integer("rotation")
+    val state = varchar("state", 16)
+    val upgradeEndsAt = timestamp("upgrade_ends_at").nullable()
+    val lastCollectedAt = timestamp("last_collected_at")
+}

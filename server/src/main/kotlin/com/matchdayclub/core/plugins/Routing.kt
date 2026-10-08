@@ -30,4 +30,5 @@ fun Route.authRoutes() {
 fun Route.apiRoutes() {
     authSessionRoutes()
     meRoutes()
+    clubRoutes()
 }
