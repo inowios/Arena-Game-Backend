@@ -59,9 +59,10 @@ class LeagueService(private val leagues: LeagueRepository, private val fixtures:
         val existing = fixtures.listByLeagueSeason(league.id, league.seasonNumber)
         if (existing.isNotEmpty()) return existing
         var members = leagues.members(league.id)
+        val offset = Math.floorMod(league.id.hashCode(), 24)
         var i = 0
         while (members.size < LeagueRules.PUBLIC_SIZE) {
-            val bot = bots.createBot(league.tzBucket, league.division, league.timezone, (members.size * 7 + i++ + league.id.hashCode()).mod(24))
+            val bot = bots.createBot(league.tzBucket, league.division, league.timezone, (offset + i++).mod(24))   // distinct names within a league
             leagues.addMember(league.id, bot.id); members = members + bot.id
         }
         val seed = league.id.leastSignificantBits xor league.seasonNumber.toLong() xor members.size.toLong()
