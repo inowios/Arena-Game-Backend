@@ -22,13 +22,17 @@ sealed interface PossessionOutcome {
 }
 
 object Possession {
-    private fun ratio(a: Double, d: Double, lo: Double = 0.25, hi: Double = 4.0) = (a / d).pow(1.6).coerceIn(lo, hi)
+    /** How strongly rating gaps translate into chances / goals. Tuned by the balance CLI. */
+    const val CHANCE_EXP = 1.0
+    const val CONVERSION_EXP = 0.6
+
+    private fun ratio(a: Double, d: Double, exp: Double, lo: Double, hi: Double) = (a / d).pow(exp).coerceIn(lo, hi)
 
     fun homeWins(home: TeamStrength, away: TeamStrength, rng: Rng): Boolean =
         rng.next() < home.midfield / (home.midfield + away.midfield)
 
     fun attack(att: TeamStrength, def: TeamStrength, attackers: List<Athlete>, sport: SportProfile, rng: Rng): PossessionOutcome {
-        val pc = (sport.baseChanceRate * ratio(att.attack, def.defense)).coerceIn(0.0, 0.95)
+        val pc = (sport.baseChanceRate * ratio(att.attack, def.defense, CHANCE_EXP, 0.35, 2.8)).coerceIn(0.0, 0.95)
         if (rng.next() >= pc) return PossessionOutcome.Nothing
         val pool = attackers.filter { !it.injured && it.position != Position.GK }
         if (pool.isEmpty()) return PossessionOutcome.Nothing
@@ -36,7 +40,7 @@ object Possession {
             val role = when (a.position) { Position.FWD -> 3.0; Position.MID -> 1.0; Position.DEF -> 0.2; Position.GK -> 0.0 }
             role * a.attributes.attack
         }
-        val pg = (sport.baseConversion * ratio(shooter.effective, def.keeper, 0.4, 2.5)).coerceIn(0.0, 0.9)
+        val pg = (sport.baseConversion * ratio(shooter.effective, def.keeper, CONVERSION_EXP, 0.5, 2.0)).coerceIn(0.0, 0.9)
         val scored = rng.next() < pg
         val saved = !scored && rng.next() < 0.55
         return PossessionOutcome.Chance(shooter.id, scored, saved)

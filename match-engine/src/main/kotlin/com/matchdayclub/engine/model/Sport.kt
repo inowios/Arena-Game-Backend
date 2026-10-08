@@ -22,6 +22,6 @@ data class SportProfile(
 )
 
 val FOOTBALL = SportProfile(
-    id = "football", startersCount = 11, possessions = 120, baseChanceRate = 0.22, baseConversion = 0.11,
+    id = "football", startersCount = 11, possessions = 120, baseChanceRate = 0.20, baseConversion = 0.11,
     scoreName = "goal", durationMinutes = 90, homeAdvantage = 0.06, maxSubs = 5,
 )
