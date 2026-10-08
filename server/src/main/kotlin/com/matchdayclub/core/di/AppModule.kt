@@ -9,6 +9,7 @@ import com.matchdayclub.domain.repository.*
 import com.matchdayclub.domain.usecase.auth.*
 import com.matchdayclub.domain.usecase.club.*
 import com.matchdayclub.domain.usecase.athlete.*
+import com.matchdayclub.domain.usecase.league.*
 import com.matchdayclub.presentation.route.ClubExistence
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -61,7 +62,14 @@ val appModule = module {
     single<AthleteRepository> { AthleteRepositoryImpl() }
     single<TrainingRepository> { TrainingRepositoryImpl() }
     single<LineupRepository> { LineupRepositoryImpl() }
-    single<ClubInitializer> { StarterSquadInitializer(get(), get()) }
+    single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("squad")) { StarterSquadInitializer(get(), get()) }
+    single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("league")) { JoinPublicLeagueInitializer(get(), get(), get()) }
+    single<LeagueRepository> { LeagueRepositoryImpl() }
+    single<FixtureRepository> { FixtureRepositoryImpl() }
+    single { BotService(get(), get(), get(), get()) }
+    single { LeagueService(get(), get(), get(), get()) }
+    single { LineupService(get(), get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
     single { ClaimAcademyUseCase(get(), get(), get(), get()) }

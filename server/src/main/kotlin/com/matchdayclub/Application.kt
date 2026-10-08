@@ -16,5 +16,6 @@ fun Application.module() {
     configureMonitoring()
     configureStatusPages()
     configureRateLimiting()
+    configureMatchdayScheduler()
     configureRouting()
 }

@@ -23,10 +23,12 @@ object AthleteFactory {
     }
 
     /** 14 footballers: 2 GK, 5 DEF, 5 MID, 2 FWD, quality 42..55. */
-    fun starterSquad(clubId: UUID, now: Instant): List<Athlete> {
+    fun starterSquad(clubId: UUID, now: Instant): List<Athlete> = squad(clubId, now, 42, 55)
+
+    fun squad(clubId: UUID, now: Instant, qualityMin: Int, qualityMax: Int): List<Athlete> {
         val base = clubId.mostSignificantBits xor clubId.leastSignificantBits
         val shape = List(2) { Position.GK } + List(5) { Position.DEF } + List(5) { Position.MID } + List(2) { Position.FWD }
-        return shape.mapIndexed { i, p -> create(base + i * 7919L, clubId, Sport.FOOTBALL, 42, 55, p, now) }
+        return shape.mapIndexed { i, p -> create(base + i * 7919L, clubId, Sport.FOOTBALL, qualityMin, qualityMax, p, now) }
     }
 }
 
