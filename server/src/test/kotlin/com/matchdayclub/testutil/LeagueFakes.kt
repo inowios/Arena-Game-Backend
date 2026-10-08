@@ -28,6 +28,7 @@ class FakeFixtureRepository : FixtureRepository {
     override suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int?) = rows.values.filter { it.leagueId == leagueId && it.seasonNumber == season && (round == null || it.round == round) }.sortedBy { it.round }
     override suspend fun listByClub(clubId: UUID, kind: FixtureKind?, limit: Int) = rows.values.filter { it.involves(clubId) && (kind == null || it.kind == kind) }.sortedByDescending { it.scheduledAt }.take(limit)
     override suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: Instant) = rows.values.filter { f -> f.kind == FixtureKind.LEAGUE && f.status == FixtureStatus.PLAYED && f.playedAt != null && !f.playedAt.isBefore(since) && clubIds.any { f.involves(it) } }
+    override suspend fun deleteScheduled(leagueId: UUID, season: Int) { rows.values.filter { it.leagueId == leagueId && it.seasonNumber == season && it.status == FixtureStatus.SCHEDULED }.map { it.id }.forEach { rows.remove(it) } }
     override suspend fun markPlayed(fixture: Fixture): Boolean {
         val cur = rows[fixture.id] ?: return false
         if (cur.status != FixtureStatus.SCHEDULED) return false

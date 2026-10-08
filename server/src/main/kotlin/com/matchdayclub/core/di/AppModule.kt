@@ -67,14 +67,14 @@ val appModule = module {
     single<LeagueRepository> { LeagueRepositoryImpl() }
     single<FixtureRepository> { FixtureRepositoryImpl() }
     single { BotService(get(), get(), get(), get()) }
-    single { LeagueService(get(), get(), get(), get()) }
+    single { LeagueService(get(), get(), get(), get(), get()) }
     single { LineupService(get(), get()) }
     single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get()) }
-    single { LeagueQueries(get(), get(), get(), get()) }
+    single { LeagueQueries(get(), get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
     single { JoinPrivateLeagueUseCase(get(), get()) }
     single { LeavePrivateLeagueUseCase(get(), get()) }
-    single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get()) }
+    single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get()) }
     single { GetPublicClubUseCase(get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }

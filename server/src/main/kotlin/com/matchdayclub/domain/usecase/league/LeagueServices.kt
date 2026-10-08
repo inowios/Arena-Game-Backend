@@ -29,15 +29,28 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
     }
 }
 
-/** Public-league membership and fixture generation. */
-class LeagueService(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val clock: Clock) {
+/** Public-league membership and fixture generation. Leagues are always full (humans + bots) so tables and fixtures exist from day one. */
+class LeagueService(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val bots: BotService, private val clock: Clock) {
     suspend fun ensurePublicMembership(club: Club): League {
         leagues.listForClub(club.id).firstOrNull { it.kind == LeagueKind.PUBLIC }?.let { return it }
         val now = clock.now()
-        val league = leagues.findOpenPublic(club.tzBucket, club.division, LeagueRules.PUBLIC_SIZE) ?: leagues.create(
+        val open = leagues.findOpenPublic(club.tzBucket, club.division, Int.MAX_VALUE)
+        if (open != null) {
+            val members = leagues.members(open.id)
+            val bot = clubs.findByIds(members).firstOrNull { it.isBot }
+            if (bot != null) {
+                leagues.removeMember(open.id, bot.id)
+                leagues.addMember(open.id, club.id)
+                fixtures.deleteScheduled(open.id, open.seasonNumber)
+                prepareSeason(open)
+                return open
+            }
+        }
+        val league = leagues.create(
             League(UUID.randomUUID(), LeagueKind.PUBLIC, "Division ${club.division}", null, club.division, club.tzBucket, club.timezone, LeagueRules.MATCHDAY_HOUR, 1, LeagueRules.firstSeasonStart(club.timezone, now), 0, null, now, now),
         )
         leagues.addMember(league.id, club.id)
+        prepareSeason(league)
         return league
     }
 
@@ -51,7 +64,7 @@ class LeagueService(private val leagues: LeagueRepository, private val fixtures:
             val bot = bots.createBot(league.tzBucket, league.division, league.timezone, (members.size * 7 + i++ + league.id.hashCode()).mod(24))
             leagues.addMember(league.id, bot.id); members = members + bot.id
         }
-        val seed = league.id.leastSignificantBits xor league.seasonNumber.toLong()
+        val seed = league.id.leastSignificantBits xor league.seasonNumber.toLong() xor members.size.toLong()
         val now = clock.now()
         val list = Schedule.rounds(members, seed).flatMapIndexed { idx, pairs ->
             val round = idx + 1

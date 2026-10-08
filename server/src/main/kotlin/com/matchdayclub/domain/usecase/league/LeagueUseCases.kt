@@ -19,9 +19,9 @@ import java.util.UUID
 
 data class LeagueView(val league: League, val table: List<StandingRow>, val clubs: Map<UUID, Club>, val nextRoundAt: Instant?, val memberCount: Int)
 data class FixturesView(val fixtures: List<Fixture>, val clubs: Map<UUID, Club>)
-data class MatchView(val fixture: Fixture, val result: MatchResult?, val clubs: Map<UUID, Club>)
+data class MatchView(val fixture: Fixture, val result: MatchResult?, val clubs: Map<UUID, Club>, val athleteNames: Map<String, String> = emptyMap())
 
-class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val clock: Clock) {
+class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
     suspend fun view(leagueId: UUID): LeagueView = view(leagues.findById(leagueId) ?: throw NotFoundException("League not found"))
 
     suspend fun view(league: League): LeagueView {
@@ -55,8 +55,11 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
     suspend fun match(fixtureId: UUID): MatchView {
         val f = fixtures.findById(fixtureId) ?: throw NotFoundException("Match not found")
         val result = f.resultJson?.let { Json.decodeFromString<MatchResult>(it) }
-        return MatchView(f, result, clubsOf(listOf(f)))
+        return MatchView(f, result, clubsOf(listOf(f)), athleteNames(f))
     }
+
+    suspend fun athleteNames(f: Fixture): Map<String, String> =
+        (athletes.listByClub(f.homeClubId) + athletes.listByClub(f.awayClubId)).associate { it.id.toString() to it.name }
 
     private suspend fun clubsOf(list: List<Fixture>) = clubs.findByIds(list.flatMap { listOf(it.homeClubId, it.awayClubId) }.toSet()).associateBy { it.id }
 }
@@ -95,7 +98,7 @@ class LeavePrivateLeagueUseCase(private val service: ClubService, private val le
     }
 }
 
-class PlayFriendlyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val runner: MatchdayRunner, private val clock: Clock) {
+class PlayFriendlyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val runner: MatchdayRunner, private val queries: LeagueQueries, private val clock: Clock) {
     suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): MatchView {
         val club = service.clubOf(userId)
         val now = clock.now()
@@ -111,7 +114,7 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
         val fixture = Fixture(UUID.randomUUID(), null, FixtureKind.FRIENDLY, 0, 0, now, club.id, opponent.id, FixtureStatus.SCHEDULED, null, null, now.toEpochMilli() xor club.id.leastSignificantBits, null, null, now)
         fixtures.createAll(listOf(fixture))
         val (played, result) = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
-        return MatchView(played, result, mapOf(club.id to club, opponent.id to opponent))
+        return MatchView(played, result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(played))
     }
 }
 

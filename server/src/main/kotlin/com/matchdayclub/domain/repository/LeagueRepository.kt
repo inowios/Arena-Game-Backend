@@ -23,6 +23,7 @@ interface FixtureRepository {
     suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int? = null): List<Fixture>
     suspend fun listByClub(clubId: UUID, kind: FixtureKind? = null, limit: Int = 50): List<Fixture>
     suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: java.time.Instant): List<Fixture>
+    suspend fun deleteScheduled(leagueId: UUID, season: Int)
     /** Marks a fixture played only if it is still SCHEDULED. Returns false when already played. */
     suspend fun markPlayed(fixture: Fixture): Boolean
 }

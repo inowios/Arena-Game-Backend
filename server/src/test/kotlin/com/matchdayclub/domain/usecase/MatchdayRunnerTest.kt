@@ -16,7 +16,7 @@ class MatchdayRunnerTest {
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val bots = BotService(users, clubs, athletes, clock)
-    private val leagueService = LeagueService(leagues, fixtures, bots, clock)
+    private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock)
     private val user = UUID.randomUUID()
@@ -26,8 +26,8 @@ class MatchdayRunnerTest {
         val club = create(user, "Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv")
         val league = leagues.listForClub(club.id).single()
         assertEquals(LeagueKind.PUBLIC, league.kind); assertEquals(3, league.tzBucket); assertEquals("2026-10-09", league.seasonStart.toString())
+        assertEquals(8, leagues.members(league.id).size); assertEquals(28 * 4, fixtures.rows.size)   // bots + fixtures from day one
         assertEquals(0, runner.runDueRounds(Instant.parse("2026-10-09T16:59:00Z")))
-        assertTrue(fixtures.rows.isEmpty())
         val played = runner.runDueRounds(Instant.parse("2026-10-09T17:00:00Z"))
         assertEquals(4, played); assertEquals(8, leagues.members(league.id).size); assertEquals(7, clubs.rows.values.count { it.isBot })
         assertEquals(28 * 4, fixtures.rows.size); assertEquals(1, leagues.rows.getValue(league.id).currentRound)
@@ -46,6 +46,9 @@ class MatchdayRunnerTest {
         val c = create(UUID.randomUUID(), "Charlie", "#000000", "#FFFFFF", "Europe/Kyiv")
         assertEquals(leagues.listForClub(a.id).single().id, leagues.listForClub(c.id).single().id)
         assertNotEquals(leagues.listForClub(a.id).single().id, leagues.listForClub(b.id).single().id)
+        val shared = leagues.listForClub(a.id).single()
+        assertEquals(8, leagues.members(shared.id).size); assertEquals(6, clubs.findByIds(leagues.members(shared.id)).count { it.isBot })   // c replaced a bot
+        assertEquals(112, fixtures.rows.values.count { it.leagueId == shared.id })
     }
 
     @Test

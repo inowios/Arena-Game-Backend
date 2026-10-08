@@ -18,14 +18,14 @@ class LeagueUseCasesTest {
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val bots = BotService(users, clubs, athletes, clock)
-    private val leagueService = LeagueService(leagues, fixtures, bots, clock)
+    private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val clubService = ClubService(clubs, buildings, clock)
     private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock)
-    private val queries = LeagueQueries(leagues, fixtures, clubs, clock)
+    private val queries = LeagueQueries(leagues, fixtures, clubs, athletes, clock)
     private val createPrivate = CreatePrivateLeagueUseCase(clubService, leagues, clock)
     private val join = JoinPrivateLeagueUseCase(clubService, leagues)
-    private val friendly = PlayFriendlyUseCase(clubService, clubs, fixtures, bots, runner, clock)
+    private val friendly = PlayFriendlyUseCase(clubService, clubs, fixtures, bots, runner, queries, clock)
     private val u1 = UUID.randomUUID(); private val u2 = UUID.randomUUID()
 
     @Test

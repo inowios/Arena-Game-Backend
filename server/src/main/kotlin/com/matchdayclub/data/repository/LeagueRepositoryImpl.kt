@@ -69,6 +69,10 @@ class FixtureRepositoryImpl : FixtureRepository {
     override suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: Instant) = if (clubIds.isEmpty()) emptyList() else dbQuery {
         FixtureTable.selectAll().where { ((FixtureTable.homeClubId inList clubIds) or (FixtureTable.awayClubId inList clubIds)) and (FixtureTable.kind eq FixtureKind.LEAGUE.name) and (FixtureTable.status eq FixtureStatus.PLAYED.name) and (FixtureTable.playedAt greaterEq since) }.map { it.toFixture() }
     }
+    override suspend fun deleteScheduled(leagueId: UUID, season: Int) {
+        dbQuery { FixtureTable.deleteWhere { (FixtureTable.leagueId eq leagueId) and (FixtureTable.seasonNumber eq season) and (FixtureTable.status eq FixtureStatus.SCHEDULED.name) } }
+    }
+
     override suspend fun markPlayed(fixture: Fixture): Boolean = dbQuery {
         FixtureTable.update({ (FixtureTable.id eq fixture.id) and (FixtureTable.status eq FixtureStatus.SCHEDULED.name) }) {
             it[status] = FixtureStatus.PLAYED.name; it[homeScore] = fixture.homeScore; it[awayScore] = fixture.awayScore; it[resultJson] = fixture.resultJson; it[playedAt] = fixture.playedAt
