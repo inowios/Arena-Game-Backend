@@ -19,6 +19,7 @@ fun Application.configureRouting() {
         route("/api/v1") {
             rateLimit(AUTH_RATE_LIMIT) { authRoutes() }
             rateLimit(API_RATE_LIMIT) { apiRoutes() }
+            if (developmentMode) devRoutes()
         }
     }
 }
@@ -32,4 +33,5 @@ fun Route.apiRoutes() {
     meRoutes()
     clubRoutes()
     athleteRoutes()
+    leagueRoutes()
 }
