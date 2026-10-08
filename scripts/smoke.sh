@@ -27,4 +27,23 @@ curl -sf -X PUT "$B/club/lineup/football" -H "$H" -H "$A" -d "$BODY" | j "assert
 step "collect ticket office income (0 right after creation)"
 OID=$(curl -sf "$B/club" -H "$A" | j "print([b['id'] for b in d['data']['buildings'] if b['type']=='TICKET_OFFICE'][0])")
 curl -sf -X POST "$B/club/buildings/$OID/collect" -H "$A" | j "assert d['data']['coins']==0"
+step "my leagues: public league with me in it"
+LID=$(curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert p and len(p['table'])>=1; print(p['league']['id'])")
+step "friendly vs bot"
+MID=$(curl -sf -X POST "$B/friendlies" -H "$H" -H "$A" -d '{}' | j "f=d['data']['fixture']; assert f['status']=='PLAYED' and d['data']['result']['events']; print(f['id'])")
+curl -sf "$B/matches/$MID" -H "$A" | j "assert d['data']['result']['events'][0]['type']=='KICKOFF'"
+curl -sf "$B/club/fixtures" -H "$A" | j "assert len(d['data']['recent'])==1"
+step "private league create + join with a second guest"
+CODE=$(curl -sf -X POST "$B/leagues/private" -H "$H" -H "$A" -d '{"name":"Office league"}' | j "print(d['data']['code'])")
+AT2=$(curl -sf -X POST "$B/auth/guest" -H "$H" -d "{\"deviceId\":\"$DEV-second\"}" | j "print(d['data']['accessToken'])")
+curl -sf -X POST "$B/club" -H "$H" -H "Authorization: Bearer $AT2" -d '{"name":"Smoke United","primaryColor":"#004400","secondaryColor":"#ffffff","timezone":"UTC"}' >/dev/null
+curl -sf -X POST "$B/leagues/private/join" -H "$H" -H "Authorization: Bearer $AT2" -d "{\"code\":\"$CODE\"}" | j "assert d['data']['memberCount']==2"
+if [ "${SMOKE_MATCHDAY:-1}" = "1" ] && command -v psql >/dev/null; then
+  step "force matchday: backdate season and run the scheduler tick (dev route)"
+  psql -q -d "${SMOKE_DB:-matchdayclub}" -c "update leagues set season_start = current_date - 1 where id = '$LID'"
+  curl -sf -X POST "$B/dev/matchday/run" | j "assert d['data']['played']>=4, d"
+  curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert len(p['table'])==8 and p['table'][0]['played']>=1; assert len(d['data']['private'][0]['table'])==2"
+  curl -sf "$B/leagues/$LID/fixtures?round=1" -H "$A" | j "assert len(d['data'])==4 and all(f['status']=='PLAYED' for f in d['data'])"
+  curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['reputation']>=1"
+fi
 echo "SMOKE OK"

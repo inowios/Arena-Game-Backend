@@ -8,7 +8,7 @@ Kotlin backend for the Matchday Club mobile game. Design spec and plans live in
 | Module | Purpose |
 |---|---|
 | `match-engine` | Pure Kotlin, deterministic match simulator. No Ktor/DB dependencies. |
-| `server` | Ktor 3 API: auth, clubs, buildings, athletes, lineups (leagues and matchday in progress). |
+| `server` | Ktor 3 API: auth, clubs, buildings, athletes, lineups, public/private leagues, matchday scheduler, friendlies. |
 
 ## Commands
 
@@ -41,6 +41,18 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/club/trainings`, `/trainings/{id}/complete` | train one attribute for 1 h |
 | POST | `/api/v1/club/athletes/{id}/heal` | medical centre |
 | GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics |
+| GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
+| GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
+| POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}`; DELETE `/private/{id}/leave` | private leagues (code, max 20) |
+| GET | `/api/v1/club/fixtures` | next scheduled + last 5 played |
+| GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
+| POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
+| GET | `/api/v1/clubs/{id}` | public club profile |
+| POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
+
+Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
+is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,
+draw 150 / +5, loss 60 / +1; starters gain fatigue, injuries from the engine last 2 days. Single-instance scheduler (in-process lock).
 
 Server rules: all timers are absolute server instants; finished timers are finalised on read; clients send commands, never state.
 
