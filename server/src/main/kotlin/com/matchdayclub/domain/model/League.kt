@@ -1,0 +1,46 @@
+package com.matchdayclub.domain.model
+
+import java.time.Instant
+import java.time.LocalDate
+import java.util.UUID
+
+enum class LeagueKind { PUBLIC, PRIVATE }
+enum class FixtureKind { LEAGUE, FRIENDLY }
+enum class FixtureStatus { SCHEDULED, PLAYED }
+
+data class League(
+    val id: UUID,
+    val kind: LeagueKind,
+    val name: String,
+    val code: String?,
+    val division: Int,
+    val tzBucket: Int,
+    val timezone: String,
+    val matchdayHour: Int,
+    val seasonNumber: Int,
+    val seasonStart: LocalDate,
+    val currentRound: Int,
+    val createdBy: UUID?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+)
+
+data class Fixture(
+    val id: UUID,
+    val leagueId: UUID?,
+    val kind: FixtureKind,
+    val seasonNumber: Int,
+    val round: Int,
+    val scheduledAt: Instant,
+    val homeClubId: UUID,
+    val awayClubId: UUID,
+    val status: FixtureStatus,
+    val homeScore: Int?,
+    val awayScore: Int?,
+    val seed: Long,
+    val resultJson: String?,
+    val playedAt: Instant?,
+    val createdAt: Instant,
+) {
+    fun involves(clubId: UUID) = homeClubId == clubId || awayClubId == clubId
+}

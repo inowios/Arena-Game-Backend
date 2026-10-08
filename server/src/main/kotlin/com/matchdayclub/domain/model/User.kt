@@ -3,7 +3,7 @@ package com.matchdayclub.domain.model
 import java.time.Instant
 import java.util.UUID
 
-enum class AuthProvider { GUEST, GOOGLE, APPLE }
+enum class AuthProvider { GUEST, GOOGLE, APPLE, BOT }
 
 data class User(
     val id: UUID,

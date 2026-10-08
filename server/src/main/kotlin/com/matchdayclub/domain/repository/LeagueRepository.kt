@@ -1,0 +1,28 @@
+package com.matchdayclub.domain.repository
+
+import com.matchdayclub.domain.model.*
+import java.util.UUID
+
+interface LeagueRepository {
+    suspend fun findById(id: UUID): League?
+    suspend fun findByCode(code: String): League?
+    suspend fun listAll(kind: LeagueKind): List<League>
+    suspend fun listForClub(clubId: UUID): List<League>
+    /** Public league in the bucket/division that has not started (current_round == 0) and has fewer than [max] members. */
+    suspend fun findOpenPublic(tzBucket: Int, division: Int, max: Int): League?
+    suspend fun create(league: League): League
+    suspend fun update(league: League): League
+    suspend fun members(leagueId: UUID): List<UUID>
+    suspend fun addMember(leagueId: UUID, clubId: UUID)
+    suspend fun removeMember(leagueId: UUID, clubId: UUID)
+}
+
+interface FixtureRepository {
+    suspend fun createAll(fixtures: List<Fixture>)
+    suspend fun findById(id: UUID): Fixture?
+    suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int? = null): List<Fixture>
+    suspend fun listByClub(clubId: UUID, kind: FixtureKind? = null, limit: Int = 50): List<Fixture>
+    suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: java.time.Instant): List<Fixture>
+    /** Marks a fixture played only if it is still SCHEDULED. Returns false when already played. */
+    suspend fun markPlayed(fixture: Fixture): Boolean
+}

@@ -10,6 +10,8 @@ class FakeClubRepository : ClubRepository {
     val rows = mutableMapOf<UUID, Club>()
     override suspend fun findByUserId(userId: UUID) = rows.values.firstOrNull { it.userId == userId }
     override suspend fun findById(id: UUID) = rows[id]
+    override suspend fun findByIds(ids: Collection<UUID>) = ids.mapNotNull { rows[it] }
+    override suspend fun listBots(tzBucket: Int) = rows.values.filter { it.isBot && it.tzBucket == tzBucket }
     override suspend fun create(club: Club): Club { rows[club.id] = club; return club }
     override suspend fun update(club: Club): Club { rows[club.id] = club; return club }
 }

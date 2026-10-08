@@ -20,6 +20,11 @@ data class Club(
     val medicalNextAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val isBot: Boolean = false,
+    val division: Int = 1,
+    val tzBucket: Int = 0,
+    val friendliesDate: java.time.LocalDate? = null,
+    val friendliesPlayed: Int = 0,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

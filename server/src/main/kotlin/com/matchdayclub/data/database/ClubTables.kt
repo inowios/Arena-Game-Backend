@@ -1,5 +1,6 @@
 package com.matchdayclub.data.database
 
+import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 object ClubTable : BaseTable("clubs") {
@@ -15,6 +16,11 @@ object ClubTable : BaseTable("clubs") {
     val timezone = varchar("timezone", 64)
     val academyNextAt = timestamp("academy_next_at").nullable()
     val medicalNextAt = timestamp("medical_next_at").nullable()
+    val isBot = bool("is_bot")
+    val division = integer("division")
+    val tzBucket = integer("tz_bucket")
+    val friendliesDate = date("friendlies_date").nullable()
+    val friendliesPlayed = integer("friendlies_played")
 }
 
 object BuildingTable : BaseTable("buildings") {
