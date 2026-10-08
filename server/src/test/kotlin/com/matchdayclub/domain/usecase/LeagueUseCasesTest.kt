@@ -57,7 +57,7 @@ class LeagueUseCasesTest {
         clock.advanceSeconds(86_400)
         friendly(u1, null)
         val (next, recent) = queries.clubFixtures(a.id)
-        assertNull(next); assertEquals(4, recent.fixtures.size)
+        assertNotNull(next); assertEquals(FixtureKind.LEAGUE, next.kind); assertEquals(4, recent.fixtures.size)
         val match = queries.match(m.fixture.id)
         assertEquals(m.result!!.score, match.result!!.score)
     }
