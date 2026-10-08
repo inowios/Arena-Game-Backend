@@ -8,6 +8,7 @@ import com.matchdayclub.domain.model.AuthProvider
 import com.matchdayclub.domain.repository.*
 import com.matchdayclub.domain.usecase.auth.*
 import com.matchdayclub.domain.usecase.club.*
+import com.matchdayclub.domain.usecase.athlete.*
 import com.matchdayclub.presentation.route.ClubExistence
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -56,6 +57,19 @@ val appModule = module {
     single { CollectIncomeUseCase(get(), get(), get(), get()) }
     single { SpeedUpUseCase(get(), get(), get()) }
     single { RemoveBuildingUseCase(get(), get()) }
+
+    single<AthleteRepository> { AthleteRepositoryImpl() }
+    single<TrainingRepository> { TrainingRepositoryImpl() }
+    single<LineupRepository> { LineupRepositoryImpl() }
+    single<ClubInitializer> { StarterSquadInitializer(get(), get()) }
+    single { SquadService(get(), get(), get(), get()) }
+    single { ListAthletesUseCase(get()) }
+    single { ClaimAcademyUseCase(get(), get(), get(), get()) }
+    single { StartTrainingUseCase(get(), get(), get(), get(), get()) }
+    single { CompleteTrainingUseCase(get(), get(), get(), get()) }
+    single { HealAthleteUseCase(get(), get(), get(), get(), get()) }
+    single { GetLineupUseCase(get(), get(), get(), get()) }
+    single { SetLineupUseCase(get(), get(), get(), get()) }
 
     single { TokenIssuer(get(), get(), get()) }
     single { GuestLoginUseCase(get(), get(), get()) }

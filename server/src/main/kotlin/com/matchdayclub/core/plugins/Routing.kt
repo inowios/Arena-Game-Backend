@@ -31,4 +31,5 @@ fun Route.apiRoutes() {
     authSessionRoutes()
     meRoutes()
     clubRoutes()
+    athleteRoutes()
 }
