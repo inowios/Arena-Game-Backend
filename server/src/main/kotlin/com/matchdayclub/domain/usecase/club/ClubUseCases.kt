@@ -99,7 +99,7 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
 
 data class CollectResult(val building: Building, val coins: Long, val club: Club)
 
-class CollectIncomeUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock) {
+class CollectIncomeUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     suspend operator fun invoke(userId: UUID, buildingId: UUID): CollectResult {
         val club = service.clubOf(userId)
         val b = service.building(club, buildingId)
@@ -107,9 +107,12 @@ class CollectIncomeUseCase(private val service: ClubService, private val clubs: 
         val spec = BuildingCatalog.level(b.type, b.level)
         if (spec.incomePerHour == 0L) throw ValidationException("This building has no income")
         val now = clock.now()
-        val amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level)
-        val updatedClub = clubs.update(club.copy(coins = club.coins + amount, updatedAt = now))
+        var amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level)
+        val doubled = club.doubleIncomeUntil != null && now.isBefore(club.doubleIncomeUntil) && amount > 0
+        if (doubled) amount *= 2
+        val updatedClub = clubs.update(club.copy(coins = club.coins + amount, doubleIncomeUntil = if (doubled) null else club.doubleIncomeUntil, updatedAt = now))
         val updated = buildings.update(b.copy(lastCollectedAt = now, updatedAt = now))
+        if (amount > 0) progress.record(club.id, com.matchdayclub.domain.rules.ProgressEvent.INCOME_COLLECTED)
         return CollectResult(updated, amount, updatedClub)
     }
 }

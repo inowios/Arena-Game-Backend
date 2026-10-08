@@ -35,3 +35,15 @@ class FakeFixtureRepository : FixtureRepository {
         rows[fixture.id] = fixture; return true
     }
 }
+
+class FakeEconomyRepository : com.matchdayclub.domain.repository.EconomyRepository {
+    val passes = mutableMapOf<Pair<UUID, Int>, com.matchdayclub.domain.model.SeasonPass>()
+    val tasks = mutableMapOf<Triple<UUID, java.time.LocalDate, String>, com.matchdayclub.domain.model.DailyTask>()
+    val purchases = mutableMapOf<String, com.matchdayclub.domain.model.Purchase>()
+    override suspend fun pass(clubId: UUID, season: Int) = passes[clubId to season]
+    override suspend fun upsertPass(pass: com.matchdayclub.domain.model.SeasonPass) = pass.also { passes[it.clubId to it.season] = it }
+    override suspend fun tasks(clubId: UUID, day: java.time.LocalDate) = tasks.values.filter { it.clubId == clubId && it.day == day }
+    override suspend fun upsertTask(task: com.matchdayclub.domain.model.DailyTask) = task.also { tasks[Triple(it.clubId, it.day, it.task)] = it }
+    override suspend fun purchaseByExternalId(externalId: String) = purchases[externalId]
+    override suspend fun createPurchase(p: com.matchdayclub.domain.model.Purchase) = p.also { purchases[it.externalId] = it }
+}

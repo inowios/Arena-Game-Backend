@@ -10,6 +10,9 @@ import com.matchdayclub.domain.usecase.auth.*
 import com.matchdayclub.domain.usecase.club.*
 import com.matchdayclub.domain.usecase.athlete.*
 import com.matchdayclub.domain.usecase.league.*
+import com.matchdayclub.domain.usecase.economy.*
+import com.matchdayclub.core.push.FcmSender
+import com.matchdayclub.domain.rules.Store
 import com.matchdayclub.presentation.route.ClubExistence
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -55,7 +58,7 @@ val appModule = module {
     single { GetClubUseCase(get()) }
     single { PlaceBuildingUseCase(get(), get(), get()) }
     single { UpgradeBuildingUseCase(get(), get(), get()) }
-    single { CollectIncomeUseCase(get(), get(), get(), get()) }
+    single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>()) }
     single { SpeedUpUseCase(get(), get(), get()) }
     single { RemoveBuildingUseCase(get(), get()) }
 
@@ -69,7 +72,24 @@ val appModule = module {
     single { BotService(get(), get(), get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }
     single { LineupService(get(), get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get()) }
+    single<EconomyRepository> { EconomyRepositoryImpl() }
+    single<PushTokenRepository> { PushTokenRepositoryImpl() }
+    single { EconomyService(get(), get(), get()) }
+    single {
+        val c = get<Application>().environment.config
+        FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString())
+    }
+    single { MatchdayNotifier(get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get()) }
+    single { ClaimDailyRewardUseCase(get(), get(), get(), get()) }
+    single { SeasonPassUseCases(get(), get(), get(), get(), get()) }
+    single<Map<Store, ReceiptVerifier>> {
+        val c = get<Application>().environment.config
+        val dev = c.propertyOrNull("iap.devMode")?.getString()?.toBoolean() ?: false
+        if (dev) mapOf(Store.DEV to DevReceiptVerifier(), Store.GOOGLE to DevReceiptVerifier(), Store.APPLE to DevReceiptVerifier()) else emptyMap()
+    }
+    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get()) }
+    single { AdRewardUseCase(get(), get(), get(), get(), get()) }
     single { LeagueQueries(get(), get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
     single { JoinPrivateLeagueUseCase(get(), get()) }
@@ -79,11 +99,11 @@ val appModule = module {
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
     single { ClaimAcademyUseCase(get(), get(), get(), get()) }
-    single { StartTrainingUseCase(get(), get(), get(), get(), get()) }
+    single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>()) }
     single { CompleteTrainingUseCase(get(), get(), get(), get()) }
     single { HealAthleteUseCase(get(), get(), get(), get(), get()) }
     single { GetLineupUseCase(get(), get(), get(), get()) }
-    single { SetLineupUseCase(get(), get(), get(), get()) }
+    single { SetLineupUseCase(get(), get(), get(), get(), get<EconomyService>()) }
 
     single { TokenIssuer(get(), get(), get()) }
     single { GuestLoginUseCase(get(), get(), get()) }

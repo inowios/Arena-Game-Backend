@@ -58,7 +58,7 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
     }
 }
 
-class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock) {
+class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind): Training {
         val st = service.state(userId)
         val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a training centre first")
@@ -72,6 +72,7 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         val pitch = st.buildings.first { it.type == BuildingType.PITCH }
         if (a.attribute(attribute) >= TrainingRules.attributeCap(pitch.level)) throw ValidationException("Attribute capped by pitch level; upgrade the pitch")
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
+        progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
         return trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
     }
 }

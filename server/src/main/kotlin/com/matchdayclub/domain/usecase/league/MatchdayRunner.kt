@@ -32,6 +32,8 @@ class MatchdayRunner(
     private val lineupService: LineupService,
     private val leagueService: LeagueService,
     private val clock: Clock,
+    private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> },
+    private val notifier: MatchdayNotifier? = null,
 ) {
     private val log = LoggerFactory.getLogger("MatchdayRunner")
     private val mutex = Mutex()
@@ -80,6 +82,13 @@ class MatchdayRunner(
         if (!fixtures.markPlayed(played)) return null
         applyEffects(home, hs, hl.starters.map { it.id }, result.score.home, result.score.away, result, fixture.kind, now)
         applyEffects(away, `as`, al.starters.map { it.id }, result.score.away, result.score.home, result, fixture.kind, now)
+        if (fixture.kind == FixtureKind.LEAGUE) {
+            if (result.score.home > result.score.away && !home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
+            if (result.score.away > result.score.home && !away.isBot) progress.record(away.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
+            notifier?.let { runCatching { it.notify(played, home, away) }.onFailure { e -> log.warn("notify failed", e) } }
+        } else {
+            if (!home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.FRIENDLY_PLAYED)
+        }
         return played to result
     }
 

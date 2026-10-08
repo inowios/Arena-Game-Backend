@@ -48,7 +48,14 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
 | GET | `/api/v1/clubs/{id}` | public club profile |
+| POST | `/api/v1/club/daily/claim` | 7-day login calendar + streak |
+| GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` | season pass: 3 daily tasks, 30 levels, free/premium tracks |
+| GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold/coins/premium pass; receipts verified server-side (dev verifier with `IAP_DEV_MODE=true`, token `dev:<order>`) |
+| POST | `/api/v1/ads/reward` `{placement, buildingId?}` | rewarded ads: `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
+| POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
+
+Not yet implemented: real Google Play / App Store receipt verifiers (interface `ReceiptVerifier` is in place; production needs store credentials), rewarded-ad server-side verification (SSV).
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,

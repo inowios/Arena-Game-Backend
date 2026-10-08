@@ -34,4 +34,5 @@ fun Route.apiRoutes() {
     clubRoutes()
     athleteRoutes()
     leagueRoutes()
+    economyRoutes()
 }

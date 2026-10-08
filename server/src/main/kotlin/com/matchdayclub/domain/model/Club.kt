@@ -25,6 +25,12 @@ data class Club(
     val tzBucket: Int = 0,
     val friendliesDate: java.time.LocalDate? = null,
     val friendliesPlayed: Int = 0,
+    val loginDay: Int = 0,
+    val loginLast: java.time.LocalDate? = null,
+    val streak: Int = 0,
+    val doubleIncomeUntil: Instant? = null,
+    val doubleIncomeAdAt: Instant? = null,
+    val freeSpeedupDate: java.time.LocalDate? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

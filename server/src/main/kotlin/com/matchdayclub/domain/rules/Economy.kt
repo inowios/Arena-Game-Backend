@@ -1,0 +1,56 @@
+package com.matchdayclub.domain.rules
+
+import java.time.LocalDate
+import java.util.UUID
+
+enum class TaskKind(val target: Int, val xp: Int, val title: String) {
+    COLLECT_3(3, 40, "Collect income 3 times"),
+    TRAIN_2(2, 40, "Start 2 training sessions"),
+    PLAY_FRIENDLY(1, 30, "Play a friendly"),
+    WIN_MATCH(1, 60, "Win your matchday match"),
+    SET_LINEUP(1, 20, "Save your lineup"),
+}
+
+enum class ProgressEvent(val task: TaskKind?) { INCOME_COLLECTED(TaskKind.COLLECT_3), TRAINING_STARTED(TaskKind.TRAIN_2), FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY), MATCH_WON(TaskKind.WIN_MATCH), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null) }
+
+data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
+
+enum class Store { GOOGLE, APPLE, DEV }
+data class Product(val id: String, val gold: Int = 0, val coins: Long = 0, val premiumPass: Boolean = false)
+
+object Economy {
+    val LOGIN_CALENDAR = listOf(Reward(coins = 150), Reward(coins = 200), Reward(coins = 300), Reward(gold = 2), Reward(coins = 400), Reward(gold = 3), Reward(coins = 800, gold = 5))
+    const val PASS_LEVELS = 30
+    const val XP_PER_LEVEL = 100
+    const val TASKS_PER_DAY = 3
+    const val DOUBLE_INCOME_COOLDOWN_SECONDS = 4 * 3600L
+    const val FREE_SPEEDUP_MAX_SECONDS = 30 * 60L
+
+    val PRODUCTS = listOf(
+        Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200),
+        Product("coins_small", coins = 5_000), Product("coins_large", coins = 30_000), Product("season_pass", premiumPass = true),
+    ).associateBy { it.id }
+
+    /** Login calendar: next day index (1..7) given the last claim date; a skipped day restarts at 1. */
+    fun nextLoginDay(lastClaim: LocalDate?, currentDay: Int, today: LocalDate): Int = when {
+        lastClaim == null -> 1
+        lastClaim == today -> currentDay
+        lastClaim.plusDays(1) == today -> if (currentDay >= LOGIN_CALENDAR.size) 1 else currentDay + 1
+        else -> 1
+    }
+
+    fun loginReward(day: Int) = LOGIN_CALENDAR[(day - 1).coerceIn(0, LOGIN_CALENDAR.size - 1)]
+
+    /** Deterministic 3 tasks per club per day. WIN_MATCH only on days a league match is scheduled (caller filters). */
+    fun tasksFor(clubId: UUID, day: LocalDate, includeMatch: Boolean): List<TaskKind> {
+        val pool = TaskKind.values().filter { includeMatch || it != TaskKind.WIN_MATCH }
+        val seed = Math.floorMod(clubId.hashCode() + day.toEpochDay().toInt() * 31, pool.size)
+        return (0 until TASKS_PER_DAY).map { pool[(seed + it * 2) % pool.size] }.distinct().let { if (it.size < TASKS_PER_DAY) (it + pool).distinct().take(TASKS_PER_DAY) else it }
+    }
+
+    fun passLevel(xp: Int) = (xp / XP_PER_LEVEL).coerceIn(0, PASS_LEVELS)
+
+    /** Free track: coins ramping up, gold every 5 levels. Premium: double coins, +gold, cosmetics flagged by level 30. */
+    fun freeReward(level: Int) = if (level % 5 == 0) Reward(gold = 3 + level / 10) else Reward(coins = 100L * level)
+    fun premiumReward(level: Int) = if (level % 5 == 0) Reward(coins = 300L * level, gold = 8 + level / 5) else Reward(coins = 250L * level)
+}

@@ -46,4 +46,12 @@ if [ "${SMOKE_MATCHDAY:-1}" = "1" ] && command -v psql >/dev/null; then
   curl -sf "$B/leagues/$LID/fixtures?round=1" -H "$A" | j "assert len(d['data'])==4 and all(f['status']=='PLAYED' for f in d['data'])"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['reputation']>=1"
 fi
+step "economy: daily reward, pass, dev purchase, ad reward, push token"
+curl -sf -X POST "$B/club/daily/claim" -H "$A" | j "assert d['data']['day']==1 and d['data']['reward']['coins']==150"
+test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/daily/claim" -H "$A")" = "409"
+curl -sf "$B/club/pass" -H "$A" | j "assert len(d['data']['tasks'])==3 and len(d['data']['levels'])==30"
+curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","productId":"gold_small","token":"dev:smoke-'$DEV'"}' | j "assert d['data']['status']=='GRANTED' and d['data']['gold']==100"
+curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","productId":"gold_small","token":"dev:smoke-'$DEV'"}' | j "assert d['data']['status']=='DUPLICATE'"
+curl -sf -X POST "$B/ads/reward" -H "$H" -H "$A" -d '{"placement":"DOUBLE_INCOME"}' | j "assert d['data']['id']"
+curl -sf -X POST "$B/push-tokens" -H "$H" -H "$A" -d '{"token":"fcm-smoke-'$DEV'","platform":"android"}' | j "assert d['data']['ok']"
 echo "SMOKE OK"

@@ -21,6 +21,12 @@ object ClubTable : BaseTable("clubs") {
     val tzBucket = integer("tz_bucket")
     val friendliesDate = date("friendlies_date").nullable()
     val friendliesPlayed = integer("friendlies_played")
+    val loginDay = integer("login_day")
+    val loginLast = date("login_last").nullable()
+    val streak = integer("streak")
+    val doubleIncomeUntil = timestamp("double_income_until").nullable()
+    val doubleIncomeAdAt = timestamp("double_income_ad_at").nullable()
+    val freeSpeedupDate = date("free_speedup_date").nullable()
 }
 
 object BuildingTable : BaseTable("buildings") {

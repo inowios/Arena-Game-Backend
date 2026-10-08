@@ -46,11 +46,13 @@ class GetLineupUseCase(private val service: ClubService, private val squads: Squ
     }
 }
 
-class SetLineupUseCase(private val service: ClubService, private val squads: SquadService, private val lineups: LineupRepository, private val clock: Clock) {
+class SetLineupUseCase(private val service: ClubService, private val squads: SquadService, private val lineups: LineupRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     suspend operator fun invoke(userId: UUID, sport: Sport, starters: List<UUID>, bench: List<UUID>, tactics: Tactics): Lineup {
         val club = service.clubOf(userId)
         LineupRules.validate(starters, bench, squads.squad(userId).athletes)
-        return lineups.upsert(Lineup(club.id, sport, starters, bench, tactics, clock.now()))
+        val saved = lineups.upsert(Lineup(club.id, sport, starters, bench, tactics, clock.now()))
+        progress.record(club.id, com.matchdayclub.domain.rules.ProgressEvent.LINEUP_SAVED)
+        return saved
     }
 }
 
