@@ -47,6 +47,6 @@ class AthleteRulesTest {
     @Test
     fun `fatigue recovers passively`() {
         val a = AthleteFactory.create(3, club, Sport.FOOTBALL, 50, 50, null, now).copy(fatigue = 40, fatigueAt = now)
-        assertEquals(40, a.currentFatigue(now)); assertEquals(36, a.currentFatigue(now.plusSeconds(3600))); assertEquals(0, a.currentFatigue(now.plusSeconds(20 * 3600)))
+        assertEquals(40, a.currentFatigue(now)); assertEquals(20, a.currentFatigue(now.plusSeconds(20 * 60))); assertEquals(0, a.currentFatigue(now.plusSeconds(3600)))
     }
 }

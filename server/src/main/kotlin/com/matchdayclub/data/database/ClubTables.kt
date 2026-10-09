@@ -33,6 +33,8 @@ object ClubTable : BaseTable("clubs") {
     val emblemFrame = varchar("emblem_frame", 40).nullable()
     val celebration = varchar("celebration", 40).nullable()
     val scoutSignedDate = date("scout_signed_date").nullable()
+    val trophies = integer("trophies")
+    val liveStreak = integer("live_streak")
 }
 
 object BuildingTable : BaseTable("buildings") {

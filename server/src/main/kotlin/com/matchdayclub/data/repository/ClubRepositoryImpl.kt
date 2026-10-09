@@ -37,17 +37,9 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
         this[ClubTable.scoutSignedDate] = c.scoutSignedDate
+        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak
     }
 
-    private fun ResultRow.toClub() = Club(
-        this[ClubTable.id], this[ClubTable.userId], this[ClubTable.name], this[ClubTable.primaryColor], this[ClubTable.secondaryColor], this[ClubTable.emblemJson],
-        this[ClubTable.level], this[ClubTable.reputation], this[ClubTable.coins], this[ClubTable.gold], this[ClubTable.timezone],
-        this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
-        this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
-        this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
-        this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
-        this[ClubTable.scoutSignedDate],
-    )
 }
 
 class BuildingRepositoryImpl : BuildingRepository {
@@ -78,3 +70,15 @@ class BuildingRepositoryImpl : BuildingRepository {
         this[BuildingTable.upgradeEndsAt], this[BuildingTable.lastCollectedAt], this[BuildingTable.createdAt], this[BuildingTable.updatedAt], this[BuildingTable.variant],
     )
 }
+
+/** Row → club; shared with repositories that read the clubs table (live-match matchmaking). */
+internal fun ResultRow.toClub() = Club(
+    this[ClubTable.id], this[ClubTable.userId], this[ClubTable.name], this[ClubTable.primaryColor], this[ClubTable.secondaryColor], this[ClubTable.emblemJson],
+    this[ClubTable.level], this[ClubTable.reputation], this[ClubTable.coins], this[ClubTable.gold], this[ClubTable.timezone],
+    this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
+    this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
+    this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
+    this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
+    this[ClubTable.scoutSignedDate],
+    this[ClubTable.trophies], this[ClubTable.liveStreak],
+)

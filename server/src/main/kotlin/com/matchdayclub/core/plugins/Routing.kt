@@ -44,4 +44,5 @@ fun Route.apiRoutes() {
     socialRoutes()
     analyticsRoutes()
     cupRoutes()
+    liveRoutes()
 }

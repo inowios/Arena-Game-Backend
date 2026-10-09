@@ -122,3 +122,13 @@ class FakeSocialRepository : com.matchdayclub.domain.repository.SocialRepository
     }
     override suspend fun invitesBy(clubId: UUID) = invites.filter { it.inviterClubId == clubId }
 }
+
+class FakeLiveMatchRepository(private val clubs: FakeClubRepository) : com.matchdayclub.domain.repository.LiveMatchRepository {
+    val rows = linkedMapOf<UUID, LiveMatch>()
+    override suspend fun create(m: LiveMatch): LiveMatch { rows[m.id] = m; return m }
+    override suspend fun find(id: UUID) = rows[id]
+    override suspend fun findOpen(clubId: UUID) = rows.values.filter { it.clubId == clubId && it.status == LiveStatus.OPEN }
+    override suspend fun update(m: LiveMatch): LiveMatch { rows[m.id] = m; return m }
+    override suspend fun opponents(clubId: UUID, minTrophies: Int, maxTrophies: Int, limit: Int) = clubs.rows.values.filter { !it.isBot && it.id != clubId && it.trophies in minTrophies..maxTrophies }.take(limit)
+    override suspend fun recent(clubId: UUID, limit: Int) = rows.values.filter { it.clubId == clubId && it.status != LiveStatus.OPEN }.sortedByDescending { it.createdAt }.take(limit)
+}

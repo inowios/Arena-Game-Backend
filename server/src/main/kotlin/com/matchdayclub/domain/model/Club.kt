@@ -40,6 +40,9 @@ data class Club(
     val celebration: String? = null,
     /** Club-local day of the last scouting signing (one a day). */
     val scoutSignedDate: java.time.LocalDate? = null,
+    /** Live-match trophies (arena ladder) and the current run of live wins (a player pack every third). */
+    val trophies: Int = 0,
+    val liveStreak: Int = 0,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

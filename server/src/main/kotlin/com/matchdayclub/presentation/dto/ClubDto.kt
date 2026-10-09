@@ -23,6 +23,7 @@ import java.time.Instant
     val builderSlots: Int = 1,
     val division: Int = 1, val seasonNo: Int = 1,
     val kit: String? = null, val emblemFrame: String? = null, val celebration: String? = null,
+    val trophies: Int = 0, val arena: String = "YARD", val liveStreak: Int = 0,
 )
 
 /** Rewarded-ad state for the club screen: double income window/cooldown and today's free speed-up. */
@@ -41,7 +42,7 @@ import java.time.Instant
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0)
 @Serializable data class CollectResponse(val building: BuildingDto, val coins: Long, val club: ClubDto)
 
-fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, builderSlots, division, seasonNo, kit, emblemFrame, celebration)
+fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, builderSlots, division, seasonNo, kit, emblemFrame, celebration, trophies, com.matchdayclub.domain.rules.Arenas.of(trophies).key, liveStreak)
 
 fun Club.adsState(now: Instant): AdsStateDto {
     val cooldown = com.matchdayclub.domain.rules.Economy.DOUBLE_INCOME_COOLDOWN_SECONDS

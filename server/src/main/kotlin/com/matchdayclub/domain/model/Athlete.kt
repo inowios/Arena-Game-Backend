@@ -10,6 +10,8 @@ enum class Sport { FOOTBALL, BASKETBALL, TENNIS }
 enum class Rarity { COMMON, RARE, ELITE }
 enum class AttributeKind { ATTACK, DEFENSE, PHYSICAL, TECHNIQUE, MENTAL }
 
+const val FATIGUE_RECOVERY_SECONDS = 60L
+
 data class Athlete(
     val id: UUID,
     val clubId: UUID,
@@ -36,8 +38,8 @@ data class Athlete(
     fun withAttribute(kind: AttributeKind, v: Int) = when (kind) {
         AttributeKind.ATTACK -> copy(attack = v); AttributeKind.DEFENSE -> copy(defense = v); AttributeKind.PHYSICAL -> copy(physical = v); AttributeKind.TECHNIQUE -> copy(technique = v); AttributeKind.MENTAL -> copy(mental = v)
     }
-    /** Fatigue recovers 4 points per hour passively. */
-    fun currentFatigue(now: Instant): Int = max(0, fatigue - ((now.epochSecond - fatigueAt.epochSecond) / 900).toInt())
+    /** Fatigue recovers a point a minute passively (a live match costs ~22; three in a row and the squad needs a rest). */
+    fun currentFatigue(now: Instant): Int = max(0, fatigue - ((now.epochSecond - fatigueAt.epochSecond) / FATIGUE_RECOVERY_SECONDS).toInt())
     fun isInjured(now: Instant) = injuredUntil != null && now.isBefore(injuredUntil)
     val overall: Int get() = toEngine(Instant.EPOCH).overall
     fun toEngine(now: Instant) = com.matchdayclub.engine.model.Athlete(id.toString(), name, position, attributes, currentFatigue(now), isInjured(now), morale)

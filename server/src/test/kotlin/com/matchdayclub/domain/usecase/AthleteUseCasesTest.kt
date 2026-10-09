@@ -93,6 +93,7 @@ class AthleteUseCasesTest {
         athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { heal(user, b.id) }
         clock.advanceSeconds(4 * 3600)
+        athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))   // tired again once the cooldown has passed
         heal(user, b.id)
         Unit
     }
