@@ -34,7 +34,9 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/auth/guest` | `{deviceId}` → tokens; creates a guest account |
 | POST | `/api/v1/auth/oauth/google`, `/apple` | `{idToken}` verified server-side; upgrades a guest in place when called with its bearer |
 | POST | `/api/v1/auth/refresh`, `/logout`, `/logout-all` | refresh rotation / revoke |
-| GET/PATCH | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it) |
+| GET/PATCH/DELETE | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it); DELETE erases the account (sign-in data, tokens, chat lines) and retires the club into a bot |
+| POST | `/api/v1/auth/transfer-code`; `/auth/transfer` `{code, deviceId}` | move an account to another device with a one-time code (24 h) |
+| GET/POST | `/api/v1/club/inbox`, `/club/inbox/read` | in-app inbox (matchday results, season end, accepted challenges, new league members); `GET /club` has `inboxUnread` |
 | GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level) |
 | POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, grid) |
 | POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` |

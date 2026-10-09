@@ -216,6 +216,7 @@ class ChallengeUseCases(
     private val clock: Clock,
     private val tx: Tx = NoTx,
     private val push: FcmSender? = null,
+    private val inbox: com.matchdayclub.domain.usecase.account.InboxService? = null,
 ) {
     companion object {
         const val TTL_SECONDS = 7 * 86_400L
@@ -255,6 +256,8 @@ class ChallengeUseCases(
             me to played
         }
         val (me, played) = result
+        inbox?.add(view.challenger.id, "CHALLENGE", mapOf("fixtureId" to played.fixture.id.toString(), "club" to me.name,
+            "home" to (played.fixture.homeScore ?: 0).toString(), "away" to (played.fixture.awayScore ?: 0).toString()))
         push?.let { p ->
             runCatching {
                 p.sendLocalized(listOf(view.challenger.userId), mapOf("type" to "CHALLENGE", "fixtureId" to played.fixture.id.toString())) { lang ->
@@ -270,7 +273,7 @@ class ChallengeUseCases(
 }
 
 /** Records who brought whom (k-factor) and tells the inviter. Never throws into the caller's flow. */
-class InviteTracker(private val social: SocialRepository, private val clubs: ClubRepository, private val clock: Clock, private val push: FcmSender? = null, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker? = null) {
+class InviteTracker(private val social: SocialRepository, private val clubs: ClubRepository, private val clock: Clock, private val push: FcmSender? = null, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker? = null, private val inbox: com.matchdayclub.domain.usecase.account.InboxService? = null) {
     suspend fun leagueJoined(league: League, joiner: Club) {
         val inviter = league.createdBy ?: return
         if (inviter == joiner.id) return
@@ -278,6 +281,7 @@ class InviteTracker(private val social: SocialRepository, private val clubs: Clu
         val fresh = social.recordInvite(Invite(UUID.randomUUID(), inviter, joiner.id, InviteKind.LEAGUE, league.code ?: "", joiner.createdAt.isAfter(now.minusSeconds(2 * 86_400)), now))
         if (fresh) progress?.record(inviter, com.matchdayclub.domain.rules.ProgressEvent.INVITE_JOINED)
         val owner = clubs.findById(inviter) ?: return
+        inbox?.add(owner.id, "LEAGUE_JOIN", mapOf("leagueId" to league.id.toString(), "league" to league.name, "club" to joiner.name))
         push?.let {
             runCatching {
                 it.sendLocalized(listOf(owner.userId), mapOf("type" to "LEAGUE_JOIN", "leagueId" to league.id.toString())) { lang ->

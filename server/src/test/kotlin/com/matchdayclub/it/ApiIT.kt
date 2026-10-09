@@ -93,6 +93,33 @@ class ApiIT {
         assertTrue(client.get("/.well-known/assetlinks.json").bodyAsText().contains("\"AA:BB\""))
         assertTrue(client.get("/.well-known/apple-app-site-association").bodyAsText().contains("TEAM1.com.inowios.matchdayclub"))
         assertEquals("https://mdc.test", Json.parseToJsonElement(client.get("/api/v1/config").bodyAsText()).data.o()["publicBaseUrl"]!!.jsonPrimitive.content)
+        // inbox: the challenger learns about the accepted challenge, the creator about the new member
+        val inboxA = call(HttpMethod.Get, "/club/inbox", a).data.o()
+        val kinds = inboxA["items"]!!.jsonArray.map { it.o()["kind"]!!.jsonPrimitive.content }
+        assertTrue("CHALLENGE" in kinds && "LEAGUE_JOIN" in kinds, kinds.toString())
+        assertEquals("Bravo FC", inboxA["items"]!!.jsonArray.first { it.o()["kind"]!!.jsonPrimitive.content == "CHALLENGE" }.o()["data"]!!.o()["club"]!!.jsonPrimitive.content)
+        assertEquals(2, call(HttpMethod.Get, "/club", a).data.o()["inboxUnread"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/club/inbox/read", a)
+        assertEquals(0, call(HttpMethod.Get, "/club", a).data.o()["inboxUnread"]!!.jsonPrimitive.int)
+    }
+
+    @Test
+    fun `device transfer and account deletion over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val old = guestWithClub("it-device-0301", "Mover FC")
+        val code = call(HttpMethod.Post, "/auth/transfer-code", old).data.o()["code"]!!.jsonPrimitive.content
+        assertTrue(Regex("^[A-Z2-9]{4}-[A-Z2-9]{4}$").matches(code), code)
+        val moved = call(HttpMethod.Post, "/auth/transfer", body = """{"code":"$code","deviceId":"it-device-0302"}""").data.o()["accessToken"]!!.jsonPrimitive.content
+        assertEquals("Mover FC", call(HttpMethod.Get, "/club", moved).data.o()["club"]!!.o()["name"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/auth/transfer", body = """{"code":"$code","deviceId":"it-device-0303"}""", expect = 409)
+        // a guest login from the new device opens the moved account
+        val again = call(HttpMethod.Post, "/auth/guest", body = """{"deviceId":"it-device-0302"}""").data.o()
+        assertEquals(false, again["isNewUser"]!!.jsonPrimitive.boolean)
+        call(HttpMethod.Delete, "/me", moved)
+        call(HttpMethod.Get, "/club", moved, expect = 404)
+        val fresh = call(HttpMethod.Post, "/auth/guest", body = """{"deviceId":"it-device-0302"}""").data.o()
+        assertEquals(true, fresh["isNewUser"]!!.jsonPrimitive.boolean)
     }
 
     @Test

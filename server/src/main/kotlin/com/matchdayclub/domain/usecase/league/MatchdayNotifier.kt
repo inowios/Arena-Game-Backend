@@ -8,7 +8,7 @@ import com.matchdayclub.domain.model.Fixture
 import com.matchdayclub.domain.model.MatchdayResult
 
 /** Builds and sends the "matchday played" push to the human club of each played fixture, in the player's language. */
-class MatchdayNotifier(private val fcm: FcmSender) {
+class MatchdayNotifier(private val fcm: FcmSender, private val inbox: com.matchdayclub.domain.usecase.account.InboxService? = null) {
     fun message(f: Fixture, me: Club, opponent: Club, result: MatchdayResult? = null, lang: String = "en"): Pair<String, String> {
         val home = f.homeClubId == me.id
         val mine = (if (home) f.homePoints else f.awayPoints) ?: (if (home) f.homeScore else f.awayScore)!!
@@ -27,6 +27,11 @@ class MatchdayNotifier(private val fcm: FcmSender) {
     suspend fun notify(f: Fixture, home: Club, away: Club, result: MatchdayResult? = null) {
         for ((me, opp) in listOf(home to away, away to home)) {
             if (me.isBot) continue
+            val home = f.homeClubId == me.id
+            val mine = (if (home) f.homePoints else f.awayPoints) ?: (if (home) f.homeScore else f.awayScore) ?: 0
+            val theirs = (if (home) f.awayPoints else f.homePoints) ?: (if (home) f.awayScore else f.homeScore) ?: 0
+            inbox?.add(me.id, "MATCHDAY", mapOf("fixtureId" to f.id.toString(), "opponent" to opp.name, "mine" to mine.toString(), "theirs" to theirs.toString(),
+                "verdict" to when { mine > theirs -> "WIN"; mine == theirs -> "DRAW"; else -> "LOSS" }, "multi" to ((result?.sections?.size ?: 1) > 1).toString()))
             fcm.sendLocalized(listOf(me.userId), mapOf("fixtureId" to f.id.toString(), "type" to "MATCHDAY")) { lang -> message(f, me, opp, result, lang) }
         }
     }

@@ -20,11 +20,18 @@ fun interface ClubExistence { suspend fun hasClub(userId: UUID): Boolean }
 fun Route.meRoutes() {
     val users: UserRepository by inject()
     val clubs: ClubExistence by inject()
+    val deleteAccount: com.matchdayclub.domain.usecase.account.DeleteAccountUseCase by inject()
     authenticate(AUTH_JWT) {
         get("/me") {
             val id = call.userId()
             val user = users.findById(id) ?: throw NotFoundException("User not found")
+            if (!user.isActive) throw com.matchdayclub.domain.exception.AuthorizationException("Account deactivated")
             call.respond(MeResponse(user.toDto(), clubs.hasClub(id)).toSuccessResponse())
+        }
+        /** In-app account deletion: sign-in data erased, the club retires into a bot. */
+        delete("/me") {
+            deleteAccount(call.userId())
+            call.respond(mapOf("ok" to true).toSuccessResponse())
         }
         /** The app reports its language (pushes are sent in it). */
         patch("/me") {

@@ -27,10 +27,11 @@ data class ClubState(val club: Club, val buildings: List<Building>, val gridSize
 
 /** Shared loading + lazy finalisation of finished timers ("finalise on read"). */
 class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList()) {
-    suspend fun clubOf(userId: UUID): Club = clubs.findByUserId(userId) ?: throw NotFoundException("Club not found")
+    /** The player's club; a retired club (account deleted or moved away) belongs to nobody any more. */
+    suspend fun clubOf(userId: UUID): Club = clubs.findByUserId(userId)?.takeUnless { it.isBot } ?: throw NotFoundException("Club not found")
 
     /** Locks the club row for the rest of the surrounding transaction. Use before changing currencies or timers. */
-    suspend fun lockedClubOf(userId: UUID): Club = clubs.lockByUserId(userId) ?: throw NotFoundException("Club not found")
+    suspend fun lockedClubOf(userId: UUID): Club = clubs.lockByUserId(userId)?.takeUnless { it.isBot } ?: throw NotFoundException("Club not found")
 
     suspend fun state(userId: UUID, lock: Boolean = false): ClubState {
         val club = if (lock) lockedClubOf(userId) else clubOf(userId)

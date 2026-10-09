@@ -53,7 +53,7 @@ val appModule = module {
     single<RefreshTokenRepository> { RefreshTokenRepositoryImpl() }
     single<ClubRepository> { ClubRepositoryImpl() }
     single<BuildingRepository> { BuildingRepositoryImpl() }
-    single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it) != null } }
+    single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
     single { ClubService(get(), get(), get(), getAll<BuildingListener>()) }
     single { SectionService(get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
@@ -77,7 +77,7 @@ val appModule = module {
     single<FixtureRepository> { FixtureRepositoryImpl() }
     single { BotService(get(), get(), get(), get(), get()) }
     single<SeasonRepository> { SeasonRepositoryImpl() }
-    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>()) }
+    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get()) }
     single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }
     single { LineupService(get(), get()) }
@@ -91,7 +91,7 @@ val appModule = module {
         val c = get<Application>().environment.config
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
     }
-    single { MatchdayNotifier(get()) }
+    single { MatchdayNotifier(get(), get()) }
     single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
     single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get(), athletes = get()) }
@@ -144,8 +144,8 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.social.GetGroundsUseCase(get(), get(), get()) }
-    single { com.matchdayclub.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get()) }
-    single { com.matchdayclub.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>()) }
+    single { com.matchdayclub.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
+    single { com.matchdayclub.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { GetPublicClubUseCase(get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
@@ -158,6 +158,12 @@ val appModule = module {
     single { SetLineupUseCase(get(), get(), get(), get(), get<EconomyService>()) }
 
     single { TokenIssuer(get(), get(), get()) }
+    single<AccountRepository> { AccountRepositoryImpl() }
+    single<InboxRepository> { InboxRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.account.InboxService(get(), get()) }
+    single { com.matchdayclub.domain.usecase.account.ClubRetirement(get(), get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.account.TransferUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.account.DeleteAccountUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
     single { GuestLoginUseCase(get(), get(), get()) }
     single { OAuthLoginUseCase(get(), get(), get(), get()) }
     single { RefreshTokenUseCase(get(), get(), get(), get()) }

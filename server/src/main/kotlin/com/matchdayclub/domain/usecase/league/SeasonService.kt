@@ -25,6 +25,7 @@ class SeasonService(
     private val leagueService: LeagueService,
     private val clock: Clock,
     private val push: FcmSender? = null,
+    private val inbox: com.matchdayclub.domain.usecase.account.InboxService? = null,
 ) : SeasonCloser {
 
     override suspend fun close(league: League, now: Instant): SeasonClose {
@@ -60,6 +61,8 @@ class SeasonService(
     }
 
     private suspend fun notify(club: Club, rec: ClubSeason) {
+        inbox?.add(club.id, "SEASON_END", mapOf("seasonNo" to rec.seasonNo.toString(), "position" to rec.position.toString(), "movement" to rec.movement.name,
+            "division" to rec.newDivision.toString(), "coins" to rec.prizeCoins.toString(), "gold" to rec.prizeGold.toString()))
         val p = push ?: return
         p.sendLocalized(listOf(club.userId), mapOf("type" to "SEASON_END", "seasonNo" to rec.seasonNo.toString())) { lang -> message(rec, lang) }
     }

@@ -13,3 +13,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class MeResponse(val user: UserDto, val hasClub: Boolean)
 
 fun User.toDto() = UserDto(id.toString(), authProvider.name, email, displayName, avatarUrl, locale)
+
+@Serializable data class TransferCodeResponse(val code: String, val expiresAt: String)
+@Serializable data class TransferRequest(val code: String, val deviceId: String)
+@Serializable data class InboxItemDto(val id: String, val kind: String, val data: Map<String, String>, val createdAt: String, val read: Boolean)
+@Serializable data class InboxResponse(val items: List<InboxItemDto>, val unread: Int)
+
+fun com.matchdayclub.domain.model.InboxItem.toDto() = InboxItemDto(id.toString(), kind,
+    runCatching { kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(dataJson) }.getOrDefault(emptyMap()), createdAt.toString(), readAt != null)

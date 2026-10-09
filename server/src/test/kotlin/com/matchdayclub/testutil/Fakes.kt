@@ -45,3 +45,21 @@ class FakeRefreshTokenRepository : RefreshTokenRepository {
 class FakeIdTokenVerifier(private val identities: Map<String, VerifiedIdentity>) : IdTokenVerifier {
     override suspend fun verify(idToken: String) = identities[idToken] ?: throw AuthenticationException("bad token")
 }
+
+class FakeAccountRepository : com.matchdayclub.domain.repository.AccountRepository {
+    val codes = mutableMapOf<String, com.matchdayclub.domain.model.TransferCode>()
+    val deletedPushFor = mutableSetOf<UUID>(); val hiddenFor = mutableSetOf<UUID>()
+    override suspend fun createTransferCode(code: com.matchdayclub.domain.model.TransferCode) { codes.values.removeIf { it.userId == code.userId }; codes[code.code] = code }
+    override suspend fun findTransferCode(code: String) = codes[code]
+    override suspend fun useTransferCode(code: String, at: Instant): Boolean { val c = codes[code] ?: return false; if (c.usedAt != null) return false; codes[code] = c.copy(usedAt = at); return true }
+    override suspend fun deletePushTokens(userId: UUID) { deletedPushFor += userId }
+    override suspend fun hideClubMessages(clubId: UUID) { hiddenFor += clubId }
+}
+
+class FakeInboxRepository : com.matchdayclub.domain.repository.InboxRepository {
+    val rows = mutableListOf<com.matchdayclub.domain.model.InboxItem>()
+    override suspend fun add(item: com.matchdayclub.domain.model.InboxItem) { rows += item }
+    override suspend fun list(clubId: UUID, limit: Int) = rows.filter { it.clubId == clubId }.sortedByDescending { it.createdAt }.take(limit)
+    override suspend fun unread(clubId: UUID) = rows.count { it.clubId == clubId && it.readAt == null }
+    override suspend fun markAllRead(clubId: UUID, at: Instant) { rows.replaceAll { if (it.clubId == clubId && it.readAt == null) it.copy(readAt = at) else it } }
+}

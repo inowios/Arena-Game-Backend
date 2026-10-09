@@ -129,3 +129,6 @@ push.challenge_title	Challenge accepted!	¡Reto aceptado!	Desafio aceito!	Выз
 push.challenge_body	{0} took your challenge: {1}–{2}. Open the highlights.	{0} aceptó tu reto: {1}–{2}. Mira el resumen.	{0} aceitou seu desafio: {1}–{2}. Veja os melhores momentos.	«{0}» принял вызов: {1}–{2}. Смотрите обзор.	«{0}» прийняв виклик: {1}–{2}. Дивіться огляд.
 push.join_title	New rival in {0}	Nuevo rival en {0}	Novo rival na {0}	Новый соперник в «{0}»	Новий суперник у «{0}»
 push.join_body	{0} joined your league.	{0} se unió a tu liga.	{0} entrou na sua liga.	«{0}» вступает в вашу лигу.	«{0}» вступає до вашої ліги.
+# --- account
+Transfer code not found	Transfer code not found	Código de transferencia no encontrado	Código de transferência não encontrado	Код переноса не найден	Код перенесення не знайдено
+This transfer code has expired	This transfer code has expired or was used	Este código de transferencia caducó o ya se usó	Este código de transferência expirou ou já foi usado	Код переноса истёк или уже использован	Код перенесення сплив або вже використаний

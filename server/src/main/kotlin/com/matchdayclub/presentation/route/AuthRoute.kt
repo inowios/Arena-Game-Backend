@@ -20,7 +20,20 @@ fun RoutingCall.userId(): UUID = principal<JWTPrincipal>()?.subject?.let { UUID.
 fun Route.authLoginRoutes() {
     val guestLogin: GuestLoginUseCase by inject()
     val oauthLogin: OAuthLoginUseCase by inject()
+    val transfer: com.matchdayclub.domain.usecase.account.TransferUseCases by inject()
     route("/auth") {
+        /** Redeem a transfer code from the old device: this device now signs in to that account. */
+        post("/transfer") {
+            val r = call.receive<TransferRequest>()
+            val res = transfer.redeem(r.code, r.deviceId)
+            call.respond(AuthResponse(res.accessToken, res.refreshToken, res.user.toDto(), false).toSuccessResponse())
+        }
+        authenticate(AUTH_JWT) {
+            post("/transfer-code") {
+                val c = transfer.createCode(call.userId())
+                call.respond(TransferCodeResponse(com.matchdayclub.domain.usecase.account.TransferUseCases.display(c.code), c.expiresAt.toString()).toSuccessResponse())
+            }
+        }
         post("/guest") {
             val r = guestLogin(call.receive<GuestLoginRequest>().deviceId)
             call.respond(AuthResponse(r.accessToken, r.refreshToken, r.user.toDto(), r.isNewUser).toSuccessResponse())

@@ -28,6 +28,7 @@ fun Route.clubRoutes() {
     val buyBuilder: BuyBuilderUseCase by inject()
     val sections: com.matchdayclub.domain.usecase.athlete.SectionService by inject()
     val cosmetics: com.matchdayclub.domain.usecase.economy.CosmeticsUseCases by inject()
+    val inbox: com.matchdayclub.domain.usecase.account.InboxService by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -45,8 +46,14 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now)).toSuccessResponse())
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id)).toSuccessResponse())
             }
+            get("/inbox") {
+                val club = getClub(call.userId()).club
+                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50
+                call.respond(InboxResponse(inbox.list(club.id, limit).map { it.toDto() }, inbox.unread(club.id)).toSuccessResponse())
+            }
+            post("/inbox/read") { inbox.markAllRead(getClub(call.userId()).club.id); call.respond(mapOf("ok" to true).toSuccessResponse()) }
             post("/builders") { call.respond(buyBuilder(call.userId()).toDto().toSuccessResponse()) }
             route("/buildings") {
                 post {
