@@ -64,7 +64,7 @@ private fun privacyEn(company: String, contact: String) = "Privacy Policy" to ""
 <li><b>Account.</b> A random identifier created on your device for guest play. If you sign in with Google or Apple, the account identifier and the e-mail address they share with us.</li>
 <li><b>Game data.</b> Your club (name, emblem, colours, buildings, athletes, lineups, matches, leagues, trophies), the messages you write in private-league chats, challenges and invites you send, and your purchase history.</li>
 <li><b>Technical data.</b> App version, platform, language, time zone and, if you allow notifications, a push token. Our servers log IP addresses and requests for security; these logs are kept for 14 days.</li>
-<li><b>Usage events.</b> Which features you use (for example tutorial steps, opening the store, watching a rewarded video). They are linked to your pseudonymous player id and used to improve the game.</li>
+<li><b>Usage events.</b> Which features you use (for example tutorial steps, opening the store, watching a rewarded video) and technical errors in the app. They are linked to your pseudonymous player id, used to improve the game and deleted after 13 months.</li>
 <li><b>Purchases.</b> Payments are handled by Google Play or the App Store. We receive the order id and product to deliver your items; we never see your payment details.</li>
 <li><b>Ads.</b> Optional rewarded videos are served by Google AdMob, which may use your device’s advertising identifier as described in <a href="https://policies.google.com/technologies/ads">Google’s policy</a>. On iOS the identifier is only available if you allow tracking. You can reset or limit it in your device settings.</li>
 </ul>
@@ -94,7 +94,7 @@ private fun privacyRu(company: String, contact: String) = "Политика ко
 <li><b>Аккаунт.</b> Случайный идентификатор, созданный на устройстве для гостевой игры. Если вы входите через Google или Apple — идентификатор аккаунта и e-mail, которые они нам передают.</li>
 <li><b>Игровые данные.</b> Ваш клуб (название, эмблема, цвета, постройки, спортсмены, составы, матчи, лиги, трофеи), сообщения в чатах приватных лиг, вызовы и приглашения, история покупок.</li>
 <li><b>Технические данные.</b> Версия приложения, платформа, язык, часовой пояс и, если вы разрешили уведомления, push-токен. Серверы записывают IP-адреса и запросы для безопасности; эти журналы хранятся 14 дней.</li>
-<li><b>События использования.</b> Какими функциями вы пользуетесь (например, шаги обучения, открытие магазина, просмотр рекламы за награду). Они связаны с вашим псевдонимным идентификатором игрока и нужны, чтобы улучшать игру.</li>
+<li><b>События использования.</b> Какими функциями вы пользуетесь (например, шаги обучения, открытие магазина, просмотр рекламы за награду) и технические ошибки приложения. Они связаны с вашим псевдонимным идентификатором игрока, нужны, чтобы улучшать игру, и удаляются через 13 месяцев.</li>
 <li><b>Покупки.</b> Платежи проводят Google Play или App Store. Мы получаем номер заказа и товар, чтобы выдать предметы; платёжные данные мы не видим.</li>
 <li><b>Реклама.</b> Необязательные ролики за награду показывает Google AdMob, который может использовать рекламный идентификатор устройства согласно <a href="https://policies.google.com/technologies/ads">политике Google</a>. На iOS идентификатор доступен, только если вы разрешили отслеживание. Его можно сбросить или ограничить в настройках устройства.</li>
 </ul>

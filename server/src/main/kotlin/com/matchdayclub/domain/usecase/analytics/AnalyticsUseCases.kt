@@ -38,6 +38,17 @@ class ActivityTracker(private val repo: AnalyticsRepository, private val clock: 
     }
 }
 
+/** Keeps product events for [Analytics.RETENTION_DAYS] (privacy policy); run from the scheduler at most once a day. */
+class AnalyticsRetention(private val repo: AnalyticsRepository, private val clock: Clock) {
+    @Volatile private var lastRun: Instant? = null
+    suspend fun runIfDue(): Int {
+        val now = clock.now()
+        if (lastRun?.isAfter(now.minusSeconds(86_400)) == true) return 0
+        lastRun = now
+        return repo.purgeEventsBefore(now.minusSeconds(Analytics.RETENTION_DAYS * 86_400))
+    }
+}
+
 /** Server-side product events; never fails the caller. */
 class EventLog(private val repo: AnalyticsRepository, private val clock: Clock) {
     private val log = LoggerFactory.getLogger("EventLog")
@@ -49,6 +60,8 @@ class EventLog(private val repo: AnalyticsRepository, private val clock: Clock) 
 
 object Analytics {
     const val BATCH_MAX = 50
+    /** Usage events are kept about 13 months, then deleted. */
+    const val RETENTION_DAYS = 400L
     const val PROPS_MAX = 12
     const val VALUE_MAX = 100
     private val NAME = Regex("^[a-z][a-z0-9_]{1,39}$")

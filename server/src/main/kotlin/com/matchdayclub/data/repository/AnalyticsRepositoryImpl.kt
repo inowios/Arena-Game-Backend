@@ -10,6 +10,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.time.Instant
 import java.time.LocalDate
@@ -35,6 +36,7 @@ class AnalyticsRepositoryImpl : AnalyticsRepository {
     }
 
     override suspend fun deleteEventsOf(userId: UUID) { dbQuery { AnalyticsEventTable.deleteWhere { AnalyticsEventTable.userId eq userId } } }
+    override suspend fun purgeEventsBefore(before: Instant): Int = dbQuery { AnalyticsEventTable.deleteWhere { AnalyticsEventTable.createdAt less before } }
 
     private fun <T> query(sql: String, read: (java.sql.ResultSet) -> T): T = TransactionManager.current().exec(sql) { rs -> read(rs) }!!
 

@@ -79,5 +79,8 @@ class CupIT {
         assertTrue(Json.encodeToString(view).contains("\"rounds\":4"))
         assertEquals(cups.entry(week, a.id), cups.lastEntryBefore(a.id, week.plusDays(7)))
         assertEquals(0, service.tick(clock.now()))
+        // analytics retention runs on the same database
+        analytics.record(listOf(AnalyticsEvent(null, "old_event", at = Instant.parse("2025-01-01T00:00:00Z")), AnalyticsEvent(null, "new_event", at = clock.now())))
+        assertEquals(1, analytics.purgeEventsBefore(Instant.parse("2025-06-01T00:00:00Z")))
     }
 }

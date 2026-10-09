@@ -180,7 +180,8 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.cup.CupNotifier(get<FcmSender>(), get()) }
     single { com.matchdayclub.domain.usecase.cup.CupService(get(), get(), get(), get(), get(), get(), get(), tx = get(), notifier = get()) }
     single { com.matchdayclub.domain.usecase.cup.CupQueries(get(), get(), get(), get(), get()) }
-    single { com.matchdayclub.core.plugins.SchedulerTick(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.AnalyticsRetention(get(), get()) }
+    single { com.matchdayclub.core.plugins.SchedulerTick(get(), get(), get()) }
     single { GuestLoginUseCase(get(), get(), get()) }
     single { OAuthLoginUseCase(get(), get(), get(), get()) }
     single { RefreshTokenUseCase(get(), get(), get(), get()) }

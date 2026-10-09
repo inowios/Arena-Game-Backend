@@ -19,6 +19,7 @@ class FakeAnalyticsRepository : AnalyticsRepository {
     override suspend fun markActive(userId: UUID, day: LocalDate): Boolean { markCalls++; return days.add(userId to day) }
     override suspend fun record(events: List<AnalyticsEvent>) { this.events += events }
     override suspend fun deleteEventsOf(userId: UUID) { events.removeAll { it.userId == userId } }
+    override suspend fun purgeEventsBefore(before: Instant): Int { val n = events.count { it.at.isBefore(before) }; events.removeAll { it.at.isBefore(before) }; return n }
     override suspend fun cohorts(from: LocalDate, to: LocalDate) = cohortRows.filter { !it.day.isBefore(from) && !it.day.isAfter(to) }
     override suspend fun activeUsers(from: LocalDate, to: LocalDate) = days.filter { !it.second.isBefore(from) && !it.second.isAfter(to) }.map { it.first }.toSet().size
     override suspend fun privateLeagueMembership(from: LocalDate, to: LocalDate) = privateLeague

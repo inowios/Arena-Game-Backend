@@ -25,7 +25,11 @@ object SchedulerStatus {
 }
 
 /** One pass: due league rounds (and their season ends), then cup draws and rounds. Shared by the timer loop and POST /admin/scheduler/run. */
-class SchedulerTick(private val runner: MatchdayRunner, private val cups: com.matchdayclub.domain.usecase.cup.CupService? = null) {
+class SchedulerTick(
+    private val runner: MatchdayRunner,
+    private val cups: com.matchdayclub.domain.usecase.cup.CupService? = null,
+    private val retention: com.matchdayclub.domain.usecase.analytics.AnalyticsRetention? = null,
+) {
     private val mutex = Mutex()
     private val log = LoggerFactory.getLogger("MatchdayScheduler")
 
@@ -48,6 +52,7 @@ class SchedulerTick(private val runner: MatchdayRunner, private val cups: com.ma
             log.error("Cup tick failed", e)
         }
         if (cupMatches > 0) { Metrics.inc("matches_played_total", "kind" to "cup", by = cupMatches.toLong()); log.info("Cup tick: played $cupMatches matches") }
+        retention?.let { r -> runCatching { r.runIfDue() }.onSuccess { if (it > 0) log.info("Analytics retention: $it old events deleted") }.onFailure { e -> log.warn("analytics retention failed", e) } }
         SchedulerStatus.lastMatches = matches; SchedulerStatus.lastCupMatches = cupMatches; SchedulerStatus.lastTickAt = Instant.now()
         matches to cupMatches
     }

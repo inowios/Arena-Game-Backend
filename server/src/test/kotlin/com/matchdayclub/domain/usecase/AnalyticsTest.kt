@@ -87,6 +87,18 @@ class AnalyticsTest {
     }
 
     @Test
+    fun `old events are purged once a day`() = runBlocking<Unit> {
+        val retention = AnalyticsRetention(repo, clock)
+        repo.events += com.matchdayclub.domain.model.AnalyticsEvent(null, "old", at = clock.now().minusSeconds((Analytics.RETENTION_DAYS + 1) * 86_400))
+        repo.events += com.matchdayclub.domain.model.AnalyticsEvent(null, "recent", at = clock.now().minusSeconds(86_400))
+        assertEquals(1, retention.runIfDue())
+        assertEquals(listOf("recent"), repo.events.map { it.name })
+        repo.events += com.matchdayclub.domain.model.AnalyticsEvent(null, "old", at = clock.now().minusSeconds((Analytics.RETENTION_DAYS + 5) * 86_400))
+        assertEquals(0, retention.runIfDue())                        // not again the same day
+        clock.advanceSeconds(86_401); assertEquals(1, retention.runIfDue())
+    }
+
+    @Test
     fun `prometheus exposition`() {
         Metrics.counter("test_things_total", "Things")
         Metrics.inc("test_things_total", "kind" to "a\"b")
