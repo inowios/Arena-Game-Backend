@@ -32,6 +32,7 @@ object ClubTable : BaseTable("clubs") {
     val kit = varchar("kit", 40).nullable()
     val emblemFrame = varchar("emblem_frame", 40).nullable()
     val celebration = varchar("celebration", 40).nullable()
+    val scoutSignedDate = date("scout_signed_date").nullable()
 }
 
 object BuildingTable : BaseTable("buildings") {

@@ -78,6 +78,7 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
         val now = clock.now()
         val next = st.club.academyNextAt
         if (next != null && now.isBefore(next)) throw ConflictException("Next academy graduate in {0}", java.time.Duration.between(now, next))
+        if (athletes.listByClub(st.club.id).count { it.sport == sport } >= com.matchdayclub.domain.rules.Careers.squadMax(sport)) throw ConflictException("The squad is full — release someone first")
         val q = TrainingRules.academyQuality(academy.level)
         val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, sport, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
@@ -100,6 +101,7 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (a.currentFatigue(now) > TrainingRules.MAX_FATIGUE_TO_TRAIN) throw ConflictException("Athlete is too tired")
         val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
         if (a.attribute(attribute) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
+        if (!com.matchdayclub.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
         trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))

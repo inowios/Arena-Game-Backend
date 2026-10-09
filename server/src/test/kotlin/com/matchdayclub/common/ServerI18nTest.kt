@@ -66,7 +66,7 @@ class ServerI18nTest {
             "Bad signature", "Missing signature", "Missing key_id", "Bad signature encoding", "Unknown key_id",
             "App Store authentication failed", "App Store reply without transaction", "Invalid Apple token", "Unknown Apple key",
             "Invalid Google token", "Google token expired", "Google token audience mismatch", "Invalid refresh token", "Refresh token already used",
-            "Refresh token expired or revoked", "User not found",
+            "Refresh token expired or revoked", "User not found", "Bad slot",
         )
         val thrown = Regex("""(?:Validation|Conflict|NotFound|Authorization|Authentication|InsufficientFunds|Upstream)Exception\("([^"$]+)"""")
         val missing = File("src/main/kotlin").walkTopDown().filter { it.extension == "kt" }

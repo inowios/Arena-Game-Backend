@@ -46,6 +46,8 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/club/academy/claim` `{sport?}` | new graduate every 8 h (football, or any open section) |
 | POST | `/api/v1/club/trainings`, `/trainings/{id}/complete`, `/trainings/{id}/speedup` | train one attribute for 1 h; finish now for gold (1 per 10 min) |
 | POST | `/api/v1/club/athletes/{id}/heal`, `/club/medical/speedup` | medical centre; end its cooldown for gold |
+| DELETE | `/api/v1/club/athletes/{id}` | release an athlete (free; the section must still field a lineup) |
+| GET/POST | `/api/v1/club/scouting`, `/club/scouting/{slot}/sign` | daily scouting report (needs an academy): prospect / prime / veteran from the club's sections; one free signing a day |
 | GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics per section (`football` 11+7, `basketball` 5+5, `tennis` 1+1) |
 | GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
 | GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
@@ -89,6 +91,11 @@ Seasons & divisions: 7 divisions (1 Sunday League … 7 Legends League). After r
 final table → prizes by position × division, a `club_seasons` history row per member, trophies (title, promotion), top 2 promoted,
 bottom 2 relegated, `clubs.season_no` + 1 (keys the season pass), and every human is placed in next season's league of their new
 division (season starts the next day; freed bots of that division are reused). Matchday coin rewards grow 25% per division.
+
+Careers: every athlete has a potential (the attribute average training can reach); at season end everyone ages a year —
+young players grow, veterans decline, 34+ may retire (replaced by a youth prospect; retired rows stay for old highlights,
+inbox `RETIREMENTS`). League matchdays move morale (+5 win / +1 draw / −4 loss for starters, −2 for those left out; the
+engine weighs morale ±10%). Squad limits: football 25, basketball 14, tennis 6.
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,

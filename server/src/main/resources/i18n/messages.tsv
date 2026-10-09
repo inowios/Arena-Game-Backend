@@ -132,3 +132,10 @@ push.join_body	{0} joined your league.	{0} se unió a tu liga.	{0} entrou na sua
 # --- account
 Transfer code not found	Transfer code not found	Código de transferencia no encontrado	Código de transferência não encontrado	Код переноса не найден	Код перенесення не знайдено
 This transfer code has expired	This transfer code has expired or was used	Este código de transferencia caducó o ya se usó	Este código de transferência expirou ou já foi usado	Код переноса истёк или уже использован	Код перенесення сплив або вже використаний
+# --- careers
+This athlete has reached their potential	This athlete has reached their potential	Este atleta ya alcanzó su potencial	Este atleta já atingiu seu potencial	Спортсмен достиг своего потенциала	Спортсмен досяг свого потенціалу
+The squad is full — release someone first	The squad is full — release someone first	La plantilla está completa: libera a alguien primero	O elenco está cheio — dispense alguém antes	Состав заполнен — сначала отпустите кого-нибудь	Склад заповнено — спершу відпустіть когось
+The section needs at least {0} athletes	The section needs at least {0} athletes	La sección necesita al menos {0} atletas	A seção precisa de pelo menos {0} atletas	В секции должно остаться не меньше {0} спортсменов	У секції має лишитися щонайменше {0} спортсменів
+You'd have nobody left in this position	You'd have nobody left in this position	No te quedaría nadie en esta posición	Você ficaria sem ninguém nesta posição	На этой позиции никого не останется	На цій позиції нікого не залишиться
+You've already signed a player today — new scouting reports tomorrow	You've already signed a player today — new scouting reports tomorrow	Ya fichaste a un jugador hoy: nuevos informes mañana	Você já contratou um jogador hoje — novos relatórios amanhã	Сегодня вы уже подписали игрока — новые отчёты скаутов завтра	Сьогодні ви вже підписали гравця — нові звіти скаутів завтра
+Unknown offer	Unknown offer	Oferta desconocida	Oferta desconhecida	Неизвестное предложение	Невідома пропозиція

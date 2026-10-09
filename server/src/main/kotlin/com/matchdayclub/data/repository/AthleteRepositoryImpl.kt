@@ -18,10 +18,13 @@ import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import java.util.UUID
 
 class AthleteRepositoryImpl : AthleteRepository {
-    override suspend fun listByClub(clubId: UUID) = dbQuery { AthleteTable.selectAll().where { AthleteTable.clubId eq clubId }.orderBy(AthleteTable.createdAt).map { it.toAthlete() } }
+    override suspend fun listByClub(clubId: UUID) = dbQuery { AthleteTable.selectAll().where { (AthleteTable.clubId eq clubId) and AthleteTable.retiredAt.isNull() }.orderBy(AthleteTable.createdAt).map { it.toAthlete() } }
+    override suspend fun namesByClubs(clubIds: Collection<UUID>): Map<UUID, String> = if (clubIds.isEmpty()) emptyMap() else dbQuery {
+        AthleteTable.select(AthleteTable.id, AthleteTable.name).where { AthleteTable.clubId inList clubIds }.associate { it[AthleteTable.id] to it[AthleteTable.name] }
+    }
     override suspend fun findById(id: UUID) = dbQuery { AthleteTable.selectAll().where { AthleteTable.id eq id }.singleOrNull()?.toAthlete() }
     override suspend fun createAll(athletes: List<Athlete>) {
-        dbQuery { AthleteTable.batchInsert(athletes) { a -> fill(a); this[AthleteTable.id] = a.id; this[AthleteTable.clubId] = a.clubId; this[AthleteTable.sport] = a.sport.name; this[AthleteTable.position] = a.position.name; this[AthleteTable.age] = a.age; this[AthleteTable.rarity] = a.rarity.name; this[AthleteTable.createdAt] = a.createdAt } }
+        dbQuery { AthleteTable.batchInsert(athletes) { a -> fill(a); this[AthleteTable.id] = a.id; this[AthleteTable.clubId] = a.clubId; this[AthleteTable.sport] = a.sport.name; this[AthleteTable.position] = a.position.name; this[AthleteTable.rarity] = a.rarity.name; this[AthleteTable.createdAt] = a.createdAt } }
     }
     override suspend fun update(athlete: Athlete) = dbQuery { AthleteTable.update({ AthleteTable.id eq athlete.id }) { it.fill(athlete) }; athlete }
 
@@ -29,13 +32,14 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.name] = a.name; this[AthleteTable.attack] = a.attack; this[AthleteTable.defense] = a.defense; this[AthleteTable.physical] = a.physical
         this[AthleteTable.technique] = a.technique; this[AthleteTable.mental] = a.mental; this[AthleteTable.fatigue] = a.fatigue; this[AthleteTable.fatigueAt] = a.fatigueAt
         this[AthleteTable.injuredUntil] = a.injuredUntil; this[AthleteTable.morale] = a.morale; this[AthleteTable.updatedAt] = a.updatedAt
+        this[AthleteTable.age] = a.age; this[AthleteTable.potential] = a.potential; this[AthleteTable.retiredAt] = a.retiredAt
     }
 
     private fun ResultRow.toAthlete() = Athlete(
         this[AthleteTable.id], this[AthleteTable.clubId], this[AthleteTable.name], Sport.valueOf(this[AthleteTable.sport]), Position.valueOf(this[AthleteTable.position]),
         this[AthleteTable.attack], this[AthleteTable.defense], this[AthleteTable.physical], this[AthleteTable.technique], this[AthleteTable.mental],
         this[AthleteTable.age], Rarity.valueOf(this[AthleteTable.rarity]), this[AthleteTable.fatigue], this[AthleteTable.fatigueAt], this[AthleteTable.injuredUntil], this[AthleteTable.morale],
-        this[AthleteTable.createdAt], this[AthleteTable.updatedAt],
+        this[AthleteTable.createdAt], this[AthleteTable.updatedAt], this[AthleteTable.potential], this[AthleteTable.retiredAt],
     )
 }
 

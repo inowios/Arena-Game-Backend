@@ -196,6 +196,11 @@ class MatchdayRunner(
             val injured = result.events.filter { it.type == EventType.INJURY && it.team == teamId }.mapNotNull { it.athleteId }.toSet()
             for (a in squad) {
                 val id = a.id.toString()
+                // morale: playing time and results (league matchdays, human clubs)
+                if (kind == FixtureKind.LEAGUE && !club.isBot && a.sport.name == p.section.sport) {
+                    val m = updates[a.id] ?: a
+                    updates[a.id] = m.copy(morale = com.matchdayclub.domain.rules.Careers.moraleAfter(m.morale, id in starters, mine), updatedAt = now)
+                }
                 if (id !in starters && id !in injured) continue
                 var n = updates[a.id] ?: a
                 n = n.copy(fatigue = (n.currentFatigue(now) + fatigue).coerceAtMost(100), fatigueAt = now, updatedAt = now)

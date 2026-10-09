@@ -61,7 +61,7 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
     }
 
     suspend fun athleteNames(f: Fixture): Map<String, String> =
-        (athletes.listByClub(f.homeClubId) + athletes.listByClub(f.awayClubId)).associate { it.id.toString() to it.name }
+        athletes.namesByClubs(listOf(f.homeClubId, f.awayClubId)).mapKeys { it.key.toString() }
 
     private suspend fun clubsOf(list: List<Fixture>) = clubs.findByIds(list.flatMap { listOf(it.homeClubId, it.awayClubId) }.toSet()).associateBy { it.id }
 }

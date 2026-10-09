@@ -77,7 +77,10 @@ val appModule = module {
     single<FixtureRepository> { FixtureRepositoryImpl() }
     single { BotService(get(), get(), get(), get(), get()) }
     single<SeasonRepository> { SeasonRepositoryImpl() }
-    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get()) }
+    single { CareerService(get(), get(), get()) }
+    single { ReleaseAthleteUseCase(get(), get(), get(), get(), tx = get()) }
+    single { ScoutingUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
     single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }
     single { LineupService(get(), get()) }

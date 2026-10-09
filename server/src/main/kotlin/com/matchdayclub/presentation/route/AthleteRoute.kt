@@ -27,6 +27,8 @@ fun Route.athleteRoutes() {
     val heal: HealAthleteUseCase by inject()
     val speedUpTraining: SpeedUpTrainingUseCase by inject()
     val speedUpMedical: SpeedUpMedicalUseCase by inject()
+    val release: ReleaseAthleteUseCase by inject()
+    val scouting: ScoutingUseCases by inject()
     val getLineup: GetLineupUseCase by inject()
     val setLineup: SetLineupUseCase by inject()
     val clock: Clock by inject()
@@ -53,6 +55,15 @@ fun Route.athleteRoutes() {
             }
             post("/athletes/{id}/heal") { call.respond(heal(call.userId(), call.uuid("id")).toDto(clock.now()).toSuccessResponse()) }
             post("/medical/speedup") { call.respond(speedUpMedical(call.userId()).toDto().toSuccessResponse()) }
+            delete("/athletes/{id}") { release(call.userId(), call.uuid("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
+            get("/scouting") {
+                val r = scouting.report(call.userId()); val now = clock.now()
+                call.respond(ScoutReportDto(r.offers.map { ScoutOfferDto(it.slot, it.kind, it.athlete.toDto(now)) }, r.signedToday, r.nextAt.toString()).toSuccessResponse())
+            }
+            post("/scouting/{slot}/sign") {
+                val slot = call.parameters["slot"]?.toIntOrNull() ?: throw ValidationException("Bad slot")
+                call.respond(HttpStatusCode.Created, scouting.sign(call.userId(), slot).toDto(clock.now()).toSuccessResponse(201))
+            }
             route("/lineup/{sport}") {
                 get {
                     val (lineup, squad) = getLineup(call.userId(), parseEnum<Sport>(call.parameters["sport"]!!, "sport")); val now = clock.now()

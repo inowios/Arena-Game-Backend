@@ -28,7 +28,7 @@ object AthleteFactory {
     fun positionsFor(sport: Sport): List<Position> = positionPool.getValue(sport).distinct()
 
     /** Deterministic athlete from a seed. Quality is the centre of attributes; the role attribute gets +10, the opposite −8. */
-    fun create(seed: Long, clubId: UUID, sport: Sport, qualityMin: Int, qualityMax: Int, position: Position? = null, now: Instant): Athlete {
+    fun create(seed: Long, clubId: UUID, sport: Sport, qualityMin: Int, qualityMax: Int, position: Position? = null, now: Instant, age: Int? = null): Athlete {
         val r = Random(seed)
         val pos = position ?: positionPool.getValue(sport).random(r)
         val q = r.nextInt(qualityMin, qualityMax + 1)
@@ -40,7 +40,11 @@ object AthleteFactory {
         }
         val name = "${first.random(r)} ${last.random(r)}"
         val rarity = when { q >= 70 -> Rarity.ELITE; q >= 58 -> Rarity.RARE; else -> Rarity.COMMON }
-        return Athlete(UUID(seed, r.nextLong()), clubId, name, sport, pos, att, def, attr(b?.get(2) ?: 0), attr(b?.get(3) ?: 0), attr(b?.get(4) ?: 0), r.nextInt(17, 22), rarity, 0, now, null, 50, now, now)
+        val a = Athlete(UUID(seed, r.nextLong()), clubId, name, sport, pos, att, def, attr(b?.get(2) ?: 0), attr(b?.get(3) ?: 0), attr(b?.get(4) ?: 0), r.nextInt(17, 22), rarity, 0, now, null, 50, now, now)
+        // separate stream so potential/age overrides don't change the attributes above (balance, tests)
+        val pr = Random(seed xor 0x7A11_5EEDL)
+        val finalAge = age ?: a.age
+        return a.copy(age = finalAge, potential = Careers.potentialFor(finalAge, a.attributeAverage, pr))
     }
 
     /** Squad shape per sport: football 14 (2 GK, 5 DEF, 5 MID, 2 FWD), basketball 8 (3 G, 3 F, 2 C), tennis 3. */

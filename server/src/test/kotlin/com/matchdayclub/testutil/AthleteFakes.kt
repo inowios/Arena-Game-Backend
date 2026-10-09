@@ -6,7 +6,8 @@ import java.util.UUID
 
 class FakeAthleteRepository : AthleteRepository {
     val rows = linkedMapOf<UUID, Athlete>()
-    override suspend fun listByClub(clubId: UUID) = rows.values.filter { it.clubId == clubId }
+    override suspend fun listByClub(clubId: UUID) = rows.values.filter { it.clubId == clubId && it.retiredAt == null }
+    override suspend fun namesByClubs(clubIds: Collection<UUID>) = rows.values.filter { it.clubId in clubIds }.associate { it.id to it.name }
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun createAll(athletes: List<Athlete>) { athletes.forEach { rows[it.id] = it } }
     override suspend fun update(athlete: Athlete): Athlete { rows[athlete.id] = athlete; return athlete }

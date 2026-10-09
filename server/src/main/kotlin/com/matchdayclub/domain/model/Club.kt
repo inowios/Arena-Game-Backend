@@ -38,6 +38,8 @@ data class Club(
     val kit: String? = null,
     val emblemFrame: String? = null,
     val celebration: String? = null,
+    /** Club-local day of the last scouting signing (one a day). */
+    val scoutSignedDate: java.time.LocalDate? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

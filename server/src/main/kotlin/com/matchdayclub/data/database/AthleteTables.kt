@@ -15,6 +15,8 @@ object AthleteTable : BaseTable("athletes") {
     val fatigueAt = timestamp("fatigue_at")
     val injuredUntil = timestamp("injured_until").nullable()
     val morale = integer("morale")
+    val potential = integer("potential")
+    val retiredAt = timestamp("retired_at").nullable()
 }
 
 object TrainingTable : Table("trainings") {

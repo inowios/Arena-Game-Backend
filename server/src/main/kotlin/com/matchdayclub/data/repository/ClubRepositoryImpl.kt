@@ -36,6 +36,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.builderSlots] = c.builderSlots
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
+        this[ClubTable.scoutSignedDate] = c.scoutSignedDate
     }
 
     private fun ResultRow.toClub() = Club(
@@ -45,6 +46,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
         this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
         this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
+        this[ClubTable.scoutSignedDate],
     )
 }
 

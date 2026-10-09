@@ -25,8 +25,13 @@ data class Athlete(
     val morale: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Ceiling of the attribute average that training can reach (careers). */
+    val potential: Int = 60,
+    /** Set when the athlete retired or was released; the row stays for old match highlights. */
+    val retiredAt: Instant? = null,
 ) {
     val attributes get() = Attributes(attack, defense, physical, technique, mental)
+    val attributeAverage: Int get() = (attack + defense + physical + technique + mental) / 5
     fun attribute(kind: AttributeKind) = when (kind) { AttributeKind.ATTACK -> attack; AttributeKind.DEFENSE -> defense; AttributeKind.PHYSICAL -> physical; AttributeKind.TECHNIQUE -> technique; AttributeKind.MENTAL -> mental }
     fun withAttribute(kind: AttributeKind, v: Int) = when (kind) {
         AttributeKind.ATTACK -> copy(attack = v); AttributeKind.DEFENSE -> copy(defense = v); AttributeKind.PHYSICAL -> copy(physical = v); AttributeKind.TECHNIQUE -> copy(technique = v); AttributeKind.MENTAL -> copy(mental = v)

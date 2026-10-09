@@ -26,6 +26,7 @@ class SeasonService(
     private val clock: Clock,
     private val push: FcmSender? = null,
     private val inbox: com.matchdayclub.domain.usecase.account.InboxService? = null,
+    private val careers: com.matchdayclub.domain.usecase.athlete.CareerService? = null,
 ) : SeasonCloser {
 
     override suspend fun close(league: League, now: Instant): SeasonClose {
@@ -53,6 +54,11 @@ class SeasonService(
                 division = newDivision, seasonNo = club.seasonNo + 1, coins = club.coins + prize.coins, gold = club.gold + prize.gold,
                 reputation = rep, level = maxOf(club.level, ClubLevels.levelFor(rep)), tzBucket = LeagueRules.tzBucket(club.timezone, now), updatedAt = now,
             ))
+            careers?.let { c ->
+                val change = c.seasonEnd(updated, record.seasonNo)
+                if (change.retired.isNotEmpty()) inbox?.add(club.id, "RETIREMENTS", mapOf("names" to change.retired.joinToString(", ") { it.name }, "count" to change.retired.size.toString(),
+                    "youth" to change.youth.joinToString(", ") { it.name }))
+            }
             humans += updated to record
         }
         for ((club, _) in humans) leagueService.ensurePublicMembership(club, now)
