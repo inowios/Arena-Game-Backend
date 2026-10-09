@@ -65,7 +65,7 @@ club fields; a section only one club has is a walkover (3:0 / 20:0 / 2:0). Table
 club can take 9 a matchday. `GET /club` returns `sections`; fixtures carry `homePoints/awayPoints` and per-section scores; `GET /matches/{id}`
 returns `sections[]` with each sport's full result (`result` stays the football match).
 
-Seasons & divisions: 7 divisions (1 Sunday League … 7 Champions League). After round 28 the league is closed (`status=FINISHED`):
+Seasons & divisions: 7 divisions (1 Sunday League … 7 Legends League). After round 28 the league is closed (`status=FINISHED`):
 final table → prizes by position × division, a `club_seasons` history row per member, trophies (title, promotion), top 2 promoted,
 bottom 2 relegated, `clubs.season_no` + 1 (keys the season pass), and every human is placed in next season's league of their new
 division (season starts the next day; freed bots of that division are reused). Matchday coin rewards grow 25% per division.

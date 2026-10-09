@@ -57,14 +57,14 @@ object Schedule {
 enum class Outcome { WIN, DRAW, LOSS }
 
 /**
- * Seven divisions, 1 = entry ("Sunday League") … 7 = top ("Champions League"). After 28 rounds the top two of each
+ * Seven divisions, 1 = entry ("Sunday League") … 7 = top ("Legends League"). After 28 rounds the top two of each
  * 8-club league go up, the bottom two go down; prizes scale with position and division.
  */
 object Divisions {
     const val MAX = 7
     const val PROMOTED = 2
     const val RELEGATED = 2
-    val NAMES = listOf("Sunday League", "County League", "Regional League", "National League", "Pro League", "Premier League", "Champions League")
+    val NAMES = listOf("Sunday League", "County League", "Regional League", "National League", "Pro League", "Elite League", "Legends League")
     fun name(division: Int) = NAMES[(division - 1).coerceIn(0, MAX - 1)]
 
     fun movement(position: Int, size: Int, division: Int): com.matchdayclub.domain.model.Movement = when {
