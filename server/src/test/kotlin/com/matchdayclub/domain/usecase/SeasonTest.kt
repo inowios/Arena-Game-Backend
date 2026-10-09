@@ -100,3 +100,22 @@ class SeasonTest {
         assertEquals(2, pass.view(c.userId).seasonNumber)
     }
 }
+
+class SeasonPushTextTest {
+    @org.junit.jupiter.api.Test
+    fun `season push is written in the player's language`() {
+        val rec = com.matchdayclub.domain.model.ClubSeason(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), 2, 1, 1, 28, 20, 4, 4, 60, 20, 64,
+            com.matchdayclub.domain.model.Movement.PROMOTED, 2, 5_000, 20, 50, java.time.Instant.EPOCH)
+        val service = com.matchdayclub.domain.usecase.league.SeasonService(FakeLeagueRepositoryForText, com.matchdayclub.testutil.FakeFixtureRepository(), com.matchdayclub.testutil.FakeClubRepository(),
+            com.matchdayclub.testutil.FakeSeasonRepository(), com.matchdayclub.domain.usecase.league.LeagueService(FakeLeagueRepositoryForText, com.matchdayclub.testutil.FakeFixtureRepository(), com.matchdayclub.testutil.FakeClubRepository(),
+                com.matchdayclub.domain.usecase.league.BotService(com.matchdayclub.testutil.FakeUserRepository(), com.matchdayclub.testutil.FakeClubRepository(), com.matchdayclub.testutil.FakeAthleteRepository(), com.matchdayclub.testutil.FixedClock()), com.matchdayclub.testutil.FixedClock()),
+            com.matchdayclub.testutil.FixedClock())
+        val (ruTitle, ruBody) = service.message(rec, "ru")
+        kotlin.test.assertEquals("Сезон окончен: вы на 1-м месте", ruTitle)
+        kotlin.test.assertTrue(ruBody.contains("Районная лига") && ruBody.contains("5000"), ruBody)
+        val (enTitle, enBody) = service.message(rec, "en")
+        kotlin.test.assertEquals("Season over: you finished #1", enTitle); kotlin.test.assertTrue(enBody.startsWith("Promoted to the County League!"), enBody)
+    }
+}
+
+private val FakeLeagueRepositoryForText = com.matchdayclub.testutil.FakeLeagueRepository()

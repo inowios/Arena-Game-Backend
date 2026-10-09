@@ -15,4 +15,6 @@ data class User(
     val isActive: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** en / es / pt / ru / uk; null until the app reported it. */
+    val locale: String? = null,
 )

@@ -21,10 +21,11 @@ class ApiIT {
     private fun JsonElement.o() = jsonObject
     private val JsonElement.data get() = jsonObject["data"]!!
 
-    private suspend fun ApplicationTestBuilder.call(method: HttpMethod, path: String, token: String? = null, body: String? = null, expect: Int = 200): JsonElement {
+    private suspend fun ApplicationTestBuilder.call(method: HttpMethod, path: String, token: String? = null, body: String? = null, expect: Int = 200, lang: String? = null): JsonElement {
         val resp = client.request("/api/v1$path") {
             this.method = method
             token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+            lang?.let { header(HttpHeaders.AcceptLanguage, it) }
             if (body != null) { contentType(ContentType.Application.Json); setBody(body) }
         }
         val text = resp.bodyAsText()
@@ -122,7 +123,10 @@ class ApiIT {
         application { module() }
         val t = guestWithClub("it-device-0201", "Cosmo FC")
         assertTrue(call(HttpMethod.Get, "/catalog/cosmetics").data.jsonArray.any { it.o()["id"]!!.jsonPrimitive.content == "kit_stripes" })
-        call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t, expect = 402)                       // 60 gold, 50 owned
+        val poor = call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t, expect = 402, lang = "ru-RU,ru;q=0.9")   // 60 gold, 50 owned
+        assertEquals("Недостаточно золота", poor.o()["errors"]!!.jsonArray[0].jsonPrimitive.content)
+        val me = call(HttpMethod.Patch, "/me", t, """{"locale":"uk-UA"}""").data.o()
+        assertEquals("uk", me["user"]!!.o()["locale"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/purchases/verify", t, """{"store":"DEV","productId":"gold_small","token":"dev:it-cos"}""")
         val inv = call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t).data.o()
         assertTrue(inv["owned"]!!.jsonArray.any { it.jsonPrimitive.content == "kit_stripes" })

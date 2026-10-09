@@ -7,4 +7,5 @@ object UserTable : BaseTable("users") {
     val displayName = varchar("display_name", 80).nullable()
     val avatarUrl = text("avatar_url").nullable()
     val isActive = bool("is_active")
+    val locale = varchar("locale", 8).nullable()
 }

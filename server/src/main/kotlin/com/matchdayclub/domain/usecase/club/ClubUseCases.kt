@@ -97,10 +97,10 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
             cosmetics?.requireOwned(st.club.id, variant, CosmeticKind.DECOR) ?: throw ValidationException("Decor looks are not available")
         }
         val spec = BuildingCatalog.spec(type)
-        if (!spec.enabled) throw ValidationException("$type is not available yet")
+        if (!spec.enabled) throw ValidationException("This building is not available yet")
         val lvl = spec.levels[0]
-        if (st.club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level ${lvl.requiredClubLevel}")
-        if (st.buildings.count { it.type == type } >= spec.maxPerClub) throw ConflictException("Maximum number of $type reached")
+        if (st.club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level {0}", lvl.requiredClubLevel)
+        if (st.buildings.count { it.type == type } >= spec.maxPerClub) throw ConflictException("You already have the maximum number of these buildings")
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(type, x, y, rotation)
         if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
@@ -123,7 +123,7 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
         val next = b.level + 1
         if (!BuildingCatalog.hasLevel(b.type, next)) throw ValidationException("Already at max level")
         val lvl = BuildingCatalog.level(b.type, next)
-        if (club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level ${lvl.requiredClubLevel}")
+        if (club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level {0}", lvl.requiredClubLevel)
         service.requireFreeBuilder(st)
         service.charge(club, coins = lvl.cost)
         val now = clock.now()

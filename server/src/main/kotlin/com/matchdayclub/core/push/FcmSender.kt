@@ -14,7 +14,7 @@ import java.util.Base64
 import java.util.UUID
 
 /** FCM HTTP v1 with a service-account JWT (no Firebase SDK). No-op when not configured. */
-class FcmSender(private val client: HttpClient, private val tokens: PushTokenRepository, serviceAccountJson: String?, private val projectIdOverride: String?) {
+class FcmSender(private val client: HttpClient, private val tokens: PushTokenRepository, serviceAccountJson: String?, private val projectIdOverride: String?, private val users: com.matchdayclub.domain.repository.UserRepository? = null) {
     private val log = LoggerFactory.getLogger("FcmSender")
     private val account: JsonObject? = serviceAccountJson?.takeIf { it.isNotBlank() }?.let { runCatching { Json.parseToJsonElement(it).jsonObject }.getOrNull() }
     private val projectId get() = projectIdOverride?.takeIf { it.isNotBlank() } ?: account?.get("project_id")?.jsonPrimitive?.content
@@ -38,6 +38,16 @@ class FcmSender(private val client: HttpClient, private val tokens: PushTokenRep
         val token = json["access_token"]!!.jsonPrimitive.content
         cached = (System.currentTimeMillis() + json["expires_in"]!!.jsonPrimitive.long * 1000) to token
         return token
+    }
+
+    /** Sends each user the text in their language ([text] gets "en", "ru"…; users without a stored locale get English). */
+    suspend fun sendLocalized(userIds: Collection<UUID>, data: Map<String, String> = emptyMap(), text: (String) -> Pair<String, String>) {
+        if (userIds.isEmpty()) return
+        val locales = runCatching { users?.locales(userIds) }.getOrNull() ?: emptyMap()
+        for ((lang, ids) in userIds.groupBy { com.matchdayclub.common.i18n.ServerI18n.normalize(locales[it]) }) {
+            val (title, body) = text(lang)
+            sendToUsers(ids, title, body, data)
+        }
     }
 
     suspend fun sendToUsers(userIds: Collection<UUID>, title: String, body: String, data: Map<String, String> = emptyMap()) {

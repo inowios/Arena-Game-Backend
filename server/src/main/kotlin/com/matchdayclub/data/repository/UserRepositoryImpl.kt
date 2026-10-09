@@ -20,7 +20,7 @@ class UserRepositoryImpl : UserRepository {
     override suspend fun create(user: User): User = dbQuery {
         UserTable.insert {
             it[id] = user.id; it[authProvider] = user.authProvider.name; it[providerId] = user.providerId; it[email] = user.email
-            it[displayName] = user.displayName; it[avatarUrl] = user.avatarUrl; it[isActive] = user.isActive
+            it[displayName] = user.displayName; it[avatarUrl] = user.avatarUrl; it[isActive] = user.isActive; it[locale] = user.locale
             it[createdAt] = user.createdAt; it[updatedAt] = user.updatedAt
         }
         user
@@ -29,7 +29,7 @@ class UserRepositoryImpl : UserRepository {
     override suspend fun update(user: User): User = dbQuery {
         UserTable.update({ UserTable.id eq user.id }) {
             it[authProvider] = user.authProvider.name; it[providerId] = user.providerId; it[email] = user.email
-            it[displayName] = user.displayName; it[avatarUrl] = user.avatarUrl; it[isActive] = user.isActive; it[updatedAt] = user.updatedAt
+            it[displayName] = user.displayName; it[avatarUrl] = user.avatarUrl; it[isActive] = user.isActive; it[locale] = user.locale; it[updatedAt] = user.updatedAt
         }
         user
     }
@@ -37,6 +37,10 @@ class UserRepositoryImpl : UserRepository {
     private fun ResultRow.toUser() = User(
         id = this[UserTable.id], authProvider = AuthProvider.valueOf(this[UserTable.authProvider]), providerId = this[UserTable.providerId],
         email = this[UserTable.email], displayName = this[UserTable.displayName], avatarUrl = this[UserTable.avatarUrl],
-        isActive = this[UserTable.isActive], createdAt = this[UserTable.createdAt], updatedAt = this[UserTable.updatedAt],
+        isActive = this[UserTable.isActive], createdAt = this[UserTable.createdAt], updatedAt = this[UserTable.updatedAt], locale = this[UserTable.locale],
     )
+
+    override suspend fun locales(ids: Collection<UUID>): Map<UUID, String?> = if (ids.isEmpty()) emptyMap() else dbQuery {
+        UserTable.select(UserTable.id, UserTable.locale).where { UserTable.id inList ids }.associate { it[UserTable.id] to it[UserTable.locale] }
+    }
 }

@@ -91,7 +91,7 @@ class ChatService(
         val me = service.lockedClubOf(userId)
         memberLeague(me, leagueId)
         val body = text.trim().replace(Regex("\\s+"), " ")
-        if (body.isEmpty() || body.length > MAX_LENGTH) throw ValidationException("Message must be 1..$MAX_LENGTH characters")
+        if (body.isEmpty() || body.length > MAX_LENGTH) throw ValidationException("A message must be 1..{0} characters", MAX_LENGTH)
         val now = clock.now()
         chat.lastByClub(me.id)?.let { if (now.epochSecond - it.createdAt.epochSecond < MIN_INTERVAL_SECONDS) throw ConflictException("Slow down") }
         if (chat.countByClubSince(me.id, now.minusSeconds(BURST_WINDOW_SECONDS)) >= BURST_MAX) throw ConflictException("Too many messages, try again in a few minutes")
@@ -226,7 +226,7 @@ class ChallengeUseCases(
     suspend fun create(userId: UUID): Challenge = tx {
         val me = service.lockedClubOf(userId)
         val now = clock.now()
-        if (social.openChallengesOf(me.id, now).size >= MAX_OPEN) throw ConflictException("You already have $MAX_OPEN open challenges")
+        if (social.openChallengesOf(me.id, now).size >= MAX_OPEN) throw ConflictException("You already have {0} open challenges", MAX_OPEN)
         var code: String; var attempt = 0
         do { code = (1..8).map { ALPHABET[Random.nextInt(ALPHABET.length)] }.joinToString(""); attempt++ } while (social.challengeByCode(code) != null && attempt < 10)
         social.createChallenge(Challenge(UUID.randomUUID(), code, me.id, null, null, ChallengeStatus.OPEN, now.plusSeconds(TTL_SECONDS), now))
@@ -257,8 +257,10 @@ class ChallengeUseCases(
         val (me, played) = result
         push?.let { p ->
             runCatching {
-                p.sendToUsers(listOf(view.challenger.userId), "Challenge accepted!", "${me.name} took your challenge: ${played.fixture.homeScore}–${played.fixture.awayScore}. Open the highlights.",
-                    mapOf("type" to "CHALLENGE", "fixtureId" to played.fixture.id.toString()))
+                p.sendLocalized(listOf(view.challenger.userId), mapOf("type" to "CHALLENGE", "fixtureId" to played.fixture.id.toString())) { lang ->
+                    com.matchdayclub.common.i18n.ServerI18n.t("push.challenge_title", lang) to
+                        com.matchdayclub.common.i18n.ServerI18n.t("push.challenge_body", lang, me.name, played.fixture.homeScore, played.fixture.awayScore)
+                }
             }
         }
         return MatchView(played.fixture, played.result, mapOf(view.challenger.id to view.challenger, me.id to me), queries.athleteNames(played.fixture))
@@ -276,6 +278,12 @@ class InviteTracker(private val social: SocialRepository, private val clubs: Clu
         val fresh = social.recordInvite(Invite(UUID.randomUUID(), inviter, joiner.id, InviteKind.LEAGUE, league.code ?: "", joiner.createdAt.isAfter(now.minusSeconds(2 * 86_400)), now))
         if (fresh) progress?.record(inviter, com.matchdayclub.domain.rules.ProgressEvent.INVITE_JOINED)
         val owner = clubs.findById(inviter) ?: return
-        push?.let { runCatching { it.sendToUsers(listOf(owner.userId), "New rival in ${league.name}", "${joiner.name} joined your league.", mapOf("type" to "LEAGUE_JOIN", "leagueId" to league.id.toString())) } }
+        push?.let {
+            runCatching {
+                it.sendLocalized(listOf(owner.userId), mapOf("type" to "LEAGUE_JOIN", "leagueId" to league.id.toString())) { lang ->
+                    com.matchdayclub.common.i18n.ServerI18n.t("push.join_title", lang, league.name) to com.matchdayclub.common.i18n.ServerI18n.t("push.join_body", lang, joiner.name)
+                }
+            }
+        }
     }
 }

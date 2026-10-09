@@ -61,16 +61,19 @@ class SeasonService(
 
     private suspend fun notify(club: Club, rec: ClubSeason) {
         val p = push ?: return
-        val title = "Season over: ${ordinal(rec.position)} place"
-        val body = when (rec.movement) {
-            Movement.PROMOTED -> "Promoted to ${Divisions.name(rec.newDivision)}! Prize: ${rec.prizeCoins} coins, ${rec.prizeGold} gold."
-            Movement.RELEGATED -> "Relegated to ${Divisions.name(rec.newDivision)}. Prize: ${rec.prizeCoins} coins. Next season starts tomorrow."
-            Movement.STAYED -> "You stay in ${Divisions.name(rec.newDivision)}. Prize: ${rec.prizeCoins} coins, ${rec.prizeGold} gold."
-        }
-        p.sendToUsers(listOf(club.userId), title, body, mapOf("type" to "SEASON_END", "seasonNo" to rec.seasonNo.toString()))
+        p.sendLocalized(listOf(club.userId), mapOf("type" to "SEASON_END", "seasonNo" to rec.seasonNo.toString())) { lang -> message(rec, lang) }
     }
 
-    private fun ordinal(n: Int) = n.toString() + when { n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
+    /** Season-end push text in [lang]. */
+    fun message(rec: ClubSeason, lang: String): Pair<String, String> {
+        val division = com.matchdayclub.common.i18n.Named("division.${rec.newDivision}")
+        val body = when (rec.movement) {
+            Movement.PROMOTED -> com.matchdayclub.common.i18n.ServerI18n.t("push.season_promoted", lang, division, rec.prizeCoins, rec.prizeGold)
+            Movement.RELEGATED -> com.matchdayclub.common.i18n.ServerI18n.t("push.season_relegated", lang, division, rec.prizeCoins)
+            Movement.STAYED -> com.matchdayclub.common.i18n.ServerI18n.t("push.season_stayed", lang, division, rec.prizeCoins, rec.prizeGold)
+        }
+        return com.matchdayclub.common.i18n.ServerI18n.t("push.season_title", lang, rec.position) to body
+    }
 }
 
 data class ClubHistory(val seasons: List<ClubSeason>, val trophies: List<Trophy>)

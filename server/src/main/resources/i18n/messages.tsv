@@ -1,0 +1,131 @@
+# Server texts: key (English template for errors), en, es, pt, ru, uk. {0}, {1}… = arguments. Tab separated.
+# --- generic
+Service temporarily unavailable. Try again later.	Service temporarily unavailable. Try again later.	Servicio no disponible temporalmente. Inténtalo más tarde.	Serviço temporariamente indisponível. Tente mais tarde.	Сервис временно недоступен. Попробуйте позже.	Сервіс тимчасово недоступний. Спробуйте пізніше.
+Something went wrong. Try again.	Something went wrong. Try again.	Algo salió mal. Inténtalo de nuevo.	Algo deu errado. Tente de novo.	Что-то пошло не так. Попробуйте ещё раз.	Щось пішло не так. Спробуйте ще раз.
+Access denied	Access denied	Acceso denegado	Acesso negado	Доступ запрещён	Доступ заборонено
+Account deactivated	Account deactivated	Cuenta desactivada	Conta desativada	Аккаунт отключён	Акаунт вимкнено
+Not authenticated	Please sign in again	Vuelve a iniciar sesión	Entre novamente	Войдите снова	Увійдіть знову
+# --- club & buildings
+Club not found	Club not found	Club no encontrado	Clube não encontrado	Клуб не найден	Клуб не знайдено
+Club already exists	You already have a club	Ya tienes un club	Você já tem um clube	У вас уже есть клуб	У вас уже є клуб
+Club name must be 3..24 characters	The club name must be 3–24 characters	El nombre del club debe tener entre 3 y 24 caracteres	O nome do clube deve ter de 3 a 24 caracteres	Название клуба — от 3 до 24 символов	Назва клубу — від 3 до 24 символів
+This building is not available yet	This building is not available yet	Este edificio aún no está disponible	Esta construção ainda não está disponível	Эта постройка пока недоступна	Ця будівля поки недоступна
+Requires club level {0}	Requires club level {0}	Requiere nivel de club {0}	Requer nível de clube {0}	Нужен уровень клуба {0}	Потрібен рівень клубу {0}
+You already have the maximum number of these buildings	You already have the maximum number of these buildings	Ya tienes el máximo de estos edificios	Você já tem o máximo dessas construções	У вас уже максимум таких построек	У вас уже максимум таких будівель
+Outside the club grid	That spot is outside your grounds	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами территории	Це місце поза територією
+Overlaps another building	It overlaps another building	Se superpone con otro edificio	Sobrepõe outra construção	Мешает другая постройка	Заважає інша будівля
+All builders are busy	All builders are busy	Todos los constructores están ocupados	Todos os construtores estão ocupados	Все строители заняты	Усі будівельники зайняті
+All builders already hired	You already have every builder	Ya tienes todos los constructores	Você já tem todos os construtores	Все строители уже наняты	Усіх будівельників уже найнято
+Building not found	Building not found	Edificio no encontrado	Construção não encontrada	Постройка не найдена	Будівлю не знайдено
+Building is under construction	The building is under construction	El edificio está en obras	A construção está em obras	Постройка строится	Будівля будується
+Already at max level	Already at the maximum level	Ya está al nivel máximo	Já está no nível máximo	Уже максимальный уровень	Уже максимальний рівень
+This building has no income	This building has no income	Este edificio no genera ingresos	Esta construção não gera renda	Эта постройка не приносит доход	Ця будівля не приносить дохід
+Only decor can be removed	Only decorations can be removed	Solo se puede quitar la decoración	Só a decoração pode ser removida	Убрать можно только декор	Прибрати можна лише декор
+Not enough coins	Not enough coins	No tienes suficientes monedas	Moedas insuficientes	Недостаточно монет	Недостатньо монет
+Not enough gold	Not enough gold	No tienes suficiente oro	Ouro insuficiente	Недостаточно золота	Недостатньо золота
+Nothing to speed up	Nothing to speed up	No hay nada que acelerar	Nada para acelerar	Нечего ускорять	Нічого прискорювати
+Free speed-up only for timers under 30 minutes	The free speed-up works for timers under 30 minutes	La aceleración gratis es para temporizadores de menos de 30 minutos	A aceleração grátis vale para timers de menos de 30 minutos	Бесплатное ускорение — только для таймеров до 30 минут	Безкоштовне прискорення — лише для таймерів до 30 хвилин
+Free speed-up already used today	You've used today's free speed-up	Ya usaste la aceleración gratis de hoy	Você já usou a aceleração grátis de hoje	Бесплатное ускорение на сегодня уже использовано	Безкоштовне прискорення на сьогодні вже використано
+Double income is on cooldown	Double income isn't available again yet	El doble de ingresos aún no está disponible	A renda dobrada ainda não está disponível	Двойной доход пока недоступен	Подвійний дохід поки недоступний
+Decor looks are chosen per decoration	Decor looks are chosen per decoration	El estilo de la decoración se elige en cada decoración	O visual da decoração é escolhido em cada decoração	Вид декора выбирается для каждого украшения	Вигляд декору обирається для кожної прикраси
+Decor looks are not available	Decor looks are not available	Los estilos de decoración no están disponibles	Os visuais de decoração não estão disponíveis	Стили декора недоступны	Стилі декору недоступні
+Only decorations have looks	Only decorations have looks	Solo las decoraciones tienen estilos	Só decorações têm visuais	Вид меняется только у декора	Вигляд змінюється лише в декору
+Emblem too large	The emblem is too large	El escudo es demasiado grande	O escudo é grande demais	Эмблема слишком большая	Емблема завелика
+# --- athletes & lineups
+Athlete not found	Athlete not found	Atleta no encontrado	Atleta não encontrado	Спортсмен не найден	Спортсмена не знайдено
+Build an academy first	Build an academy first	Primero construye una academia	Construa uma academia primeiro	Сначала постройте академию	Спершу збудуйте академію
+Build a training centre first	Build a training centre first	Primero construye un centro de entrenamiento	Construa um centro de treinamento primeiro	Сначала постройте тренировочный центр	Спершу збудуйте тренувальний центр
+Build a medical centre first	Build a medical centre first	Primero construye un centro médico	Construa um centro médico primeiro	Сначала постройте медцентр	Спершу збудуйте медцентр
+Build the venue for {0} first	Build the {0} venue first	Primero construye la instalación de {0}	Construa primeiro a instalação de {0}	Сначала постройте площадку: {0}	Спершу збудуйте майданчик: {0}
+Next academy graduate in {0}	Next academy graduate in {0}	Próximo canterano en {0}	Próximo formado da base em {0}	Следующий выпускник академии через {0}	Наступний випускник академії через {0}
+All training slots are busy	All training slots are busy	Todas las plazas de entrenamiento están ocupadas	Todas as vagas de treino estão ocupadas	Все слоты тренировок заняты	Усі слоти тренувань зайняті
+Athlete is already training	The athlete is already training	El atleta ya está entrenando	O atleta já está treinando	Спортсмен уже тренируется	Спортсмен уже тренується
+Athlete is injured	The athlete is injured	El atleta está lesionado	O atleta está lesionado	Спортсмен травмирован	Спортсмен травмований
+Athlete is too tired	The athlete is too tired	El atleta está demasiado cansado	O atleta está cansado demais	Спортсмен слишком устал	Спортсмен надто втомився
+Attribute capped by the venue level; upgrade it	This attribute is capped by the venue level — upgrade the venue	El atributo está limitado por el nivel de la instalación: mejórala	O atributo está limitado pelo nível da instalação — melhore-a	Характеристика упирается в уровень площадки — улучшите её	Характеристика впирається в рівень майданчика — покращте його
+Training not found	Training not found	Entrenamiento no encontrado	Treino não encontrado	Тренировка не найдена	Тренування не знайдено
+Training still in progress	The training is still in progress	El entrenamiento sigue en curso	O treino ainda está em andamento	Тренировка ещё идёт	Тренування ще триває
+The medical centre is busy for {0}	The medical centre is busy for {0}	El centro médico está ocupado durante {0}	O centro médico está ocupado por {0}	Медцентр занят ещё {0}	Медцентр зайнятий ще {0}
+Athlete is already fit	The athlete is already fit	El atleta ya está en forma	O atleta já está em forma	Спортсмен уже в форме	Спортсмен уже у формі
+The medical centre is ready	The medical centre is ready	El centro médico está listo	O centro médico está pronto	Медцентр свободен	Медцентр вільний
+Exactly {0} starters required	Exactly {0} starters are required	Se necesitan exactamente {0} titulares	São necessários exatamente {0} titulares	Нужно ровно {0} игроков в старте	Потрібно рівно {0} гравців у старті
+At most {0} on the bench	At most {0} on the bench	Como máximo {0} en el banquillo	No máximo {0} no banco	Не больше {0} в запасе	Не більше {0} у запасі
+Duplicate athlete in lineup	An athlete appears twice in the lineup	Un atleta aparece dos veces en la alineación	Um atleta aparece duas vezes na escalação	Спортсмен указан в составе дважды	Спортсмена вказано у складі двічі
+Athlete does not belong to this section	The athlete isn't in this section	El atleta no pertenece a esta sección	O atleta não é desta seção	Спортсмен не из этой секции	Спортсмен не з цієї секції
+Exactly one goalkeeper must start	Exactly one goalkeeper must start	Debe salir exactamente un portero	Exatamente um goleiro deve começar	В старте должен быть ровно один вратарь	У старті має бути рівно один воротар
+The lineup needs {0}..{1} × {2}	The lineup needs {0}–{1} × {2}	La alineación necesita {0}–{1} × {2}	A escalação precisa de {0}–{1} × {2}	В составе нужно {0}–{1} × {2}	У складі потрібно {0}–{1} × {2}
+# --- leagues, friendlies
+League not found	League not found	Liga no encontrada	Liga não encontrada	Лига не найдена	Лігу не знайдено
+League code not found	No league with this code	No hay ninguna liga con este código	Nenhuma liga com este código	Лиги с таким кодом нет	Ліги з таким кодом немає
+League is full	The league is full	La liga está completa	A liga está cheia	В лиге нет мест	У лізі немає місць
+Already a member	You're already a member	Ya eres miembro	Você já é membro	Вы уже в лиге	Ви вже в лізі
+League name must be 3..24 characters	The league name must be 3–24 characters	El nombre de la liga debe tener entre 3 y 24 caracteres	O nome da liga deve ter de 3 a 24 caracteres	Название лиги — от 3 до 24 символов	Назва ліги — від 3 до 24 символів
+Not a member of this league	You're not a member of this league	No eres miembro de esta liga	Você não é membro desta liga	Вы не состоите в этой лиге	Ви не берете участі в цій лізі
+Not a member	Not a member	No es miembro	Não é membro	Не участник	Не учасник
+Only the league creator can do this	Only the league creator can do this	Solo el creador de la liga puede hacerlo	Só o criador da liga pode fazer isso	Это может только создатель лиги	Це може лише творець ліги
+Use leave instead	Use “Leave” instead	Usa «Salir»	Use “Sair”	Используйте «Выйти»	Скористайтеся «Вийти»
+Match not found	Match not found	Partido no encontrado	Jogo não encontrado	Матч не найден	Матч не знайдено
+Daily friendly limit reached	You've played today's friendlies	Ya jugaste los amistosos de hoy	Você já jogou os amistosos de hoje	Товарищеские матчи на сегодня закончились	Товариські матчі на сьогодні закінчилися
+Opponent not found	Opponent not found	Rival no encontrado	Adversário não encontrado	Соперник не найден	Суперника не знайдено
+Cannot play against yourself	You can't play against yourself	No puedes jugar contra ti mismo	Você não pode jogar contra si mesmo	Нельзя играть с самим собой	Не можна грати із самим собою
+Friendly could not be played	The friendly couldn't be played	No se pudo jugar el amistoso	Não foi possível jogar o amistoso	Не удалось сыграть товарищеский матч	Не вдалося зіграти товариський матч
+# --- social
+A message must be 1..{0} characters	A message must be 1–{0} characters	El mensaje debe tener de 1 a {0} caracteres	A mensagem deve ter de 1 a {0} caracteres	Сообщение — от 1 до {0} символов	Повідомлення — від 1 до {0} символів
+Slow down	Not so fast — wait a moment	Más despacio: espera un momento	Calma — espere um pouco	Не так быстро — подождите немного	Не так швидко — зачекайте трохи
+Too many messages, try again in a few minutes	Too many messages — try again in a few minutes	Demasiados mensajes: inténtalo en unos minutos	Mensagens demais — tente em alguns minutos	Слишком много сообщений — попробуйте через несколько минут	Забагато повідомлень — спробуйте за кілька хвилин
+Message not found	Message not found	Mensaje no encontrado	Mensagem não encontrada	Сообщение не найдено	Повідомлення не знайдено
+Only the author or the league creator can delete	Only the author or the league creator can delete it	Solo el autor o el creador de la liga pueden borrarlo	Só o autor ou o criador da liga pode apagar	Удалить может только автор или создатель лиги	Видалити може лише автор або творець ліги
+Cannot report your own message	You can't report your own message	No puedes denunciar tu propio mensaje	Você não pode denunciar a própria mensagem	Нельзя пожаловаться на своё сообщение	Не можна поскаржитися на своє повідомлення
+Cannot block yourself	You can't block yourself	No puedes bloquearte a ti mismo	Você não pode bloquear a si mesmo	Нельзя заблокировать себя	Не можна заблокувати себе
+Challenge not found	Challenge not found	Reto no encontrado	Desafio não encontrado	Вызов не найден	Виклик не знайдено
+This challenge was already played	This challenge was already played	Este reto ya se jugó	Este desafio já foi jogado	Этот вызов уже сыгран	Цей виклик уже зіграно
+This is your own challenge — send it to a friend	This is your own challenge — send it to a friend	Es tu propio reto: envíaselo a un amigo	Este é o seu desafio — envie a um amigo	Это ваш вызов — отправьте его другу	Це ваш виклик — надішліть його другові
+You already have {0} open challenges	You already have {0} open challenges	Ya tienes {0} retos abiertos	Você já tem {0} desafios abertos	У вас уже открыто вызовов: {0}	У вас уже відкрито викликів: {0}
+Challenge could not be played	The challenge couldn't be played	No se pudo jugar el reto	Não foi possível jogar o desafio	Не удалось сыграть вызов	Не вдалося зіграти виклик
+# --- economy
+Already claimed today	Already claimed today	Ya lo reclamaste hoy	Já resgatado hoje	Уже получено сегодня	Уже отримано сьогодні
+Task not active today	This task isn't active today	Esta tarea no está activa hoy	Esta tarefa não está ativa hoje	Это задание сегодня неактивно	Це завдання сьогодні неактивне
+Already claimed	Already claimed	Ya reclamado	Já resgatado	Уже получено	Уже отримано
+Task not complete	The task isn't complete yet	La tarea aún no está completa	A tarefa ainda não foi concluída	Задание ещё не выполнено	Завдання ще не виконано
+Nothing to claim	Nothing to claim	No hay nada que reclamar	Nada para resgatar	Забирать нечего	Немає чого забирати
+Nothing to claim yet	Nothing to claim yet	Aún no hay nada que reclamar	Ainda nada para resgatar	Пока забирать нечего	Поки немає чого забирати
+Unknown product	Unknown product	Producto desconocido	Produto desconhecido	Неизвестный товар	Невідомий товар
+Store not supported	This store isn't supported	Esta tienda no es compatible	Esta loja não é suportada	Этот магазин не поддерживается	Цей магазин не підтримується
+Invalid receipt	The purchase couldn't be verified	No se pudo verificar la compra	Não foi possível verificar a compra	Не удалось подтвердить покупку	Не вдалося підтвердити покупку
+Purchase is pending	The payment is still pending	El pago sigue pendiente	O pagamento ainda está pendente	Платёж ещё обрабатывается	Платіж ще обробляється
+Purchase was cancelled	The purchase was cancelled	La compra se canceló	A compra foi cancelada	Покупка отменена	Покупку скасовано
+Purchase was refunded	The purchase was refunded	La compra fue reembolsada	A compra foi reembolsada	За покупку вернули деньги	За покупку повернули гроші
+Already owned	You already own this	Ya lo tienes	Você já tem isso	Уже есть	Уже є
+Unknown item	Unknown item	Artículo desconocido	Item desconhecido	Неизвестный предмет	Невідомий предмет
+This item can't be bought, it is earned	This item can't be bought — it's earned	Este artículo no se compra: se gana	Este item não se compra — se conquista	Этот предмет не продаётся — его можно заслужить	Цей предмет не продається — його можна заслужити
+This item doesn't fit here	This item doesn't fit here	Este artículo no va aquí	Este item não serve aqui	Этот предмет сюда не подходит	Цей предмет сюди не підходить
+You don't own this item yet	You don't own this item yet	Aún no tienes este artículo	Você ainda não tem este item	У вас пока нет этого предмета	У вас поки немає цього предмета
+Unknown coin pack	Unknown coin pack	Paquete de monedas desconocido	Pacote de moedas desconhecido	Неизвестный пакет монет	Невідомий пакет монет
+Unknown achievement	Unknown achievement	Logro desconocido	Conquista desconhecida	Неизвестное достижение	Невідоме досягнення
+Ad rewards are confirmed by the ad network	Ad rewards are confirmed by the ad network	Las recompensas de anuncios las confirma la red publicitaria	As recompensas de anúncios são confirmadas pela rede de anúncios	Награды за рекламу подтверждает рекламная сеть	Нагороди за рекламу підтверджує рекламна мережа
+# --- names used in texts
+sport.FOOTBALL	Football	Fútbol	Futebol	Футбол	Футбол
+sport.BASKETBALL	Basketball	Baloncesto	Basquete	Баскетбол	Баскетбол
+sport.TENNIS	Tennis	Tenis	Tênis	Теннис	Теніс
+division.1	Sunday League	Liga Dominical	Liga de Várzea	Дворовая лига	Дворова ліга
+division.2	County League	Liga Comarcal	Liga Municipal	Районная лига	Районна ліга
+division.3	Regional League	Liga Regional	Liga Regional	Региональная лига	Регіональна ліга
+division.4	National League	Liga Nacional	Liga Nacional	Национальная лига	Національна ліга
+division.5	Pro League	Liga Profesional	Liga Profissional	Профессиональная лига	Професійна ліга
+division.6	Elite League	Liga Élite	Liga de Elite	Элитная лига	Елітна ліга
+division.7	Legends League	Liga de Leyendas	Liga das Lendas	Лига легенд	Ліга легенд
+# --- push notifications
+push.victory	Victory!	¡Victoria!	Vitória!	Победа!	Перемога!
+push.draw	Draw	Empate	Empate	Ничья	Нічия
+push.defeat	Defeat	Derrota	Derrota	Поражение	Поразка
+push.matchday_title	Matchday played: {0}	Jornada jugada: {0}	Rodada disputada: {0}	Матчдей сыгран: {0}	Матчдей зіграно: {0}
+push.matchday_sections	{0} vs {1}: {2}. Open the highlights.	{0} vs {1}: {2}. Mira el resumen.	{0} x {1}: {2}. Veja os melhores momentos.	{0} — {1}: {2}. Смотрите обзор.	{0} — {1}: {2}. Дивіться огляд.
+push.matchday_score	{0} {1}–{2} {3}. Open the match highlights.	{0} {1}–{2} {3}. Mira el resumen del partido.	{0} {1}–{2} {3}. Veja os melhores momentos.	{0} {1}–{2} {3}. Смотрите обзор матча.	{0} {1}–{2} {3}. Дивіться огляд матчу.
+push.season_title	Season over: you finished #{0}	Fin de temporada: terminaste en el puesto {0}	Fim de temporada: você terminou em {0}º	Сезон окончен: вы на {0}-м месте	Сезон завершено: ви на {0}-му місці
+push.season_promoted	Promoted to the {0}! Prize: {1} coins, {2} gold.	¡Ascenso a la {0}! Premio: {1} monedas, {2} de oro.	Acesso para a {0}! Prêmio: {1} moedas, {2} de ouro.	Повышение: {0}! Приз: {1} монет, {2} золота.	Підвищення: {0}! Приз: {1} монет, {2} золота.
+push.season_relegated	Relegated to the {0}. Prize: {1} coins. The next season starts tomorrow.	Descenso a la {0}. Premio: {1} monedas. La próxima temporada empieza mañana.	Rebaixado para a {0}. Prêmio: {1} moedas. A próxima temporada começa amanhã.	Вылет: {0}. Приз: {1} монет. Новый сезон — завтра.	Виліт: {0}. Приз: {1} монет. Новий сезон — завтра.
+push.season_stayed	You stay in the {0}. Prize: {1} coins, {2} gold.	Sigues en la {0}. Premio: {1} monedas, {2} de oro.	Você segue na {0}. Prêmio: {1} moedas, {2} de ouro.	Вы остаётесь: {0}. Приз: {1} монет, {2} золота.	Ви лишаєтеся: {0}. Приз: {1} монет, {2} золота.
+push.challenge_title	Challenge accepted!	¡Reto aceptado!	Desafio aceito!	Вызов принят!	Виклик прийнято!
+push.challenge_body	{0} took your challenge: {1}–{2}. Open the highlights.	{0} aceptó tu reto: {1}–{2}. Mira el resumen.	{0} aceitou seu desafio: {1}–{2}. Veja os melhores momentos.	«{0}» принял вызов: {1}–{2}. Смотрите обзор.	«{0}» прийняв виклик: {1}–{2}. Дивіться огляд.
+push.join_title	New rival in {0}	Nuevo rival en {0}	Novo rival na {0}	Новый соперник в «{0}»	Новий суперник у «{0}»
+push.join_body	{0} joined your league.	{0} se unió a tu liga.	{0} entrou na sua liga.	«{0}» вступает в вашу лигу.	«{0}» вступає до вашої ліги.

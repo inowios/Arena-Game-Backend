@@ -34,7 +34,7 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/auth/guest` | `{deviceId}` → tokens; creates a guest account |
 | POST | `/api/v1/auth/oauth/google`, `/apple` | `{idToken}` verified server-side; upgrades a guest in place when called with its bearer |
 | POST | `/api/v1/auth/refresh`, `/logout`, `/logout-all` | refresh rotation / revoke |
-| GET | `/api/v1/me` | user + `hasClub` |
+| GET/PATCH | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it) |
 | GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level) |
 | POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, grid) |
 | POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` |
@@ -91,6 +91,10 @@ division (season starts the next day; freed bots of that division are reused). M
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,
 draw 150 / +5, loss 60 / +1; starters gain fatigue, injuries from the engine last 2 days. Single-instance scheduler (in-process lock).
+
+Languages: en, es, pt, ru, uk. Error messages are answered in the request's `Accept-Language` (catalog
+`server/src/main/resources/i18n/messages.tsv`, keyed by the English template: `ConflictException("Requires club level {0}", n)`;
+`ServerI18nTest` fails when a thrown message has no translations); pushes use the user's stored locale.
 
 Server rules: all timers are absolute server instants; finished timers are finalised on read; clients send commands, never state.
 Every mutating use case runs in one transaction (`Tx`) and locks the club row (`SELECT … FOR UPDATE`) before touching currencies,

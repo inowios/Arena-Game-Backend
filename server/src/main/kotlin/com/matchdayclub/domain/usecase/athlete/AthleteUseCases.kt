@@ -73,11 +73,11 @@ class ListAthletesUseCase(private val squads: SquadService) {
 class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx, private val sections: SectionService? = null, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     suspend operator fun invoke(userId: UUID, sport: Sport = Sport.FOOTBALL): Athlete = tx {
         val st = service.state(userId, lock = true)
-        if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club, clubBuildings = st.buildings)) throw ValidationException("Build the ${sport.name.lowercase()} venue first")
+        if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club, clubBuildings = st.buildings)) throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + sport.name))
         val academy = st.buildings.firstOrNull { it.type == BuildingType.ACADEMY && it.state == BuildingState.IDLE } ?: throw ValidationException("Build an academy first")
         val now = clock.now()
         val next = st.club.academyNextAt
-        if (next != null && now.isBefore(next)) throw ConflictException("Next graduate at $next")
+        if (next != null && now.isBefore(next)) throw ConflictException("Next academy graduate in {0}", java.time.Duration.between(now, next))
         val q = TrainingRules.academyQuality(academy.level)
         val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, sport, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
@@ -98,7 +98,7 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (squad.trainings.any { it.athleteId == a.id }) throw ConflictException("Athlete is already training")
         if (a.isInjured(now)) throw ConflictException("Athlete is injured")
         if (a.currentFatigue(now) > TrainingRules.MAX_FATIGUE_TO_TRAIN) throw ConflictException("Athlete is too tired")
-        val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the ${a.sport.name.lowercase()} venue first")
+        val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
         if (a.attribute(attribute) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
@@ -122,7 +122,7 @@ class HealAthleteUseCase(private val service: ClubService, private val squads: S
         val med = st.buildings.firstOrNull { it.type == BuildingType.MEDICAL_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a medical centre first")
         val now = clock.now()
         val next = st.club.medicalNextAt
-        if (next != null && now.isBefore(next)) throw ConflictException("Medical centre busy until $next")
+        if (next != null && now.isBefore(next)) throw ConflictException("The medical centre is busy for {0}", java.time.Duration.between(now, next))
         val a = squads.athleteOf(st.club.id, athleteId)
         if (!a.isInjured(now) && a.currentFatigue(now) == 0) throw ValidationException("Athlete is already fit")
         clubs.update(st.club.copy(medicalNextAt = now.plusSeconds(TrainingRules.medicalCooldownSeconds(med.level)), updatedAt = now))

@@ -25,15 +25,15 @@ object LineupRules {
 
     fun validate(sport: Sport, starters: List<UUID>, bench: List<UUID>, squad: List<Athlete>) {
         val profile = Sections.profile(sport)
-        if (starters.size != profile.startersCount) throw ValidationException("Exactly ${profile.startersCount} starters required")
-        if (bench.size > profile.benchMax) throw ValidationException("At most ${profile.benchMax} on the bench")
+        if (starters.size != profile.startersCount) throw ValidationException("Exactly {0} starters required", profile.startersCount)
+        if (bench.size > profile.benchMax) throw ValidationException("At most {0} on the bench", profile.benchMax)
         val all = starters + bench
         if (all.toSet().size != all.size) throw ValidationException("Duplicate athlete in lineup")
         val byId = squad.filter { it.sport == sport }.associateBy { it.id }
         if (all.any { it !in byId }) throw ValidationException("Athlete does not belong to this section")
         for ((pos, range) in profile.requiredRoles) {
             val n = starters.count { byId.getValue(it).position == pos }
-            if (n !in range) throw ValidationException(if (pos == Position.GK) "Exactly one goalkeeper must start" else "Lineup needs ${range.first}..${range.last} × $pos")
+            if (n !in range) throw if (pos == Position.GK) ValidationException("Exactly one goalkeeper must start") else ValidationException("The lineup needs {0}..{1} × {2}", range.first, range.last, pos.name)
         }
     }
 
