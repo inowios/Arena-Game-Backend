@@ -268,12 +268,13 @@ class ChallengeUseCases(
 }
 
 /** Records who brought whom (k-factor) and tells the inviter. Never throws into the caller's flow. */
-class InviteTracker(private val social: SocialRepository, private val clubs: ClubRepository, private val clock: Clock, private val push: FcmSender? = null) {
+class InviteTracker(private val social: SocialRepository, private val clubs: ClubRepository, private val clock: Clock, private val push: FcmSender? = null, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker? = null) {
     suspend fun leagueJoined(league: League, joiner: Club) {
         val inviter = league.createdBy ?: return
         if (inviter == joiner.id) return
         val now = clock.now()
-        social.recordInvite(Invite(UUID.randomUUID(), inviter, joiner.id, InviteKind.LEAGUE, league.code ?: "", joiner.createdAt.isAfter(now.minusSeconds(2 * 86_400)), now))
+        val fresh = social.recordInvite(Invite(UUID.randomUUID(), inviter, joiner.id, InviteKind.LEAGUE, league.code ?: "", joiner.createdAt.isAfter(now.minusSeconds(2 * 86_400)), now))
+        if (fresh) progress?.record(inviter, com.matchdayclub.domain.rules.ProgressEvent.INVITE_JOINED)
         val owner = clubs.findById(inviter) ?: return
         push?.let { runCatching { it.sendToUsers(listOf(owner.userId), "New rival in ${league.name}", "${joiner.name} joined your league.", mapOf("type" to "LEAGUE_JOIN", "leagueId" to league.id.toString())) } }
     }

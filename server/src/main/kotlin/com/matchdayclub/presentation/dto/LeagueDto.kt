@@ -10,7 +10,7 @@ import com.matchdayclub.engine.model.MatchResult
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-@Serializable data class ClubRefDto(val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val level: Int, val isBot: Boolean, val emblemJson: String? = null)
+@Serializable data class ClubRefDto(val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val level: Int, val isBot: Boolean, val emblemJson: String? = null, val frame: String? = null, val kit: String? = null)
 @Serializable data class LeagueDto(val id: String, val kind: String, val name: String, val code: String?, val division: Int, val seasonNumber: Int, val seasonStart: String, val currentRound: Int, val totalRounds: Int, val matchdayHour: Int, val timezone: String, val nextRoundAt: String?, val memberCount: Int, val createdBy: String? = null, val status: String = "ACTIVE")
 @Serializable data class StandingRowDto(val position: Int, val club: ClubRefDto, val played: Int, val won: Int, val drawn: Int, val lost: Int, val gf: Int, val ga: Int, val gd: Int, val points: Int)
 @Serializable data class LeagueTableResponse(val league: LeagueDto, val table: List<StandingRowDto>)
@@ -37,7 +37,7 @@ import java.util.UUID
 @Serializable data class PlayFriendlyRequest(val opponentClubId: String? = null)
 
 private val unknown = { id: UUID -> ClubRefDto(id.toString(), "Unknown", "#777777", "#FFFFFF", 1, true, null) }
-fun Club.toRef() = ClubRefDto(id.toString(), name, primaryColor, secondaryColor, level, isBot, emblemJson)
+fun Club.toRef() = ClubRefDto(id.toString(), name, primaryColor, secondaryColor, level, isBot, emblemJson, emblemFrame, kit)
 fun Map<UUID, Club>.ref(id: UUID) = this[id]?.toRef() ?: unknown(id)
 
 fun LeagueView.toDto() = LeagueTableResponse(

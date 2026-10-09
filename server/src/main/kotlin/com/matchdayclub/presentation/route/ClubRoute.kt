@@ -27,6 +27,7 @@ fun Route.clubRoutes() {
     val move: MoveBuildingUseCase by inject()
     val buyBuilder: BuyBuilderUseCase by inject()
     val sections: com.matchdayclub.domain.usecase.athlete.SectionService by inject()
+    val cosmetics: com.matchdayclub.domain.usecase.economy.CosmeticsUseCases by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -44,7 +45,7 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active).toSuccessResponse())
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now)).toSuccessResponse())
             }
             post("/builders") { call.respond(buyBuilder(call.userId()).toDto().toSuccessResponse()) }
             route("/buildings") {
@@ -52,7 +53,7 @@ fun Route.clubRoutes() {
                     val r = call.receive<PlaceBuildingRequest>()
                     val type = runCatching { BuildingType.valueOf(r.type) }.getOrElse { throw ValidationException("Unknown building type") }
                     val st = getClub(call.userId())
-                    val b = place(call.userId(), type, r.x, r.y, r.rotation)
+                    val b = place(call.userId(), type, r.x, r.y, r.rotation, r.variant)
                     call.respond(HttpStatusCode.Created, b.toDto(st.now, st.club.level).toSuccessResponse(201))
                 }
                 route("/{id}") {
@@ -66,6 +67,12 @@ fun Route.clubRoutes() {
                     post("/move") {
                         val r = call.receive<MoveBuildingRequest>()
                         val b = move(call.userId(), call.buildingId(), r.x, r.y, r.rotation)
+                        val st = getClub(call.userId())
+                        call.respond(b.toDto(st.now, st.club.level).toSuccessResponse())
+                    }
+                    post("/variant") {
+                        val r = call.receive<VariantRequest>()
+                        val b = cosmetics.setDecorLook(call.userId(), call.buildingId(), r.itemId)
                         val st = getClub(call.userId())
                         call.respond(b.toDto(st.now, st.club.level).toSuccessResponse())
                     }

@@ -3,10 +3,14 @@ package com.matchdayclub.data.repository
 import com.matchdayclub.common.extension.dbQuery
 import com.matchdayclub.data.database.*
 import com.matchdayclub.domain.model.*
+import com.matchdayclub.domain.repository.AchievementRepository
 import com.matchdayclub.domain.repository.EconomyRepository
+import com.matchdayclub.domain.repository.InventoryRepository
 import com.matchdayclub.domain.repository.PushTokenRepository
+import com.matchdayclub.domain.rules.Metric
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -29,6 +33,47 @@ class EconomyRepositoryImpl : EconomyRepository {
     }
     override suspend fun createPurchase(p: Purchase) = dbQuery {
         PurchaseTable.insert { it[id] = p.id; it[clubId] = p.clubId; it[store] = p.store; it[productId] = p.productId; it[externalId] = p.externalId; it[status] = p.status; it[grantedGold] = p.grantedGold; it[grantedCoins] = p.grantedCoins; it[createdAt] = p.createdAt }; p
+    }
+    override suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: Instant): Boolean = dbQuery {
+        AdRewardTable.insertIgnore { it[AdRewardTable.transactionId] = transactionId; it[AdRewardTable.clubId] = clubId; it[AdRewardTable.placement] = placement; it[createdAt] = at }.insertedCount == 1
+    }
+}
+
+class InventoryRepositoryImpl : InventoryRepository {
+    override suspend fun items(clubId: UUID) = dbQuery {
+        ClubItemTable.selectAll().where { ClubItemTable.clubId eq clubId }.orderBy(ClubItemTable.acquiredAt).map { ClubItem(clubId, it[ClubItemTable.itemId], it[ClubItemTable.itemSource], it[ClubItemTable.acquiredAt]) }
+    }
+    override suspend fun add(item: ClubItem): Boolean = dbQuery {
+        ClubItemTable.insertIgnore { it[clubId] = item.clubId; it[itemId] = item.itemId; it[itemSource] = item.source; it[acquiredAt] = item.acquiredAt }.insertedCount == 1
+    }
+}
+
+class AchievementRepositoryImpl : AchievementRepository {
+    override suspend fun counters(clubId: UUID) = dbQuery {
+        ClubCounterTable.selectAll().where { ClubCounterTable.clubId eq clubId }
+            .mapNotNull { r -> runCatching { Metric.valueOf(r[ClubCounterTable.metric]) }.getOrNull()?.let { it to r[ClubCounterTable.value] } }.toMap()
+    }
+    override suspend fun increment(clubId: UUID, metric: Metric, by: Long) {
+        dbQuery {
+            ClubCounterTable.upsert(onUpdate = { it[ClubCounterTable.value] = ClubCounterTable.value + by }) {
+                it[ClubCounterTable.clubId] = clubId; it[ClubCounterTable.metric] = metric.name; it[value] = by
+            }
+        }
+    }
+    override suspend fun raiseTo(clubId: UUID, metric: Metric, value: Long) {
+        dbQuery {
+            ClubCounterTable.upsert(onUpdate = { it[ClubCounterTable.value] = CustomFunction("GREATEST", LongColumnType(), ClubCounterTable.value, longLiteral(value)) }) {
+                it[ClubCounterTable.clubId] = clubId; it[ClubCounterTable.metric] = metric.name; it[ClubCounterTable.value] = value
+            }
+        }
+    }
+    override suspend fun claimed(clubId: UUID) = dbQuery {
+        ClubAchievementTable.selectAll().where { ClubAchievementTable.clubId eq clubId }.associate { it[ClubAchievementTable.achievement] to it[ClubAchievementTable.tier] }
+    }
+    override suspend fun setClaimed(clubId: UUID, achievementId: String, tier: Int, at: Instant) {
+        dbQuery {
+            ClubAchievementTable.upsert { it[ClubAchievementTable.clubId] = clubId; it[achievement] = achievementId; it[ClubAchievementTable.tier] = tier; it[claimedAt] = at }
+        }
     }
 }
 

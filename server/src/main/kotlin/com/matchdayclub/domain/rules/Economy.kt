@@ -12,12 +12,21 @@ enum class TaskKind(val target: Int, val xp: Int, val title: String) {
     SET_LINEUP(1, 20, "Save your lineup"),
 }
 
-enum class ProgressEvent(val task: TaskKind?) { INCOME_COLLECTED(TaskKind.COLLECT_3), TRAINING_STARTED(TaskKind.TRAIN_2), FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY), MATCH_WON(TaskKind.WIN_MATCH), SECTION_WON(TaskKind.WIN_SECTIONS), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null) }
+/** Gameplay events reported by other modules: they advance daily tasks and achievement counters. */
+enum class ProgressEvent(val task: TaskKind?, val metric: Metric? = null) {
+    INCOME_COLLECTED(TaskKind.COLLECT_3, Metric.INCOME_COLLECTIONS), TRAINING_STARTED(TaskKind.TRAIN_2, Metric.TRAININGS),
+    FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY, Metric.FRIENDLIES), MATCH_WON(TaskKind.WIN_MATCH, Metric.MATCHES_WON),
+    SECTION_WON(TaskKind.WIN_SECTIONS, Metric.SECTIONS_WON), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null),
+    ACADEMY_GRADUATE(null, Metric.ACADEMY_GRADUATES), INVITE_JOINED(null, Metric.INVITES),
+}
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
 
 enum class Store { GOOGLE, APPLE, DEV }
+/** Real-money store product (ids must match Play Console / App Store Connect). */
 data class Product(val id: String, val gold: Int = 0, val coins: Long = 0, val premiumPass: Boolean = false)
+/** Coins bought with gold (spec §6 "пакеты монет" are sold for gold). */
+data class CoinPack(val id: String, val gold: Int, val coins: Long)
 
 object Economy {
     val LOGIN_CALENDAR = listOf(Reward(coins = 150), Reward(coins = 200), Reward(coins = 300), Reward(gold = 2), Reward(coins = 400), Reward(gold = 3), Reward(coins = 800, gold = 5))
@@ -30,9 +39,18 @@ object Economy {
     const val SECOND_BUILDER_GOLD = 250
 
     val PRODUCTS = listOf(
-        Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200),
-        Product("coins_small", coins = 5_000), Product("coins_large", coins = 30_000), Product("season_pass", premiumPass = true),
+        Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200), Product("gold_huge", gold = 2600),
+        Product("season_pass", premiumPass = true),
     ).associateBy { it.id }
+
+    val COIN_PACKS = listOf(CoinPack("coins_small", 25, 3_000), CoinPack("coins_medium", 100, 13_000), CoinPack("coins_large", 400, 60_000)).associateBy { it.id }
+
+    /** Premium track's last level grants an elite athlete (spec §6). */
+    const val ELITE_LEVEL = 30
+    const val ELITE_QUALITY_MIN = 70
+    const val ELITE_QUALITY_MAX = 76
+    /** Cosmetic on a pass level: [premium] track or free track. */
+    fun passItem(level: Int, premium: Boolean): Cosmetic? = Cosmetics.ALL.firstOrNull { it.source == CosmeticSource.PASS && it.unlock == (if (premium) "premium:" else "free:") + level }
 
     /** Login calendar: next day index (1..7) given the last claim date; a skipped day restarts at 1. */
     fun nextLoginDay(lastClaim: LocalDate?, currentDay: Int, today: LocalDate): Int = when {

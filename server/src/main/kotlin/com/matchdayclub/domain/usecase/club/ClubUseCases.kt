@@ -88,9 +88,14 @@ class GetClubUseCase(private val service: ClubService) {
     suspend operator fun invoke(userId: UUID): ClubState = service.state(userId)
 }
 
-class PlaceBuildingUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
-    suspend operator fun invoke(userId: UUID, type: BuildingType, x: Int, y: Int, rotation: Int): Building = tx {
+class PlaceBuildingUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx, private val cosmetics: com.matchdayclub.domain.usecase.economy.CosmeticsService? = null) {
+    /** [variant]: look of a DECOR (an owned decor cosmetic); must be null for other types. */
+    suspend operator fun invoke(userId: UUID, type: BuildingType, x: Int, y: Int, rotation: Int, variant: String? = null): Building = tx {
         val st = service.state(userId, lock = true)
+        if (variant != null) {
+            if (type != BuildingType.DECOR) throw ValidationException("Only decorations have looks")
+            cosmetics?.requireOwned(st.club.id, variant, CosmeticKind.DECOR) ?: throw ValidationException("Decor looks are not available")
+        }
         val spec = BuildingCatalog.spec(type)
         if (!spec.enabled) throw ValidationException("$type is not available yet")
         val lvl = spec.levels[0]
@@ -104,7 +109,8 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         val club = service.charge(st.club, coins = lvl.cost)
         val now = clock.now()
         val state = if (lvl.buildSeconds > 0) BuildingState.UPGRADING else BuildingState.IDLE
-        buildings.create(Building(UUID.randomUUID(), club.id, type, 1, x, y, rotation, state, if (lvl.buildSeconds > 0) now.plusSeconds(lvl.buildSeconds) else null, now, now, now))
+        buildings.create(Building(UUID.randomUUID(), club.id, type, 1, x, y, rotation, state, if (lvl.buildSeconds > 0) now.plusSeconds(lvl.buildSeconds) else null, now, now, now,
+            variant = variant?.takeUnless { Cosmetics.isDefault(it) }))
     }
 }
 

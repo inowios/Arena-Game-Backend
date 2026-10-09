@@ -7,6 +7,7 @@ import com.matchdayclub.domain.exception.ConflictException
 import com.matchdayclub.domain.exception.NotFoundException
 import com.matchdayclub.domain.exception.ValidationException
 import com.matchdayclub.domain.model.*
+import com.matchdayclub.domain.repository.AthleteRepository
 import com.matchdayclub.domain.repository.BuildingRepository
 import com.matchdayclub.domain.repository.ClubRepository
 import com.matchdayclub.domain.repository.EconomyRepository
@@ -26,13 +27,25 @@ class ClaimDailyRewardUseCase(private val service: ClubService, private val club
         val reward = Economy.loginReward(day)
         val streak = if (club.loginLast != null && club.loginLast.plusDays(1) == today) club.streak + 1 else 1
         val updated = clubs.update(club.copy(coins = club.coins + reward.coins, gold = club.gold + reward.gold, loginDay = day, loginLast = today, streak = streak, updatedAt = clock.now()))
+        economy.recordMax(club.id, Metric.BEST_STREAK, streak.toLong())
         DailyClaim(day, reward, streak, updated)
     }
 }
 
 data class PassView(val pass: SeasonPass, val level: Int, val tasks: List<DailyTask>, val seasonNumber: Int)
 
-class SeasonPassUseCases(private val service: ClubService, private val clubs: ClubRepository, private val repo: EconomyRepository, private val economy: EconomyService, private val clock: Clock, private val tx: Tx = NoTx) {
+data class PassClaim(val reward: Reward, val items: List<String>, val elite: Athlete?, val view: PassView)
+
+class SeasonPassUseCases(
+    private val service: ClubService,
+    private val clubs: ClubRepository,
+    private val repo: EconomyRepository,
+    private val economy: EconomyService,
+    private val clock: Clock,
+    private val tx: Tx = NoTx,
+    private val cosmetics: CosmeticsService? = null,
+    private val athletes: AthleteRepository? = null,
+) {
     /** The pass follows the club's own season counter (leagues are re-formed every season, so their numbers restart). */
     private suspend fun passOf(club: Club): Pair<SeasonPass, Int> {
         val season = club.seasonNo
@@ -57,19 +70,47 @@ class SeasonPassUseCases(private val service: ClubService, private val clubs: Cl
         view(userId)
     }
 
-    /** Claims every reached, unclaimed level on the free track (and premium if owned). */
-    suspend fun claimLevels(userId: UUID): Pair<Reward, PassView> = tx {
+    /**
+     * Claims every reached, unclaimed level on the free track (and premium if owned): coins/gold, pass cosmetics
+     * (gold instead when already owned from an earlier season) and, at the last premium level, an elite athlete
+     * for [eliteSport] (one of the club's sections; football by default).
+     */
+    suspend fun claimLevels(userId: UUID, eliteSport: Sport = Sport.FOOTBALL): PassClaim = tx {
         val club = service.lockedClubOf(userId)
         val (pass, _) = passOf(club)
         val level = Economy.passLevel(pass.xp)
+        if (level <= pass.claimedFree && (!pass.premium || level <= pass.claimedPremium)) throw ConflictException("Nothing to claim")
         var total = Reward()
-        for (l in pass.claimedFree + 1..level) total += Economy.freeReward(l)
+        val items = mutableListOf<String>()
+        var elite: Athlete? = null
+        suspend fun item(l: Int, premium: Boolean) {
+            val it = Economy.passItem(l, premium) ?: return
+            val c = cosmetics ?: return
+            if (c.grant(club.id, it, CosmeticSource.PASS)) items += it.id else total += Reward(gold = Cosmetics.DUPLICATE_GOLD)
+        }
+        for (l in pass.claimedFree + 1..level) { total += Economy.freeReward(l); item(l, false) }
         var claimedPremium = pass.claimedPremium
-        if (pass.premium) { for (l in pass.claimedPremium + 1..level) total += Economy.premiumReward(l); claimedPremium = level }
-        if (total == Reward()) throw ConflictException("Nothing to claim")
+        if (pass.premium) {
+            for (l in pass.claimedPremium + 1..level) {
+                total += Economy.premiumReward(l); item(l, true)
+                if (l == Economy.ELITE_LEVEL) elite = eliteAthlete(club, eliteSport)
+            }
+            claimedPremium = level
+        }
         clubs.update(club.copy(coins = club.coins + total.coins, gold = club.gold + total.gold, updatedAt = clock.now()))
         repo.upsertPass(pass.copy(claimedFree = level, claimedPremium = claimedPremium))
-        total to view(userId)
+        PassClaim(total, items, elite, view(userId))
+    }
+
+    private suspend fun eliteAthlete(club: Club, requested: Sport): Athlete? {
+        val repo = athletes ?: return null
+        val squad = repo.listByClub(club.id)
+        val sport = if (squad.any { it.sport == requested }) requested else Sport.FOOTBALL
+        val now = clock.now()
+        val a = com.matchdayclub.domain.rules.AthleteFactory.create(now.toEpochMilli() xor club.id.mostSignificantBits xor 0x5EA5_0A11L, club.id, sport, Economy.ELITE_QUALITY_MIN, Economy.ELITE_QUALITY_MAX, null, now)
+            .copy(rarity = Rarity.ELITE, age = 22)
+        repo.createAll(listOf(a))
+        return a
     }
 
     suspend fun unlockPremium(club: Club) { val (pass, _) = passOf(club); repo.upsertPass(pass.copy(premium = true)) }
@@ -107,11 +148,23 @@ class VerifyPurchaseUseCase(private val service: ClubService, private val clubs:
 
 enum class AdPlacement { DOUBLE_INCOME, FREE_SPEEDUP }
 
-class AdRewardUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val economy: EconomyService, private val clock: Clock, private val tx: Tx = NoTx) {
-    suspend operator fun invoke(userId: UUID, placement: AdPlacement, buildingId: UUID?): Club = tx {
+class AdRewardUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val economy: EconomyService, private val clock: Clock, private val tx: Tx = NoTx, private val repo: EconomyRepository? = null) {
+    /** Client-reported reward: only enabled in development (production rewards come from [grantVerified]). */
+    suspend operator fun invoke(userId: UUID, placement: AdPlacement, buildingId: UUID?): Club = tx { apply(service.lockedClubOf(userId), placement, buildingId) }
+
+    /**
+     * Reward confirmed by the ad network's server-side verification callback. Idempotent per [transactionId]
+     * (callbacks are retried): returns null when that transaction was already granted.
+     */
+    suspend fun grantVerified(userId: UUID, placement: AdPlacement, buildingId: UUID?, transactionId: String): Club? = tx {
         val club = service.lockedClubOf(userId)
+        val fresh = repo?.recordAdReward(transactionId, club.id, placement.name, clock.now()) ?: true
+        if (fresh) apply(club, placement, buildingId) else null
+    }
+
+    private suspend fun apply(club: Club, placement: AdPlacement, buildingId: UUID?): Club {
         val now = clock.now()
-        when (placement) {
+        return when (placement) {
             AdPlacement.DOUBLE_INCOME -> {
                 if (club.doubleIncomeAdAt != null && now.isBefore(club.doubleIncomeAdAt.plusSeconds(Economy.DOUBLE_INCOME_COOLDOWN_SECONDS))) throw ConflictException("Double income is on cooldown")
                 clubs.update(club.copy(doubleIncomeUntil = now.plusSeconds(Economy.DOUBLE_INCOME_COOLDOWN_SECONDS), doubleIncomeAdAt = now, updatedAt = now))

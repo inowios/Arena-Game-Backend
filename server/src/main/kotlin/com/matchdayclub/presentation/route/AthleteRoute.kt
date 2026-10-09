@@ -25,6 +25,8 @@ fun Route.athleteRoutes() {
     val start: StartTrainingUseCase by inject()
     val complete: CompleteTrainingUseCase by inject()
     val heal: HealAthleteUseCase by inject()
+    val speedUpTraining: SpeedUpTrainingUseCase by inject()
+    val speedUpMedical: SpeedUpMedicalUseCase by inject()
     val getLineup: GetLineupUseCase by inject()
     val setLineup: SetLineupUseCase by inject()
     val clock: Clock by inject()
@@ -45,7 +47,12 @@ fun Route.athleteRoutes() {
                 call.respond(HttpStatusCode.Created, t.toDto(clock.now()).toSuccessResponse(201))
             }
             post("/trainings/{id}/complete") { call.respond(complete(call.userId(), call.uuid("id")).toDto(clock.now()).toSuccessResponse()) }
+            post("/trainings/{id}/speedup") {
+                val (athlete, club) = speedUpTraining(call.userId(), call.uuid("id"))
+                call.respond(SpeedUpTrainingResponse(athlete.toDto(clock.now()), club.toDto()).toSuccessResponse())
+            }
             post("/athletes/{id}/heal") { call.respond(heal(call.userId(), call.uuid("id")).toDto(clock.now()).toSuccessResponse()) }
+            post("/medical/speedup") { call.respond(speedUpMedical(call.userId()).toDto().toSuccessResponse()) }
             route("/lineup/{sport}") {
                 get {
                     val (lineup, squad) = getLineup(call.userId(), parseEnum<Sport>(call.parameters["sport"]!!, "sport")); val now = clock.now()

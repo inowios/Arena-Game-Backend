@@ -59,7 +59,7 @@ val appModule = module {
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
     single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
-    single { PlaceBuildingUseCase(get(), get(), get(), tx = get()) }
+    single { PlaceBuildingUseCase(get(), get(), get(), tx = get(), cosmetics = get()) }
     single { UpgradeBuildingUseCase(get(), get(), get(), tx = get()) }
     single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
     single { SpeedUpUseCase(get(), get(), get(), tx = get()) }
@@ -85,7 +85,7 @@ val appModule = module {
     single<PushTokenRepository> { PushTokenRepositoryImpl() }
     single {
         val sections = get<SectionService>(); val clubs = get<ClubRepository>()
-        EconomyService(get(), get(), get()) { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }
+        EconomyService(get(), get(), get(), { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }, achievements = get())
     }
     single {
         val c = get<Application>().environment.config
@@ -94,14 +94,46 @@ val appModule = module {
     single { MatchdayNotifier(get()) }
     single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
-    single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get(), athletes = get()) }
+    single<com.matchdayclub.core.store.HttpGateway> { com.matchdayclub.core.store.KtorHttpGateway(get()) }
     single<Map<Store, ReceiptVerifier>> {
         val c = get<Application>().environment.config
-        val dev = c.propertyOrNull("iap.devMode")?.getString()?.toBoolean() ?: false
-        if (dev) mapOf(Store.DEV to DevReceiptVerifier(), Store.GOOGLE to DevReceiptVerifier(), Store.APPLE to DevReceiptVerifier()) else emptyMap()
+        fun prop(k: String) = c.propertyOrNull(k)?.getString()?.trim().orEmpty()
+        val dev = prop("iap.devMode").toBoolean()
+        val log = org.slf4j.LoggerFactory.getLogger("Store")
+        buildMap {
+            if (dev) put(Store.DEV, DevReceiptVerifier())
+            val playJson = prop("iap.google.serviceAccountJson")
+            if (playJson.isNotEmpty()) put(Store.GOOGLE, com.matchdayclub.core.store.GooglePlayVerifier(get(),
+                com.matchdayclub.core.store.GoogleServiceAccount(get(), playJson, "https://www.googleapis.com/auth/androidpublisher"), prop("iap.google.packageName")))
+            else if (dev) put(Store.GOOGLE, DevReceiptVerifier())
+            val issuer = prop("iap.apple.issuerId"); val keyId = prop("iap.apple.keyId"); val pk = prop("iap.apple.privateKey")
+            if (issuer.isNotEmpty() && keyId.isNotEmpty() && pk.isNotEmpty()) {
+                val roots = prop("iap.apple.rootCertPath").takeIf { it.isNotEmpty() }?.let { path ->
+                    java.io.File(path).inputStream().use { listOf(java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(it) as java.security.cert.X509Certificate) }
+                } ?: emptyList()
+                put(Store.APPLE, com.matchdayclub.core.store.AppStoreVerifier(get(), issuer, keyId, pk, prop("iap.apple.bundleId"), roots))
+            } else if (dev) put(Store.APPLE, DevReceiptVerifier())
+            log.info("Receipt verifiers: ${keys.joinToString()}${if (dev) " (dev receipts accepted)" else ""}")
+        }
     }
     single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
-    single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get()) }
+    single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get(), repo = get()) }
+    single { com.matchdayclub.core.store.AdMobSsvVerifier(get()) }
+    single {
+        val app = get<Application>()
+        val v = app.environment.config.propertyOrNull("ads.clientRewards")?.getString()?.trim().orEmpty()
+        com.matchdayclub.presentation.route.AdsConfig(if (v.isEmpty()) app.developmentMode else v.toBoolean())
+    }
+    single<InventoryRepository> { InventoryRepositoryImpl() }
+    single<AchievementRepository> { AchievementRepositoryImpl() }
+    single { CosmeticsService(get(), get()) }
+    single { CosmeticsUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single { BuyCoinPackUseCase(get(), get(), get(), tx = get()) }
+    single { AchievementService(get(), get(), get(), get()) }
+    single { AchievementUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { SpeedUpTrainingUseCase(get(), get(), get(), get(), tx = get()) }
+    single { SpeedUpMedicalUseCase(get(), get(), get(), tx = get()) }
     single { LeagueQueries(get(), get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
     single { JoinPrivateLeagueUseCase(get(), get(), tx = get(), invites = get(), chat = get()) }
@@ -113,12 +145,12 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.social.GetGroundsUseCase(get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get()) }
-    single { com.matchdayclub.domain.usecase.social.InviteTracker(get(), get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { GetPublicClubUseCase(get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
-    single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get(), sections = get()) }
+    single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get(), sections = get(), progress = get<EconomyService>()) }
     single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
     single { CompleteTrainingUseCase(get(), get(), get(), get(), tx = get()) }
     single { HealAthleteUseCase(get(), get(), get(), get(), get(), tx = get()) }

@@ -115,4 +115,48 @@ class ApiIT {
         assertEquals(2, call(HttpMethod.Post, "/club/builders", a).data.o()["builderSlots"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/club/builders", a, expect = 409)
     }
+
+    @Test
+    fun `cosmetics, coin packs, achievements and ad rewards over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig(mapOf("ads.clientRewards" to "false")) }
+        application { module() }
+        val t = guestWithClub("it-device-0201", "Cosmo FC")
+        assertTrue(call(HttpMethod.Get, "/catalog/cosmetics").data.jsonArray.any { it.o()["id"]!!.jsonPrimitive.content == "kit_stripes" })
+        call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t, expect = 402)                       // 60 gold, 50 owned
+        call(HttpMethod.Post, "/purchases/verify", t, """{"store":"DEV","productId":"gold_small","token":"dev:it-cos"}""")
+        val inv = call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t).data.o()
+        assertTrue(inv["owned"]!!.jsonArray.any { it.jsonPrimitive.content == "kit_stripes" })
+        assertEquals(90, inv["club"]!!.o()["gold"]!!.jsonPrimitive.int)
+        val eq = call(HttpMethod.Post, "/club/cosmetics/equip", t, """{"kind":"KIT","itemId":"kit_stripes"}""").data.o()
+        assertEquals("kit_stripes", eq["equipped"]!!.o()["kit"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/club/cosmetics/equip", t, """{"kind":"FRAME","itemId":"frame_gold"}""", expect = 409)
+        val state = call(HttpMethod.Get, "/club", t).data.o()
+        assertEquals("kit_stripes", state["club"]!!.o()["kit"]!!.jsonPrimitive.content)
+        assertTrue(state["ads"]!!.o()["freeSpeedupAvailable"]!!.jsonPrimitive.boolean)
+        // decor looks
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":11,"y":11,"variant":"decor_flowerbed"}""", expect = 409)
+        call(HttpMethod.Post, "/club/cosmetics/decor_flowerbed/buy", t)
+        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":11,"y":11,"variant":"decor_flowerbed"}""", expect = 201).data.o()
+        assertEquals("decor_flowerbed", decor["variant"]!!.jsonPrimitive.content)
+        val tree = call(HttpMethod.Post, "/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant", t, """{"itemId":"decor_tree"}""").data.o()
+        assertTrue(tree["variant"] == null || tree["variant"] is JsonNull)
+        // coins for gold
+        val coinsBefore = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["coins"]!!.jsonPrimitive.long
+        val afterPack = call(HttpMethod.Post, "/club/shop/coins/coins_small", t).data.o()
+        assertEquals(coinsBefore + 3_000, afterPack["coins"]!!.jsonPrimitive.long); assertEquals(40, afterPack["gold"]!!.jsonPrimitive.int)
+        // achievements from real counters (friendly played) and the login streak maximum
+        call(HttpMethod.Post, "/friendlies", t, "{}", expect = 201)
+        call(HttpMethod.Post, "/club/daily/claim", t)
+        val list = call(HttpMethod.Get, "/club/achievements", t).data.jsonArray.associateBy { it.o()["id"]!!.jsonPrimitive.content }
+        assertEquals(1, list.getValue("friendly_face").o()["value"]!!.jsonPrimitive.int)
+        assertEquals(1, list.getValue("loyal").o()["value"]!!.jsonPrimitive.int)
+        val claim = call(HttpMethod.Post, "/club/achievements/friendly_face/claim", t).data.o()
+        assertEquals(5, claim["gold"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/club/achievements/friendly_face/claim", t, expect = 409)
+        // production-style ads: the client can't grant itself rewards; unsigned callbacks are refused
+        call(HttpMethod.Post, "/ads/reward", t, """{"placement":"DOUBLE_INCOME"}""", expect = 403)
+        assertEquals(403, client.get("/api/v1/ads/ssv?transaction_id=1&user_id=x").status.value)
+        // speed-ups need something running
+        call(HttpMethod.Post, "/club/medical/speedup", t, expect = 409)
+    }
 }

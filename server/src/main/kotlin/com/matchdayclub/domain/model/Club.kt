@@ -34,6 +34,10 @@ data class Club(
     val builderSlots: Int = 1,
     /** The club's own season counter (1 = first season); keys the season pass and history. */
     val seasonNo: Int = 1,
+    /** Equipped cosmetics (null = default look). */
+    val kit: String? = null,
+    val emblemFrame: String? = null,
+    val celebration: String? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }
@@ -51,6 +55,8 @@ data class Building(
     val lastCollectedAt: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** DECOR look (cosmetic id); null = default tree. */
+    val variant: String? = null,
 ) {
     fun isDone(now: Instant) = state == BuildingState.UPGRADING && upgradeEndsAt != null && !now.isBefore(upgradeEndsAt)
 }

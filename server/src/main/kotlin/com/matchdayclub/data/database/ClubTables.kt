@@ -29,6 +29,9 @@ object ClubTable : BaseTable("clubs") {
     val freeSpeedupDate = date("free_speedup_date").nullable()
     val builderSlots = integer("builder_slots")
     val seasonNo = integer("season_no")
+    val kit = varchar("kit", 40).nullable()
+    val emblemFrame = varchar("emblem_frame", 40).nullable()
+    val celebration = varchar("celebration", 40).nullable()
 }
 
 object BuildingTable : BaseTable("buildings") {
@@ -41,4 +44,5 @@ object BuildingTable : BaseTable("buildings") {
     val state = varchar("state", 16)
     val upgradeEndsAt = timestamp("upgrade_ends_at").nullable()
     val lastCollectedAt = timestamp("last_collected_at")
+    val variant = varchar("variant", 40).nullable()
 }

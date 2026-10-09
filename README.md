@@ -21,7 +21,9 @@ Kotlin backend for the Matchday Club mobile game. Design spec and plans live in
 
 Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides: `DATABASE_URL`, `DATABASE_USER`,
 `DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
-`ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`).
+`ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`; stores and ads:
+`GOOGLE_PLAY_PACKAGE`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY`,
+`APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`, `ADS_CLIENT_REWARDS`).
 
 ## API (v1)
 
@@ -40,8 +42,8 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |
 | GET | `/api/v1/club/athletes` | squad, active trainings, slots |
 | POST | `/api/v1/club/academy/claim` `{sport?}` | new graduate every 8 h (football, or any open section) |
-| POST | `/api/v1/club/trainings`, `/trainings/{id}/complete` | train one attribute for 1 h |
-| POST | `/api/v1/club/athletes/{id}/heal` | medical centre |
+| POST | `/api/v1/club/trainings`, `/trainings/{id}/complete`, `/trainings/{id}/speedup` | train one attribute for 1 h; finish now for gold (1 per 10 min) |
+| POST | `/api/v1/club/athletes/{id}/heal`, `/club/medical/speedup` | medical centre; end its cooldown for gold |
 | GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics per section (`football` 11+7, `basketball` 5+5, `tennis` 1+1) |
 | GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
 | GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
@@ -52,9 +54,14 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
 | GET | `/api/v1/clubs/{id}` | public club profile |
 | POST | `/api/v1/club/daily/claim` | 7-day login calendar + streak |
-| GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` | season pass: 3 daily tasks, 30 levels, free/premium tracks |
-| GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold/coins/premium pass; receipts verified server-side (dev verifier with `IAP_DEV_MODE=true`, token `dev:<order>`) |
-| POST | `/api/v1/ads/reward` `{placement, buildingId?}` | rewarded ads: `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
+| GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks, 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
+| GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold packs + premium pass. `GOOGLE`: Play purchase token (`purchases.products.get`, order id = idempotency key); `APPLE`: transaction id (App Store Server API, production then sandbox; optional x5c chain check against Apple Root CA G3); `DEV` with `IAP_DEV_MODE=true`, token `dev:<order>` |
+| GET | `/api/v1/catalog/coin-packs`; POST `/club/shop/coins/{pack}` | coins for gold (25 → 3 000, 100 → 13 000, 400 → 60 000) |
+| GET | `/api/v1/catalog/cosmetics`; GET `/club/cosmetics`; POST `/club/cosmetics/{id}/buy`, `/club/cosmetics/equip` `{kind, itemId?}` | kits, emblem frames, goal celebrations, decor looks: shop (gold), season pass or achievements; equipped looks are on `ClubDto`/`ClubRefDto` (`kit`, `emblemFrame`/`frame`, `celebration`) |
+| POST | `/api/v1/club/buildings` `{…, variant?}`, `/club/buildings/{id}/variant` `{itemId}` | decor look at placement / later (owned decor items) |
+| GET | `/api/v1/club/achievements`; POST `/club/achievements/{id}/claim` | 14 tiered achievements (wins, sections, divisions, titles, builds, streak, invites…): gold per tier, some tiers give cosmetics |
+| POST | `/api/v1/ads/reward` `{placement, buildingId?}` | client-reported reward (development, or `ADS_CLIENT_REWARDS=true`): `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
+| GET | `/api/v1/ads/ssv` | AdMob server-side verification callback (signature checked with Google's keys; `user_id` = user id, `custom_data` = `PLACEMENT[:buildingId]`; idempotent per `transaction_id`) |
 | GET/POST | `/api/v1/leagues/{id}/messages` `?before=&after=` / `{text}` | private-league chat (members only, 2 s / 20 per 5 min, masked; system lines `join|Name`, `leave|…`, `restart|n|winner`, `kick|…`) |
 | POST/DELETE | `/api/v1/messages/{id}/report`, `/messages/{id}`; `/clubs/{id}/block` | moderation: 3 reports hide a line; author or creator deletes; blocks hide a club's lines |
 | POST/DELETE/GET | `/api/v1/leagues/private/{id}/restart`, `/members/{clubId}`, `/history` | creator: new private season (table frozen into history), remove members |
@@ -65,7 +72,10 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
-Not yet implemented: real Google Play / App Store receipt verifiers (interface `ReceiptVerifier` is in place; production needs store credentials), rewarded-ad server-side verification (SSV).
+Monetization (spec §6): gold buys speed-ups (buildings, trainings, medical cooldown), the second builder, coin packs and cosmetics;
+athletes, attributes, reputation and league places are never sold. `GET /club` carries `ads` (double-income window/cooldown, today's
+free speed-up). Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
+`season_pass` — consumable bought once per season. AdMob SSV callback URL: `https://<host>/api/v1/ads/ssv`.
 
 Sections: football always; a basketball court (club level 3) or tennis court (level 5) opens that section with a starter squad
 when its construction finishes; the venue level caps that section's attributes. A matchday is one opponent across all sections either

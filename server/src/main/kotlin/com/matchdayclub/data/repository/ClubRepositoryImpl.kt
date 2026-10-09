@@ -35,6 +35,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.doubleIncomeUntil] = c.doubleIncomeUntil; this[ClubTable.doubleIncomeAdAt] = c.doubleIncomeAdAt; this[ClubTable.freeSpeedupDate] = c.freeSpeedupDate
         this[ClubTable.builderSlots] = c.builderSlots
         this[ClubTable.seasonNo] = c.seasonNo
+        this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
     }
 
     private fun ResultRow.toClub() = Club(
@@ -43,7 +44,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
         this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
         this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
-        this[ClubTable.builderSlots], this[ClubTable.seasonNo],
+        this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
     )
 }
 
@@ -66,12 +67,12 @@ class BuildingRepositoryImpl : BuildingRepository {
 
     private fun UpdateBuilder<*>.fill(b: Building) {
         this[BuildingTable.level] = b.level; this[BuildingTable.state] = b.state.name; this[BuildingTable.upgradeEndsAt] = b.upgradeEndsAt
-        this[BuildingTable.lastCollectedAt] = b.lastCollectedAt; this[BuildingTable.updatedAt] = b.updatedAt
+        this[BuildingTable.lastCollectedAt] = b.lastCollectedAt; this[BuildingTable.updatedAt] = b.updatedAt; this[BuildingTable.variant] = b.variant
     }
 
     private fun ResultRow.toBuilding() = Building(
         this[BuildingTable.id], this[BuildingTable.clubId], BuildingType.valueOf(this[BuildingTable.type]), this[BuildingTable.level],
         this[BuildingTable.gridX], this[BuildingTable.gridY], this[BuildingTable.rotation], BuildingState.valueOf(this[BuildingTable.state]),
-        this[BuildingTable.upgradeEndsAt], this[BuildingTable.lastCollectedAt], this[BuildingTable.createdAt], this[BuildingTable.updatedAt],
+        this[BuildingTable.upgradeEndsAt], this[BuildingTable.lastCollectedAt], this[BuildingTable.createdAt], this[BuildingTable.updatedAt], this[BuildingTable.variant],
     )
 }

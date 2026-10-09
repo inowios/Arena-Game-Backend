@@ -50,6 +50,27 @@ class FakeEconomyRepository : com.matchdayclub.domain.repository.EconomyReposito
     override suspend fun upsertTask(task: com.matchdayclub.domain.model.DailyTask) = task.also { tasks[Triple(it.clubId, it.day, it.task)] = it }
     override suspend fun purchaseByExternalId(externalId: String) = purchases[externalId]
     override suspend fun createPurchase(p: com.matchdayclub.domain.model.Purchase) = p.also { purchases[it.externalId] = it }
+    val adRewards = mutableSetOf<String>()
+    override suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: java.time.Instant) = adRewards.add(transactionId)
+}
+
+class FakeInventoryRepository : com.matchdayclub.domain.repository.InventoryRepository {
+    val rows = mutableListOf<com.matchdayclub.domain.model.ClubItem>()
+    override suspend fun items(clubId: UUID) = rows.filter { it.clubId == clubId }
+    override suspend fun add(item: com.matchdayclub.domain.model.ClubItem): Boolean {
+        if (rows.any { it.clubId == item.clubId && it.itemId == item.itemId }) return false
+        rows += item; return true
+    }
+}
+
+class FakeAchievementRepository : com.matchdayclub.domain.repository.AchievementRepository {
+    val counters = mutableMapOf<Pair<UUID, com.matchdayclub.domain.rules.Metric>, Long>()
+    val claims = mutableMapOf<Pair<UUID, String>, Int>()
+    override suspend fun counters(clubId: UUID) = counters.filterKeys { it.first == clubId }.mapKeys { it.key.second }
+    override suspend fun increment(clubId: UUID, metric: com.matchdayclub.domain.rules.Metric, by: Long) { counters.merge(clubId to metric, by, Long::plus) }
+    override suspend fun raiseTo(clubId: UUID, metric: com.matchdayclub.domain.rules.Metric, value: Long) { counters.merge(clubId to metric, value) { a, b -> maxOf(a, b) } }
+    override suspend fun claimed(clubId: UUID) = claims.filterKeys { it.first == clubId }.mapKeys { it.key.second }
+    override suspend fun setClaimed(clubId: UUID, achievementId: String, tier: Int, at: java.time.Instant) { claims[clubId to achievementId] = tier }
 }
 
 class FakeSeasonRepository : com.matchdayclub.domain.repository.SeasonRepository {

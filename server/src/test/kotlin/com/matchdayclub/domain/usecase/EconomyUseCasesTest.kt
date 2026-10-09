@@ -52,7 +52,7 @@ class EconomyUseCasesTest {
             assertEquals(40, after.pass.xp); assertFailsWith<ConflictException> { pass.claimTask(user, TaskKind.COLLECT_3) }
         }
         repo.upsertPass(repo.passes.values.first().copy(xp = 520))
-        val (reward, v2) = pass.claimLevels(user)
+        val claimed = pass.claimLevels(user); val reward = claimed.reward; val v2 = claimed.view
         assertEquals(5, v2.pass.claimedFree); assertTrue(reward.coins >= 100 + 200 + 300 + 400); assertTrue(reward.gold >= 3)
         assertFailsWith<ConflictException> { pass.claimLevels(user) }
         Unit   // JUnit only runs test methods that return void
