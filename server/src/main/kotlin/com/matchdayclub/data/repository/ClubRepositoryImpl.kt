@@ -38,7 +38,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
         this[ClubTable.scoutSignedDate] = c.scoutSignedDate
-        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.marketSalt] = c.marketSalt
+        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.marketSalt] = c.marketSalt; this[ClubTable.arenaChestWeek] = c.arenaChestWeek
     }
 
 }
@@ -81,7 +81,7 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
     this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
     this[ClubTable.scoutSignedDate],
-    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt],
+    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
 )
 
 class MarketRepositoryImpl : com.matchdayclub.domain.repository.MarketRepository {

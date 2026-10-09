@@ -36,6 +36,7 @@ object ClubTable : BaseTable("clubs") {
     val trophies = integer("trophies")
     val liveStreak = integer("live_streak")
     val marketSalt = integer("market_salt")
+    val arenaChestWeek = integer("arena_chest_week")
 }
 
 object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases") {

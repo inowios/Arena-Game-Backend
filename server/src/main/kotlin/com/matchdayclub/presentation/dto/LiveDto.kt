@@ -20,3 +20,6 @@ fun LiveTeam.toDto(now: Instant) = LiveTeamDto(club.toRef(), starters.map { it.t
 fun LiveStart.toDto(now: Instant) = LiveStartDto(match.id.toString(), match.seed, home.toDto(now), away.toDto(now), halfSeconds)
 fun LiveOutcome.toDto(now: Instant) = LiveFinishDto(outcome.name, arena.key, coins, reputation, club.trophies, trophiesDelta, club.liveStreak, pack != null, club.toDto(), athletes.map { it.toDto(now) }, pack?.toDto(now),
     growth.map { AthleteGrowthDto(it.athlete.id.toString(), it.athlete.name, it.xpGained, it.points, it.raised.map { k -> k.name }, it.overallBefore, it.overallAfter) })
+
+@Serializable data class ArenaChestDto(val arena: String, val coins: Long, val gold: Int, val available: Boolean, val nextAt: String, val club: ClubDto? = null)
+fun com.matchdayclub.domain.usecase.live.ArenaChest.toDto(club: com.matchdayclub.domain.model.Club? = null) = ArenaChestDto(arena.key, coins, gold, available, nextAt.toString(), club?.toDto())

@@ -150,3 +150,24 @@ class GrowthTest {
         assertEquals(0, res.points); assertEquals(99, res.athlete.xp)
     }
 }
+
+class ArenaChestTest {
+    private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))   // a Friday
+    private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository()
+    private val clubService = ClubService(clubs, buildings, clock)
+    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val chest = com.matchdayclub.domain.usecase.live.ArenaChestUseCase(clubService, clubs, clock)
+    private val u1 = UUID.randomUUID()
+
+    @Test
+    fun `the chest opens once a week and scales with the arena`() = runBlocking<Unit> {
+        val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val v = chest.view(u1); assertTrue(v.available); assertEquals(400L, v.coins); assertEquals(3, v.gold)
+        val (c, after) = chest.claim(u1)
+        assertFalse(c.available); assertEquals(club.coins + 400, after.coins); assertEquals(club.gold + 3, after.gold)
+        assertFailsWith<ConflictException> { chest.claim(u1) }
+        clock.advanceSeconds(3 * 86_400)   // Monday
+        clubs.rows[club.id] = clubs.rows.getValue(club.id).copy(trophies = 800)   // CITY
+        val w = chest.view(u1); assertTrue(w.available); assertEquals("CITY", w.arena.key); assertEquals((400 * 1.6).toLong(), w.coins); assertEquals(7, w.gold)
+    }
+}

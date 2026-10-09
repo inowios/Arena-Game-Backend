@@ -39,6 +39,13 @@ object Arenas {
     const val MAX_FATIGUE_TO_PLAY = 85
     /** A player pack (a new athlete) every this many wins in a row. */
     const val PACK_EVERY_WINS = 3
+    /** The weekly chest of the arena you stand in: coins and gold scale with the rung. */
+    fun chestCoins(arena: Arena): Long = (400 * arena.rewardK).toLong()
+    fun chestGold(arena: Arena): Int = 3 + arena.index * 2
+    fun isoWeek(now: java.time.Instant, zone: java.time.ZoneId): Int { val d = now.atZone(zone).toLocalDate(); val wf = java.time.temporal.WeekFields.ISO; return d.get(wf.weekBasedYear()) * 100 + d.get(wf.weekOfWeekBasedYear()) }
+    /** Start of the next ISO week in the club's zone. */
+    fun nextWeek(now: java.time.Instant, zone: java.time.ZoneId): java.time.Instant { val d = now.atZone(zone).toLocalDate(); val monday = d.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY)); return monday.atStartOfDay(zone).toInstant() }
+
     /** Quality range of a pack athlete by arena: the ladder hands out better players higher up. */
     fun packQuality(arena: Arena): IntRange { val lo = 46 + arena.index * 5; return lo..(lo + 12) }
 }

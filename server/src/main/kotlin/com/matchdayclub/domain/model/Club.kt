@@ -45,6 +45,8 @@ data class Club(
     val liveStreak: Int = 0,
     /** Bumped by a paid market refresh: a new set of listings for the same period. */
     val marketSalt: Int = 0,
+    /** ISO week (year*100 + week) the arena chest was last opened in. */
+    val arenaChestWeek: Int = 0,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

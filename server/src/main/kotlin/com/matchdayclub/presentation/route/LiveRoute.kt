@@ -24,7 +24,10 @@ fun Route.liveRoutes() {
     val start: StartLiveMatchUseCase by inject()
     val finish: FinishLiveMatchUseCase by inject()
     val clock: Clock by inject()
+    val chest: com.matchdayclub.domain.usecase.live.ArenaChestUseCase by inject()
     authenticate(AUTH_JWT) { route("/live") {
+        get("/chest") { call.respond(chest.view(call.userId()).toDto().toSuccessResponse()) }
+        post("/chest/claim") { val (c, club) = chest.claim(call.userId()); call.respond(c.toDto(club).toSuccessResponse()) }
         post("/start") {
             val r = runCatching { call.receive<LiveStartRequest>() }.getOrDefault(LiveStartRequest())
             val opp = r.opponentClubId?.let { runCatching { UUID.fromString(it) }.getOrElse { throw ValidationException("Bad opponentClubId") } }
