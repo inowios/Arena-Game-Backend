@@ -31,7 +31,7 @@ class AccountTest {
     private val inbox = InboxService(inboxRepo, clock)
 
     @Test
-    fun `a transfer code moves a guest account to a new device once`() = runBlocking {
+    fun `a transfer code moves a guest account to a new device once`() = runBlocking<Unit> {
         val old = guest("device-old-0001").user
         val club = create(old.id, "Movers FC", "#AA0000", "#FFFFFF", "UTC")
         val fresh = guest("device-new-0002").user                       // the new phone already made its own guest
@@ -53,7 +53,7 @@ class AccountTest {
     }
 
     @Test
-    fun `deleting the account erases sign-in data and retires the club`() = runBlocking {
+    fun `deleting the account erases sign-in data and retires the club`() = runBlocking<Unit> {
         val u = guest("device-del-0001").user
         val club = create(u.id, "Leavers FC", "#AA0000", "#FFFFFF", "UTC")
         val friend = guest("device-del-0002").user; val friendClub = create(friend.id, "Stayers FC", "#0000AA", "#FFFFFF", "UTC")
@@ -74,7 +74,7 @@ class AccountTest {
     }
 
     @Test
-    fun `inbox keeps entries and counts unread`() = runBlocking {
+    fun `inbox keeps entries and counts unread`() = runBlocking<Unit> {
         val u = guest("device-inbox-01").user; val club = create(u.id, "Inbox FC", "#AA0000", "#FFFFFF", "UTC")
         inbox.add(club.id, "MATCHDAY", mapOf("opponent" to "FC Rivals", "verdict" to "WIN"))
         clock.advanceSeconds(60); inbox.add(club.id, "LEAGUE_JOIN", mapOf("league" to "Office", "club" to "Bravo"))

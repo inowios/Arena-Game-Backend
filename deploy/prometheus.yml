@@ -1,0 +1,9 @@
+# Prometheus scrape config for the API's /metrics (Bearer = ADMIN_TOKEN, stored in a file next to this config).
+global: { scrape_interval: 30s }
+rule_files: [ alerts.yml ]
+scrape_configs:
+  - job_name: matchdayclub
+    scheme: https
+    metrics_path: /metrics
+    authorization: { type: Bearer, credentials_file: /etc/prometheus/mdc_admin_token }
+    static_configs: [ { targets: [ "api.example.com" ] } ]

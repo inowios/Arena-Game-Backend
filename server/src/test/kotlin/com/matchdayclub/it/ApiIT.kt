@@ -190,4 +190,59 @@ class ApiIT {
         // speed-ups need something running
         call(HttpMethod.Post, "/club/medical/speedup", t, expect = 409)
     }
+    @Test
+    fun `admin, metrics, analytics events and legal pages over HTTP`() = testApplication {
+        val token = "it-admin-token-0123456789"
+        environment { config = TestDb.appConfig(mapOf("admin.token" to token, "links.supportEmail" to "help@mdc.test")) }
+        application { module() }
+        val t = guestWithClub("it-device-0401", "Metric FC")
+        val accepted = call(HttpMethod.Post, "/analytics/events", t,
+            """{"platform":"android","appVersion":"0.1.0","events":[{"name":"session_start"},{"name":"tutorial_step","props":{"step":"build"}},{"name":"Bad Name"}]}""").data.o()
+        assertEquals(2, accepted["accepted"]!!.jsonPrimitive.int)
+        // admin endpoints need the token
+        assertEquals(401, client.get("/admin/stats").status.value)
+        assertEquals(401, client.get("/metrics") { header("X-Admin-Token", "wrong-token") }.status.value)
+        val metrics = client.get("/metrics") { header(HttpHeaders.Authorization, "Bearer $token") }
+        assertEquals(200, metrics.status.value)
+        val text = metrics.bodyAsText()
+        assertTrue(text.contains("http_requests_total{route=\"/api/v1/club\",method=\"POST\",status=\"201\"}"), text.lines().filter { it.startsWith("http_requests_total") }.joinToString("\n"))
+        assertTrue(text.contains("process_uptime_seconds") && text.contains("http_request_duration_seconds_bucket"))
+        suspend fun admin(method: HttpMethod, path: String, body: String? = null, expect: Int = 200): JsonElement {
+            val resp = client.request(path) {
+                this.method = method; header("X-Admin-Token", token)
+                if (body != null) { contentType(ContentType.Application.Json); setBody(body) }
+            }
+            val txt = resp.bodyAsText()
+            assertEquals(expect, resp.status.value, "$method $path -> $txt")
+            return Json.parseToJsonElement(txt)
+        }
+        val counts = admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()
+        assertEquals(1, counts["clubs"]!!.jsonPrimitive.int); assertTrue(counts["bots"]!!.jsonPrimitive.int >= 7)
+        assertEquals(3, counts["analyticsEvents"]!!.jsonPrimitive.int)   // club_created + 2 from the app
+        val report = admin(HttpMethod.Get, "/admin/metrics?days=7").data.o()
+        assertEquals(1, report["dau"]!!.jsonPrimitive.int); assertEquals(1, report["installs"]!!.jsonPrimitive.int)
+        assertEquals("NO_DATA", report["kpis"]!!.o()["d1Retention"]!!.o()["status"]!!.jsonPrimitive.content)
+        assertEquals(1, report["events"]!!.o()["club_created"]!!.jsonPrimitive.int)
+        admin(HttpMethod.Get, "/admin/metrics?days=0", expect = 400)
+        val found = admin(HttpMethod.Get, "/admin/clubs?q=metric").data.jsonArray
+        assertEquals(listOf("Metric FC"), found.map { it.o()["name"]!!.jsonPrimitive.content })
+        val clubId = found[0].o()["id"]!!.jsonPrimitive.content
+        val card = admin(HttpMethod.Get, "/admin/clubs/$clubId").data.o()
+        assertEquals("GUEST", card["user"]!!.o()["provider"]!!.jsonPrimitive.content)
+        assertEquals(java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), card["lastActive"]!!.jsonPrimitive.content)
+        val granted = admin(HttpMethod.Post, "/admin/clubs/$clubId/grant", """{"coins":500,"gold":20,"reason":"Matchday outage"}""").data.o()
+        assertEquals(70, granted["gold"]!!.jsonPrimitive.int)
+        admin(HttpMethod.Post, "/admin/clubs/$clubId/grant", """{"gold":5,"reason":" "}""", expect = 400)
+        val gift = call(HttpMethod.Get, "/club/inbox", t).data.o()["items"]!!.jsonArray.first { it.o()["kind"]!!.jsonPrimitive.content == "GIFT" }
+        assertEquals("Matchday outage", gift.o()["data"]!!.o()["reason"]!!.jsonPrimitive.content)
+        assertTrue(admin(HttpMethod.Post, "/admin/scheduler/run").data.o()["matches"]!!.jsonPrimitive.int >= 0)
+        // store-required public pages
+        val privacy = client.get("/privacy").bodyAsText()
+        assertTrue(privacy.contains("Privacy Policy") && privacy.contains("mailto:help@mdc.test"))
+        assertTrue(client.get("/delete-account?lang=ru").bodyAsText().contains("Удаление аккаунта"))
+        assertTrue(client.get("/terms") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }.bodyAsText().contains("Условия использования"))
+        // account deletion erases the player's own events
+        call(HttpMethod.Delete, "/me", t)
+        assertEquals(1, admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()["analyticsEvents"]!!.jsonPrimitive.int)   // only the anonymous account_deleted
+    }
 }

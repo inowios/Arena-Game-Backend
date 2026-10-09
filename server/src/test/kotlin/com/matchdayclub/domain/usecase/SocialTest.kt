@@ -40,7 +40,7 @@ class SocialTest {
     }
 
     @Test
-    fun `chat is members-only, masked, rate limited and moderated`() = runBlocking {
+    fun `chat is members-only, masked, rate limited and moderated`() = runBlocking<Unit> {
         val (u1, a) = user("Alpha"); val (u2, b) = user("Bravo"); val (u3, _) = user("Charlie")
         val league = createPrivate(u1, "Office")
         join(u2, league.code!!)
@@ -65,7 +65,7 @@ class SocialTest {
     }
 
     @Test
-    fun `creator restarts a private season and can remove members, the league passes on when the creator leaves`() = runBlocking {
+    fun `creator restarts a private season and can remove members, the league passes on when the creator leaves`() = runBlocking<Unit> {
         val (u1, _) = user("Alpha"); val (u2, b) = user("Bravo"); val (u3, c) = user("Charlie")
         val league = createPrivate(u1, "Office"); join(u2, league.code!!); join(u3, league.code!!)
         runner.runDueRounds(Instant.parse("2026-10-09T20:00:00Z"))
@@ -82,7 +82,7 @@ class SocialTest {
     }
 
     @Test
-    fun `a challenge link is played once by the first other club`() = runBlocking {
+    fun `a challenge link is played once by the first other club`() = runBlocking<Unit> {
         val (u1, a) = user("Alpha"); val (u2, b) = user("Bravo"); val (u3, _) = user("Charlie")
         val ch = challenges.create(u1)
         assertEquals(8, ch.code.length)

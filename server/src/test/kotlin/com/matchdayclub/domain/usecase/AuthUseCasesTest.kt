@@ -19,7 +19,7 @@ class AuthUseCasesTest {
     private val refresh = RefreshTokenUseCase(tokens, users, testJwt, clock)
 
     @Test
-    fun `guest login creates once and reuses`() = runBlocking {
+    fun `guest login creates once and reuses`() = runBlocking<Unit> {
         val a = guest("device-12345678")
         val b = guest("device-12345678")
         assertTrue(a.isNewUser); assertFalse(b.isNewUser); assertEquals(a.user.id, b.user.id)
@@ -27,7 +27,7 @@ class AuthUseCasesTest {
     }
 
     @Test
-    fun `guest upgrades to google in place keeping id`() = runBlocking {
+    fun `guest upgrades to google in place keeping id`() = runBlocking<Unit> {
         val g = guest("device-12345678")
         val up = oauth(AuthProvider.GOOGLE, "g-ok", g.user.id)
         assertEquals(g.user.id, up.user.id); assertEquals(AuthProvider.GOOGLE, up.user.authProvider); assertEquals("a@b.com", up.user.email); assertFalse(up.isNewUser)
@@ -36,13 +36,13 @@ class AuthUseCasesTest {
     }
 
     @Test
-    fun `oauth with bad token fails`() = runBlocking {
+    fun `oauth with bad token fails`() = runBlocking<Unit> {
         assertFailsWith<AuthenticationException> { oauth(AuthProvider.APPLE, "nope", null) }
         Unit
     }
 
     @Test
-    fun `refresh rotates and rejects reuse`() = runBlocking {
+    fun `refresh rotates and rejects reuse`() = runBlocking<Unit> {
         val a = guest("device-12345678")
         val pair = refresh(a.refreshToken)
         assertNotEquals(a.refreshToken, pair.refreshToken)

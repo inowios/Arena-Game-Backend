@@ -67,6 +67,8 @@ class ServerI18nTest {
             "App Store authentication failed", "App Store reply without transaction", "Invalid Apple token", "Unknown Apple key",
             "Invalid Google token", "Google token expired", "Google token audience mismatch", "Invalid refresh token", "Refresh token already used",
             "Refresh token expired or revoked", "User not found", "Bad slot",
+            // app/admin-only
+            "Too many events in one batch", "days must be 1..365", "Bad date", "Admin token required", "Grant must be positive", "Grant too large", "Reason required",
         )
         val thrown = Regex("""(?:Validation|Conflict|NotFound|Authorization|Authentication|InsufficientFunds|Upstream)Exception\("([^"$]+)"""")
         val missing = File("src/main/kotlin").walkTopDown().filter { it.extension == "kt" }

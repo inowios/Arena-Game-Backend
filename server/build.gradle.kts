@@ -66,4 +66,7 @@ tasks.test {
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
-tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> { mergeServiceFiles() }
+tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+    mergeServiceFiles()
+    manifest { attributes("Implementation-Version" to project.version) }   // shown by GET /admin/stats
+}

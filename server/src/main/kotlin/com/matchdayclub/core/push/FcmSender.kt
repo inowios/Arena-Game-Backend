@@ -1,5 +1,6 @@
 package com.matchdayclub.core.push
 
+import com.matchdayclub.core.metrics.Metrics
 import com.matchdayclub.domain.repository.PushTokenRepository
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -63,9 +64,11 @@ class FcmSender(private val client: HttpClient, private val tokens: PushTokenRep
                     putJsonObject("data") { data.forEach { (k, v) -> put(k, v) } }
                 }
             }
-            val resp = runCatching { client.post("https://fcm.googleapis.com/v1/projects/$projectId/messages:send") { header("Authorization", "Bearer $access"); contentType(ContentType.Application.Json); setBody(msg.toString()) } }.getOrNull() ?: continue
-            if (resp.status == HttpStatusCode.NotFound || resp.bodyAsText().contains("UNREGISTERED")) tokens.delete(t.token)
-            else if (!resp.status.isSuccess()) log.warn("FCM send failed ${resp.status}: ${resp.bodyAsText().take(200)}")
+            val resp = runCatching { client.post("https://fcm.googleapis.com/v1/projects/$projectId/messages:send") { header("Authorization", "Bearer $access"); contentType(ContentType.Application.Json); setBody(msg.toString()) } }.getOrNull()
+            if (resp == null) { Metrics.inc("push_total", "result" to "error"); continue }
+            if (resp.status.isSuccess()) Metrics.inc("push_total", "result" to "sent")
+            else if (resp.status == HttpStatusCode.NotFound || resp.bodyAsText().contains("UNREGISTERED")) { tokens.delete(t.token); Metrics.inc("push_total", "result" to "unregistered") }
+            else { log.warn("FCM send failed ${resp.status}: ${resp.bodyAsText().take(200)}"); Metrics.inc("push_total", "result" to "failed") }
         }
     }
 }

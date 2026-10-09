@@ -17,6 +17,10 @@ fun Application.configureRouting() {
             if (ok) call.respond("ok".toSuccessResponse()) else call.respond(HttpStatusCode.ServiceUnavailable, "db down".toSuccessResponse(503))
         }
         linkRoutes()
+        legalRoutes()
+        val adminToken = environment.config.propertyOrNull("admin.token")?.getString()?.trim().orEmpty()
+        if (adminToken.length >= ADMIN_TOKEN_MIN) rateLimit(AUTH_RATE_LIMIT) { adminRoutes(adminToken) }
+        else if (adminToken.isNotEmpty()) environment.log.warn("ADMIN_TOKEN shorter than $ADMIN_TOKEN_MIN characters: admin endpoints and /metrics are disabled")
         route("/api/v1") {
             configRoutes()
             rateLimit(AUTH_RATE_LIMIT) { authRoutes() }
@@ -38,4 +42,5 @@ fun Route.apiRoutes() {
     leagueRoutes()
     economyRoutes()
     socialRoutes()
+    analyticsRoutes()
 }

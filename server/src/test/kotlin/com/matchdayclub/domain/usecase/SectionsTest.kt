@@ -44,7 +44,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `finishing a basketball court opens the section with a starter squad, once`() = runBlocking {
+    fun `finishing a basketball court opens the section with a starter squad, once`() = runBlocking<Unit> {
         val c = clubWithCourt()
         val hoopers = athletes.rows.values.filter { it.clubId == c.id && it.sport == Sport.BASKETBALL }
         assertEquals(8, hoopers.size)
@@ -55,7 +55,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `academy graduates per section, only for open sections`() = runBlocking {
+    fun `academy graduates per section, only for open sections`() = runBlocking<Unit> {
         clubWithCourt()
         place(user, BuildingType.ACADEMY, 4, 10, 0).let { speed(user, it.id) }
         val g = academy(user, Sport.BASKETBALL)
@@ -66,7 +66,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `basketball lineup has five of its own athletes`() = runBlocking {
+    fun `basketball lineup has five of its own athletes`() = runBlocking<Unit> {
         clubWithCourt()
         val (l, squad) = getLineup(user, Sport.BASKETBALL)
         assertEquals(5, l.starters.size); assertTrue(squad.all { it.sport == Sport.BASKETBALL })
@@ -77,7 +77,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `matchday plays every section and a missing section is a walkover`() = runBlocking {
+    fun `matchday plays every section and a missing section is a walkover`() = runBlocking<Unit> {
         val c = clubWithCourt()
         val played = runner.runDueRounds(Instant.parse("2026-10-09T20:00:00Z"))
         assertEquals(4, played)
@@ -99,7 +99,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `injured starter is replaced by a fit player of the same role`() = runBlocking {
+    fun `injured starter is replaced by a fit player of the same role`() = runBlocking<Unit> {
         val c = create(user, "Subs FC", "#AA0000", "#FFFFFF", "UTC")
         val (l, squad) = getLineup(user, Sport.FOOTBALL)
         setLineup(user, Sport.FOOTBALL, l.starters, l.bench, l.tactics)

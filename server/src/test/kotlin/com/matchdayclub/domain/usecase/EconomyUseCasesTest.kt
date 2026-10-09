@@ -30,7 +30,7 @@ class EconomyUseCasesTest {
     private val user = UUID.randomUUID()
 
     @Test
-    fun `daily reward once per day with streak and reset`() = runBlocking {
+    fun `daily reward once per day with streak and reset`() = runBlocking<Unit> {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val a = daily(user); assertEquals(1, a.day); assertEquals(1, a.streak); assertEquals(2_650, a.club.coins)
         assertFailsWith<ConflictException> { daily(user) }
@@ -39,7 +39,7 @@ class EconomyUseCasesTest {
     }
 
     @Test
-    fun `tasks progress through collect and pass levels are claimable`() = runBlocking {
+    fun `tasks progress through collect and pass levels are claimable`() = runBlocking<Unit> {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val view = pass.view(user)
         assertEquals(3, view.tasks.size); assertEquals(0, view.level)
@@ -59,7 +59,7 @@ class EconomyUseCasesTest {
     }
 
     @Test
-    fun `purchases grant once and are idempotent`() = runBlocking {
+    fun `purchases grant once and are idempotent`() = runBlocking<Unit> {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val r = purchase(user, Store.DEV, "gold_medium", "dev:order-1")
         assertEquals("GRANTED", r.status); assertEquals(600, r.club.gold)
@@ -71,7 +71,7 @@ class EconomyUseCasesTest {
     }
 
     @Test
-    fun `double income ad doubles the next collect and has a cooldown`() = runBlocking {
+    fun `double income ad doubles the next collect and has a cooldown`() = runBlocking<Unit> {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         ads(user, AdPlacement.DOUBLE_INCOME, null)
         assertFailsWith<ConflictException> { ads(user, AdPlacement.DOUBLE_INCOME, null) }

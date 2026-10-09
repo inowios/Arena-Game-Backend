@@ -166,7 +166,17 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.account.InboxService(get(), get()) }
     single { com.matchdayclub.domain.usecase.account.ClubRetirement(get(), get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.account.TransferUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
-    single { com.matchdayclub.domain.usecase.account.DeleteAccountUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.account.DeleteAccountUseCase(get(), get(), get(), get(), get(), get(), tx = get(), analytics = get(), events = get()) }
+    single<AnalyticsRepository> { AnalyticsRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.analytics.ActivityTracker(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.EventLog(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.TrackEventsUseCase(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.MetricsReportUseCase(get(), get()) }
+    single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("analytics")) { com.matchdayclub.domain.usecase.analytics.AnalyticsClubInitializer(get()) }
+    single<OpsRepository> { OpsRepositoryImpl(get()) }
+    single { com.matchdayclub.domain.usecase.admin.SupportQueries(get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.admin.AdminGrantUseCase(get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.core.plugins.SchedulerTick(get()) }
     single { GuestLoginUseCase(get(), get(), get()) }
     single { OAuthLoginUseCase(get(), get(), get(), get()) }
     single { RefreshTokenUseCase(get(), get(), get(), get()) }

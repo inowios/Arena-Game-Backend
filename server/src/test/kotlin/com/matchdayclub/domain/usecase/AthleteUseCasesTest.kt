@@ -38,7 +38,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `new club gets a starter squad and a default lineup`() = runBlocking {
+    fun `new club gets a starter squad and a default lineup`() = runBlocking<Unit> {
         setup()
         val (l, squad) = getLineup(user, Sport.FOOTBALL)
         assertEquals(14, squad.size); assertTrue(l.isDefault); assertEquals(11, l.starters.size); assertEquals(3, l.bench.size)
@@ -46,7 +46,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `academy claim respects cooldown`() = runBlocking {
+    fun `academy claim respects cooldown`() = runBlocking<Unit> {
         setup(BuildingType.ACADEMY)
         clubs.update(clubs.rows.values.first().copy(academyNextAt = null))
         val a = claim(user)
@@ -57,7 +57,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `training raises an attribute after an hour and uses slots`() = runBlocking {
+    fun `training raises an attribute after an hour and uses slots`() = runBlocking<Unit> {
         setup(BuildingType.TRAINING_CENTER)
         val a = athletes.rows.values.first { it.attack < 60 }
         val t = start(user, a.id, AttributeKind.ATTACK)
@@ -70,7 +70,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `training needs a centre and respects fatigue and cap`() = runBlocking {
+    fun `training needs a centre and respects fatigue and cap`() = runBlocking<Unit> {
         setup()
         val a = athletes.rows.values.first()
         assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.ATTACK) }
@@ -83,7 +83,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `medical centre heals with cooldown`() = runBlocking {
+    fun `medical centre heals with cooldown`() = runBlocking<Unit> {
         setup(BuildingType.MEDICAL_CENTER)
         val a = athletes.rows.values.first()
         athletes.update(a.copy(injuredUntil = clock.now().plusSeconds(86_400), fatigue = 50, fatigueAt = clock.now()))
@@ -98,7 +98,7 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `set lineup validates and engine bridge maps injuries`() = runBlocking {
+    fun `set lineup validates and engine bridge maps injuries`() = runBlocking<Unit> {
         setup()
         val squad = athletes.rows.values.toList()
         val gk = squad.first { it.position == Position.GK }

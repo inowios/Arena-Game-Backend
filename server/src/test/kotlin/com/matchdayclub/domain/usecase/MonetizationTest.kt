@@ -55,7 +55,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `shop cosmetics cost gold once, earned ones can't be bought`() = runBlocking {
+    fun `shop cosmetics cost gold once, earned ones can't be bought`() = runBlocking<Unit> {
         setup(gold = 100)
         val inv = shop.buy(user, "kit_stripes")
         assertTrue("kit_stripes" in inv.owned); assertEquals(40, inv.club.gold)
@@ -69,7 +69,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `equip owned looks, reset to default, refuse what is not owned`() = runBlocking {
+    fun `equip owned looks, reset to default, refuse what is not owned`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ConflictException> { shop.equip(user, CosmeticKind.KIT, "kit_hoops") }
         shop.buy(user, "kit_hoops"); shop.buy(user, "frame_silver")
@@ -83,7 +83,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `decor looks at placement and later`() = runBlocking {
+    fun `decor looks at placement and later`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 15, 15, 0, "decor_fountain") }
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 12, 12, 0, "decor_tree") }
@@ -99,7 +99,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `coin packs turn gold into coins`() = runBlocking {
+    fun `coin packs turn gold into coins`() = runBlocking<Unit> {
         setup(gold = 120)
         val before = club().coins
         val after = coinPacks(user, "coins_medium")
@@ -110,7 +110,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `achievements pay gold per reached tier from counters and club state`() = runBlocking {
+    fun `achievements pay gold per reached tier from counters and club state`() = runBlocking<Unit> {
         setup(gold = 0, level = 3)
         val office = buildings.rows.values.first { it.type == BuildingType.TICKET_OFFICE }
         repeat(10) { clock.advanceSeconds(3600); collect(user, office.id) }
@@ -128,7 +128,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `title achievement grants its frame, a duplicate pays gold`() = runBlocking {
+    fun `title achievement grants its frame, a duplicate pays gold`() = runBlocking<Unit> {
         setup(gold = 0)
         seasons.createTrophy(Trophy(UUID.randomUUID(), club().id, TrophyKind.LEAGUE_TITLE, 1, 1, clock.now()))
         val c = achievements.claim(user, "champion")
@@ -143,7 +143,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `best login streak is kept after the streak breaks`() = runBlocking {
+    fun `best login streak is kept after the streak breaks`() = runBlocking<Unit> {
         setup()
         repeat(7) { daily(user); clock.advanceSeconds(86_400) }
         clock.advanceSeconds(3 * 86_400); daily(user)
@@ -153,7 +153,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `premium pass grants cosmetics and an elite athlete at the last level`() = runBlocking {
+    fun `premium pass grants cosmetics and an elite athlete at the last level`() = runBlocking<Unit> {
         setup()
         pass.view(user)
         val key = economyRepo.passes.keys.first()
@@ -178,7 +178,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `training and medical speed-ups cost gold by remaining time`() = runBlocking {
+    fun `training and medical speed-ups cost gold by remaining time`() = runBlocking<Unit> {
         setup(gold = 100, level = 3, BuildingType.TRAINING_CENTER, BuildingType.MEDICAL_CENTER)
         val a = athletes.rows.values.first { it.clubId == club().id && it.sport == Sport.FOOTBALL && it.position.name != "GK" && it.attack < 55 }
         val t = startTraining(user, a.id, AttributeKind.ATTACK)
@@ -201,7 +201,7 @@ class MonetizationTest {
     }
 
     @Test
-    fun `verified ad rewards are granted once per transaction`() = runBlocking {
+    fun `verified ad rewards are granted once per transaction`() = runBlocking<Unit> {
         setup()
         val c = assertNotNull(ads.grantVerified(user, AdPlacement.DOUBLE_INCOME, null, "tx-1"))
         assertNotNull(c.doubleIncomeUntil)

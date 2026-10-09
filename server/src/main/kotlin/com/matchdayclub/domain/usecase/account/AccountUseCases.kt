@@ -90,14 +90,19 @@ class DeleteAccountUseCase(
     private val retirement: ClubRetirement,
     private val clock: Clock,
     private val tx: Tx = NoTx,
+    private val analytics: com.matchdayclub.domain.repository.AnalyticsRepository? = null,
+    private val events: com.matchdayclub.domain.usecase.analytics.EventLog? = null,
 ) {
-    suspend operator fun invoke(userId: UUID) = tx {
-        val user = users.findById(userId) ?: throw NotFoundException("User not found")
-        clubs.lockByUserId(userId)?.let { retirement.retire(it) }
-        accounts.deletePushTokens(userId)
-        refreshTokens.revokeAllForUser(userId)
-        users.update(user.copy(isActive = false, providerId = "deleted:${user.id}", email = null, displayName = null, avatarUrl = null, locale = null, updatedAt = clock.now()))
-        Unit
+    suspend operator fun invoke(userId: UUID) {
+        tx {
+            val user = users.findById(userId) ?: throw NotFoundException("User not found")
+            clubs.lockByUserId(userId)?.let { retirement.retire(it) }
+            accounts.deletePushTokens(userId)
+            refreshTokens.revokeAllForUser(userId)
+            analytics?.deleteEventsOf(userId)
+            users.update(user.copy(isActive = false, providerId = "deleted:${user.id}", email = null, displayName = null, avatarUrl = null, locale = null, updatedAt = clock.now()))
+        }
+        events?.track(null, "account_deleted")   // anonymous: the user's own events are gone
     }
 }
 

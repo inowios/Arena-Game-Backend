@@ -1,0 +1,16 @@
+# HTTPS reverse proxy for the API (certificates from Let's Encrypt). Used by `docker compose --profile tls up -d`.
+{$DOMAIN} {
+	encode gzip
+
+	# Optional: keep ops endpoints reachable only from your monitoring/admin IPs (they also require ADMIN_TOKEN).
+	# @ops {
+	# 	path /metrics /admin/*
+	# 	not remote_ip 203.0.113.10
+	# }
+	# respond @ops 404
+
+	reverse_proxy app:8080 {
+		# rate limiting keys on the client address
+		header_up X-Real-IP {remote_host}
+	}
+}

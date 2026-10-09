@@ -45,7 +45,7 @@ fun Route.economyRoutes() {
      */
     get("/ads/ssv") {
         val raw = call.request.queryString()
-        val params = try { ssv.verify(raw) } catch (e: Exception) { log.warn("SSV rejected: ${e.message}"); call.respond(io.ktor.http.HttpStatusCode.Forbidden, mapOf("ok" to false)); return@get }
+        val params = try { ssv.verify(raw) } catch (e: Exception) { log.warn("SSV rejected: ${e.message}"); com.matchdayclub.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "rejected"); call.respond(io.ktor.http.HttpStatusCode.Forbidden, mapOf("ok" to false)); return@get }
         val userId = params["user_id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         val tx = params["transaction_id"]
         val custom = params["custom_data"].orEmpty()
@@ -53,7 +53,8 @@ fun Route.economyRoutes() {
         val buildingId = custom.substringAfter(':', "").takeIf { it.isNotBlank() }?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         if (userId == null || tx.isNullOrBlank() || placement == null) { log.info("SSV ignored (test or incomplete): user=${params["user_id"]} custom=$custom"); call.respond(mapOf("ok" to true)); return@get }
         runCatching { ads.grantVerified(userId, placement, buildingId, tx) }
-            .onFailure { log.info("SSV reward not applied for $userId/$placement: ${it.message}") }
+            .onSuccess { com.matchdayclub.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "granted") }
+            .onFailure { log.info("SSV reward not applied for $userId/$placement: ${it.message}"); com.matchdayclub.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "not_applied") }
         call.respond(mapOf("ok" to true))
     }
     authenticate(AUTH_JWT) {
@@ -80,13 +81,17 @@ fun Route.economyRoutes() {
         }
         post("/purchases/verify") {
             val r = call.receive<VerifyPurchaseRequest>()
-            val res = purchase(call.userId(), parseEnum<Store>(r.store, "store"), r.productId, r.token)
+            val store = parseEnum<Store>(r.store, "store")
+            val res = try { purchase(call.userId(), store, r.productId, r.token) }
+                      catch (e: Exception) { com.matchdayclub.core.metrics.Metrics.inc("purchases_total", "store" to store.name, "result" to "rejected"); throw e }
+            com.matchdayclub.core.metrics.Metrics.inc("purchases_total", "store" to store.name, "result" to res.status.lowercase())
             call.respond(PurchaseResponse(res.status, res.gold, res.coins, res.club.toDto()).toSuccessResponse())
         }
         post("/ads/reward") {
             if (!adsConfig.clientRewards) throw com.matchdayclub.domain.exception.AuthorizationException("Ad rewards are confirmed by the ad network")
             val r = call.receive<AdRewardRequest>()
             val club = ads(call.userId(), parseEnum<AdPlacement>(r.placement, "placement"), r.buildingId?.let { runCatching { UUID.fromString(it) }.getOrElse { throw ValidationException("Bad buildingId") } })
+            com.matchdayclub.core.metrics.Metrics.inc("ad_rewards_total", "source" to "client", "result" to "granted")
             call.respond(club.toDto().toSuccessResponse())
         }
         post("/push-tokens") { val r = call.receive<PushTokenRequest>(); pushTokens.upsert(call.userId(), r.token, r.platform.lowercase()); call.respond(mapOf("ok" to true).toSuccessResponse()) }

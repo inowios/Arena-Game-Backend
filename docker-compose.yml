@@ -9,6 +9,7 @@ services:
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
     ports: [ "127.0.0.1:5433:5432" ]
     healthcheck: { test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER:-matchday}" ], interval: 5s, timeout: 3s, retries: 20 }
+    restart: unless-stopped
   app:
     build: .
     image: ${APP_IMAGE:-matchdayclub/server:local}
@@ -19,14 +20,51 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-matchday}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       JWT_ISSUER: ${JWT_ISSUER:-https://api.matchdayclub.app}
+      KTOR_DEVELOPMENT: ${KTOR_DEVELOPMENT:-false}
+      CORS_ALLOWED_HOSTS: ${CORS_ALLOWED_HOSTS:-}
+      CLIENT_MIN_VERSION: ${CLIENT_MIN_VERSION:-0.1.0}
+      MATCHDAY_SCHEDULER_ENABLED: ${MATCHDAY_SCHEDULER_ENABLED:-true}
+      # sign-in
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
       APPLE_BUNDLE_ID: ${APPLE_BUNDLE_ID:-com.inowios.matchdayclub}
-      CORS_ALLOWED_HOSTS: ${CORS_ALLOWED_HOSTS:-}
-      KTOR_DEVELOPMENT: ${KTOR_DEVELOPMENT:-false}
+      # public pages, invite links, app links
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      LEGAL_COMPANY: ${LEGAL_COMPANY:-Inowios}
+      ANDROID_PACKAGE: ${ANDROID_PACKAGE:-com.inowios.matchdayclub}
+      ANDROID_CERT_SHA256: ${ANDROID_CERT_SHA256:-}
+      IOS_TEAM_ID: ${IOS_TEAM_ID:-}
+      PLAY_STORE_URL: ${PLAY_STORE_URL:-}
+      APP_STORE_URL: ${APP_STORE_URL:-}
+      # purchases
       IAP_DEV_MODE: ${IAP_DEV_MODE:-false}
+      GOOGLE_PLAY_PACKAGE: ${GOOGLE_PLAY_PACKAGE:-com.inowios.matchdayclub}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}
+      APPSTORE_ISSUER_ID: ${APPSTORE_ISSUER_ID:-}
+      APPSTORE_KEY_ID: ${APPSTORE_KEY_ID:-}
+      APPSTORE_PRIVATE_KEY: ${APPSTORE_PRIVATE_KEY:-}
+      APPSTORE_ROOT_CERT_PATH: ${APPSTORE_ROOT_CERT_PATH:-}
+      # rewarded ads (production: AdMob server-side verification only)
+      ADS_CLIENT_REWARDS: ${ADS_CLIENT_REWARDS:-false}
+      # push
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
-    ports: [ "${PORT:-8080}:8080" ]
+      # ops: /admin/* and /metrics (empty = disabled)
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+    volumes: [ "./secrets:/app/secrets:ro" ]
+    ports: [ "${APP_BIND:-0.0.0.0}:${PORT:-8080}:8080" ]
+    restart: unless-stopped
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+  # HTTPS in front of the app (Let's Encrypt): docker compose --profile tls up -d   (set DOMAIN and APP_BIND=127.0.0.1)
+  caddy:
+    image: caddy:2-alpine
+    profiles: [ "tls" ]
+    depends_on: [ app ]
+    environment: { DOMAIN: "${DOMAIN:-localhost}" }
+    ports: [ "80:80", "443:443" ]
+    volumes: [ "./deploy/Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config" ]
     restart: unless-stopped
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

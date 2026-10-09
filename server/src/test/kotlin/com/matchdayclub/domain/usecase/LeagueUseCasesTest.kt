@@ -29,7 +29,7 @@ class LeagueUseCasesTest {
     private val u1 = UUID.randomUUID(); private val u2 = UUID.randomUUID()
 
     @Test
-    fun `private league aggregates members public results`() = runBlocking {
+    fun `private league aggregates members public results`() = runBlocking<Unit> {
         val a = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val b = create(u2, "Tigers", "#00AA00", "#FFFFFF", "UTC")
         val priv = createPrivate(u1, "Office league")
@@ -45,7 +45,7 @@ class LeagueUseCasesTest {
     }
 
     @Test
-    fun `friendlies are capped per day and reward coins without reputation`() = runBlocking {
+    fun `friendlies are capped per day and reward coins without reputation`() = runBlocking<Unit> {
         val a = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val before = clubs.rows.getValue(a.id)
         val m = friendly(u1, null)

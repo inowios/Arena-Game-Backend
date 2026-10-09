@@ -47,7 +47,7 @@ class SeasonTest {
     }
 
     @Test
-    fun `strong club wins the entry division, gets prizes, trophies and moves up`() = runBlocking {
+    fun `strong club wins the entry division, gets prizes, trophies and moves up`() = runBlocking<Unit> {
         val c = newClub("Champs", rating = 95)
         val oldLeague = leagues.listForClub(c.id).single()
         assertEquals(LeagueRules.ROUNDS * 4, playSeason())
@@ -69,7 +69,7 @@ class SeasonTest {
     }
 
     @Test
-    fun `weak club is relegated from division 2`() = runBlocking {
+    fun `weak club is relegated from division 2`() = runBlocking<Unit> {
         val c = newClub("Strugglers", rating = 15, division = 2)
         val league = leagues.listForClub(c.id).single { it.status == LeagueStatus.ACTIVE }
         assertEquals(2, league.division)
@@ -81,7 +81,7 @@ class SeasonTest {
     }
 
     @Test
-    fun `bots of a finished season are reused by the next league in that division`() = runBlocking {
+    fun `bots of a finished season are reused by the next league in that division`() = runBlocking<Unit> {
         newClub("First", rating = 50)
         playSeason()
         val botsBefore = clubs.rows.values.count { it.isBot }
@@ -90,7 +90,7 @@ class SeasonTest {
     }
 
     @Test
-    fun `season pass follows the club season counter`() = runBlocking {
+    fun `season pass follows the club season counter`() = runBlocking<Unit> {
         val c = newClub("Passers")
         val service = ClubService(clubs, buildings, clock)
         val economy = EconomyService(economyRepo, leagues, clock)

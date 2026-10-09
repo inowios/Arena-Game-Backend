@@ -61,7 +61,7 @@ class CareerTest {
     }
 
     @Test
-    fun `season end ages the squad, retires veterans and brings youth in`() = runBlocking {
+    fun `season end ages the squad, retires veterans and brings youth in`() = runBlocking<Unit> {
         setup()
         val veteran = squad().first { it.position == Position.DEF }
         athletes.update(veteran.copy(age = 35))
@@ -77,7 +77,7 @@ class CareerTest {
     }
 
     @Test
-    fun `release keeps a playable section`() = runBlocking {
+    fun `release keeps a playable section`() = runBlocking<Unit> {
         setup()
         val keepers = squad().filter { it.position == Position.GK }
         assertEquals(2, keepers.size)
@@ -90,7 +90,7 @@ class CareerTest {
     }
 
     @Test
-    fun `scouting needs an academy and signs one player a day`() = runBlocking {
+    fun `scouting needs an academy and signs one player a day`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ValidationException> { scouting.report(user) }
         place(user, BuildingType.ACADEMY, 2, 10, 0).let { speed(user, it.id) }
@@ -112,7 +112,7 @@ class CareerTest {
     }
 
     @Test
-    fun `training stops at potential`() = runBlocking {
+    fun `training stops at potential`() = runBlocking<Unit> {
         setup()
         place(user, BuildingType.TRAINING_CENTER, 2, 10, 0).let { speed(user, it.id) }
         val a = squad().first { it.position == Position.MID && it.attack < 58 }
@@ -123,7 +123,7 @@ class CareerTest {
     }
 
     @Test
-    fun `league matchdays move morale with playing time and results`() = runBlocking {
+    fun `league matchdays move morale with playing time and results`() = runBlocking<Unit> {
         setup()
         runner.runDueRounds(Instant.parse("2026-10-09T20:00:00Z"))
         val mine = fixtures.rows.values.single { it.involves(club().id) && it.round == 1 }

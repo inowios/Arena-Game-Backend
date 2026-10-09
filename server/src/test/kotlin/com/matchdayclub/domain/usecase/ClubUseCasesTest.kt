@@ -26,7 +26,7 @@ class ClubUseCasesTest {
     private val user = UUID.randomUUID()
 
     @Test
-    fun `update club validates and keeps unspecified fields`() = runBlocking {
+    fun `update club validates and keeps unspecified fields`() = runBlocking<Unit> {
         newClub()
         val c = update(user, null, "#112233", null, """{"shape":"shield","icon":"ball"}""")
         assertEquals("Red Lions", c.name); assertEquals("#112233", c.primaryColor); assertEquals("#FFFFFF", c.secondaryColor); assertTrue(c.emblemJson!!.contains("shield"))
@@ -38,7 +38,7 @@ class ClubUseCasesTest {
     private fun newClub() = runBlocking { create(user, "Red Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv") }
 
     @Test
-    fun `create club seeds pitch and ticket office`() = runBlocking {
+    fun `create club seeds pitch and ticket office`() = runBlocking<Unit> {
         val c = newClub()
         val st = get(user)
         assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(12, st.gridSize)
@@ -49,7 +49,7 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `place charges coins starts timer and finalises on read`() = runBlocking {
+    fun `place charges coins starts timer and finalises on read`() = runBlocking<Unit> {
         newClub()
         val b = place(user, BuildingType.ACADEMY, 0, 10, 0)
         assertEquals(BuildingState.UPGRADING, b.state); assertEquals(2_000, clubs.rows.values.first().coins)
@@ -59,7 +59,7 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `placement validation`() = runBlocking {
+    fun `placement validation`() = runBlocking<Unit> {
         newClub()
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 3, 4, 0) }           // overlaps pitch
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 11, 11, 0) }       // outside grid
@@ -70,7 +70,7 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `collect income is capped and speed up costs gold`() = runBlocking {
+    fun `collect income is capped and speed up costs gold`() = runBlocking<Unit> {
         newClub()
         val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }
         clock.advanceSeconds(2 * 3600)
@@ -81,7 +81,7 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `upgrade requires club level and speed up works`() = runBlocking {
+    fun `upgrade requires club level and speed up works`() = runBlocking<Unit> {
         newClub()
         val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }
         assertFailsWith<ValidationException> { upgrade(user, office.id) }

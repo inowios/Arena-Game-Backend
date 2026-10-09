@@ -23,7 +23,8 @@ Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides
 `DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
 `ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`; stores and ads:
 `GOOGLE_PLAY_PACKAGE`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY`,
-`APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`, `ADS_CLIENT_REWARDS`).
+`APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`, `ADS_CLIENT_REWARDS`; ops: `ADMIN_TOKEN`, `SUPPORT_EMAIL`, `LEGAL_COMPANY`).
+Production setup, monitoring, backups and the store checklist: `deploy/README.md`.
 
 ## API (v1)
 
@@ -73,6 +74,9 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST/GET | `/api/v1/challenges`, `/challenges/mine`, `/challenges/{code}`, `/challenges/{code}/accept` | one-off friendly by link (7 days, first taker plays; both clubs rewarded) |
 | GET | `/l/{code}`, `/c/{code}`, `/.well-known/assetlinks.json`, `/.well-known/apple-app-site-association` | invite landing pages (5 languages, store links, clipboard hand-off) and app-link association |
 | GET | `/api/v1/config` | public client config: base URL, link templates, store URLs, minimum client version |
+| POST | `/api/v1/analytics/events` `{platform, appVersion, events:[{name, props?, at?}]}` | product events from the app (≤ 50 per batch; names `[a-z][a-z0-9_]`, ≤ 12 short string props; queued events may be up to 3 days old) |
+| GET | `/privacy`, `/terms`, `/delete-account` (`?lang=ru`) | store-required public pages, English/Russian (contact `SUPPORT_EMAIL`, publisher `LEGAL_COMPANY`) |
+| GET/POST | `/metrics`, `/admin/metrics?days=`, `/admin/stats`, `/admin/clubs?q=`, `/admin/clubs/{id}`, `/admin/clubs/{id}/grant`, `/admin/scheduler/run` | ops and support with `X-Admin-Token: $ADMIN_TOKEN` — see `deploy/README.md` |
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
@@ -100,6 +104,12 @@ engine weighs morale ±10%). Squad limits: football 25, basketball 14, tennis 6.
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,
 draw 150 / +5, loss 60 / +1; starters gain fatigue, injuries from the engine last 2 days. Single-instance scheduler (in-process lock).
+
+Analytics: every authenticated request marks the user active for the UTC day (`user_days`, one insert per user and day);
+the app sends product events in batches (`analytics_events`; the server adds `club_created`, `account_deleted`, `admin_grant`).
+`GET /admin/metrics` reports the spec's launch KPIs — D1/D7 retention by signup cohort (only complete days count), share of
+weekly-active players in a private league, k-factor (new players who joined through an invite ÷ active players) — with their
+targets/thresholds, plus DAU/WAU/MAU, purchases, ad rewards and top events. Deleting an account erases that player's events.
 
 Languages: en, es, pt, ru, uk. Error messages are answered in the request's `Accept-Language` (catalog
 `server/src/main/resources/i18n/messages.tsv`, keyed by the English template: `ConflictException("Requires club level {0}", n)`;

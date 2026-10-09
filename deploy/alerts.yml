@@ -1,0 +1,29 @@
+groups:
+  - name: matchdayclub
+    rules:
+      - alert: ApiDown
+        expr: up{job="matchdayclub"} == 0
+        for: 2m
+        annotations: { summary: "API not scraped for 2 minutes" }
+      - alert: SchedulerStale
+        # the scheduler passes every 5 minutes; matchdays, season ends and cups stop when it does
+        expr: time() - scheduler_last_tick_timestamp_seconds > 900
+        for: 5m
+        annotations: { summary: "Matchday scheduler has not run for 15+ minutes" }
+      - alert: SchedulerFailing
+        expr: increase(scheduler_failures_total[30m]) > 0
+        annotations: { summary: "Scheduler pass threw (see app logs: MatchdayScheduler)" }
+      - alert: ServerErrors
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 0.001) > 0.02
+        for: 10m
+        annotations: { summary: "More than 2% of requests fail with 5xx" }
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        annotations: { summary: "p95 latency above 1s" }
+      - alert: PushFailures
+        expr: increase(push_total{result="failed"}[1h]) > 50
+        annotations: { summary: "FCM rejects pushes (credentials or quota?)" }
+      - alert: PurchasesRejected
+        expr: increase(purchases_total{result="rejected"}[1h]) > 10
+        annotations: { summary: "Many purchase verifications rejected (store keys? fraud?)" }

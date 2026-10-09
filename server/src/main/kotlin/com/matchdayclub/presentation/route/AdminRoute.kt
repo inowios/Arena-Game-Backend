@@ -1,0 +1,86 @@
+package com.matchdayclub.presentation.route
+
+import com.matchdayclub.common.response.toSuccessResponse
+import com.matchdayclub.core.metrics.Metrics
+import com.matchdayclub.core.plugins.SchedulerStatus
+import com.matchdayclub.core.plugins.SchedulerTick
+import com.matchdayclub.domain.exception.AuthenticationException
+import com.matchdayclub.domain.exception.ValidationException
+import com.matchdayclub.domain.repository.OpsRepository
+import com.matchdayclub.domain.usecase.admin.AdminGrantUseCase
+import com.matchdayclub.domain.usecase.admin.SupportQueries
+import com.matchdayclub.domain.usecase.analytics.MetricsReportUseCase
+import com.matchdayclub.presentation.dto.*
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
+import java.security.MessageDigest
+import java.time.LocalDate
+import java.util.UUID
+
+/** Shortest admin token accepted; with a shorter (or no) ADMIN_TOKEN the admin endpoints and /metrics are not served. */
+const val ADMIN_TOKEN_MIN = 16
+
+private fun ApplicationCall.requireAdmin(expected: ByteArray) {
+    val got = request.header("X-Admin-Token")
+        ?: request.header(HttpHeaders.Authorization)?.takeIf { it.startsWith("Bearer ", ignoreCase = true) }?.substring(7)?.trim()
+    if (got == null || !MessageDigest.isEqual(got.toByteArray(), expected)) throw AuthenticationException("Admin token required")
+}
+
+/**
+ * Ops and support API (header `X-Admin-Token: <ADMIN_TOKEN>` or `Authorization: Bearer <ADMIN_TOKEN>`):
+ * Prometheus metrics, the launch KPI report, counts and scheduler state, club lookup, compensation grants and a manual
+ * scheduler pass.
+ */
+fun Route.adminRoutes(token: String) {
+    val expected = token.toByteArray()
+    val report: MetricsReportUseCase by inject()
+    val ops: OpsRepository by inject()
+    val support: SupportQueries by inject()
+    val grant: AdminGrantUseCase by inject()
+    val tick: SchedulerTick by inject()
+    val version = AdminRoute::class.java.`package`?.implementationVersion ?: "dev"
+
+    get("/metrics") {
+        call.requireAdmin(expected)
+        call.respondText(Metrics.render(), ContentType.parse("text/plain; version=0.0.4; charset=utf-8"))
+    }
+    route("/admin") {
+        get("/metrics") {
+            call.requireAdmin(expected)
+            val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 30
+            val to = call.request.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrElse { throw ValidationException("Bad date") } }
+            call.respond(report(days, to).toDto().toSuccessResponse())
+        }
+        get("/stats") {
+            call.requireAdmin(expected)
+            val s = SchedulerStatus
+            call.respond(OpsStatsDto(ops.counts(), SchedulerStatusDto(s.lastTickAt?.toString(), s.lastMatches, s.lastCupMatches, s.lastError, s.ticks.get(), s.failures.get()), version).toSuccessResponse())
+        }
+        get("/clubs") {
+            call.requireAdmin(expected)
+            call.respond(support.search(call.request.queryParameters["q"] ?: "").map { it.toAdminDto() }.toSuccessResponse())
+        }
+        get("/clubs/{id}") {
+            call.requireAdmin(expected)
+            val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrElse { throw ValidationException("Bad id") }
+            call.respond(support.card(id).toDto().toSuccessResponse())
+        }
+        post("/clubs/{id}/grant") {
+            call.requireAdmin(expected)
+            val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrElse { throw ValidationException("Bad id") }
+            val r = call.receive<GrantRequest>()
+            call.respond(grant(id, r.coins, r.gold, r.reason).toAdminDto().toSuccessResponse())
+        }
+        post("/scheduler/run") {
+            call.requireAdmin(expected)
+            val (matches, cup) = tick.run()
+            call.respond(SchedulerRunResponse(matches, cup).toSuccessResponse())
+        }
+    }
+}
+
+private object AdminRoute

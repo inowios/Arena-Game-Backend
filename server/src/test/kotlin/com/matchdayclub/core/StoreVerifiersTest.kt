@@ -43,7 +43,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `admob callback signature is verified and parameters decoded`() = runBlocking {
+    fun `admob callback signature is verified and parameters decoded`() = runBlocking<Unit> {
         val v = AdMobSsvVerifier(adHttp(), now = { now })
         val content = "ad_network=5450213213286189855&ad_unit=1234567890&custom_data=FREE_SPEEDUP%3Aabc&reward_amount=1&reward_item=Reward&timestamp=1507770365237823&transaction_id=18fa792de1bca816048293fc71035638&user_id=u-1"
         val params = v.verify(signedQuery(content))
@@ -54,7 +54,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `admob keys are refreshed once for an unknown key id`() = runBlocking {
+    fun `admob keys are refreshed once for an unknown key id`() = runBlocking<Unit> {
         val http = adHttp(keyId = 42)
         val v = AdMobSsvVerifier(http, now = { now })
         v.verify(signedQuery("transaction_id=1&user_id=a"))
@@ -82,7 +82,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `google play purchase is granted by order id`() = runBlocking {
+    fun `google play purchase is granted by order id`() = runBlocking<Unit> {
         val (v, http) = play { url ->
             assertTrue(url.contains("/applications/com.inowios.matchdayclub/purchases/products/gold_small/tokens/tok-1"))
             HttpReply(200, """{"purchaseState":0,"consumptionState":0,"orderId":"GPA.1234-5678","acknowledgementState":0,"purchaseType":0}""")
@@ -93,7 +93,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `google play rejects pending, cancelled and unknown purchases`() = runBlocking {
+    fun `google play rejects pending, cancelled and unknown purchases`() = runBlocking<Unit> {
         assertFailsWith<ValidationException> { play { HttpReply(200, """{"purchaseState":2,"orderId":"x"}""") }.first.verify("gold_small", "t") }
         assertFailsWith<ValidationException> { play { HttpReply(200, """{"purchaseState":1,"orderId":"x"}""") }.first.verify("gold_small", "t") }
         assertFailsWith<ValidationException> { play { HttpReply(404, """{"error":{"code":404}}""") }.first.verify("gold_small", "t") }
@@ -134,7 +134,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `app store transaction is looked up (sandbox fallback) and checked`() = runBlocking {
+    fun `app store transaction is looked up (sandbox fallback) and checked`() = runBlocking<Unit> {
         val signer = ecPair()
         val (v, http) = appStore(jws(transaction(), signer.private))
         assertEquals("apple:2000000123456789", v.verify("gold_small", "2000000123456789"))
@@ -147,7 +147,7 @@ class StoreVerifiersTest {
     }
 
     @Test
-    fun `signed transaction chain is verified against the configured root`() = runBlocking {
+    fun `signed transaction chain is verified against the configured root`() = runBlocking<Unit> {
         val keytool = File(System.getProperty("java.home"), "bin/keytool")
         assumeTrue(keytool.canExecute(), "keytool not available")
         val dir = kotlin.io.path.createTempDirectory("aasa").toFile()

@@ -35,7 +35,7 @@ class ConcurrencyIT {
     private val userId = UUID.randomUUID()
 
     @BeforeEach
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking<Unit> {
         TestDb.fresh()
         users.create(User(userId, AuthProvider.GUEST, "it-device-$userId", null, null, null, true, clock.now(), clock.now()))
         create(userId, "Race FC", "#112233", "#FFFFFF", "UTC"); Unit

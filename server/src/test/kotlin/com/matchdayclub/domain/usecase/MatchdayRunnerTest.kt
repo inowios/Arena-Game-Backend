@@ -22,7 +22,7 @@ class MatchdayRunnerTest {
     private val user = UUID.randomUUID()
 
     @Test
-    fun `club joins a public league in its timezone bucket and the first round plays at 20 local`() = runBlocking {
+    fun `club joins a public league in its timezone bucket and the first round plays at 20 local`() = runBlocking<Unit> {
         val club = create(user, "Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv")
         val league = leagues.listForClub(club.id).single()
         assertEquals(LeagueKind.PUBLIC, league.kind); assertEquals(3, league.tzBucket); assertEquals("2026-10-09", league.seasonStart.toString())
@@ -40,7 +40,7 @@ class MatchdayRunnerTest {
     }
 
     @Test
-    fun `second club in the same bucket shares the league, different bucket gets its own`() = runBlocking {
+    fun `second club in the same bucket shares the league, different bucket gets its own`() = runBlocking<Unit> {
         val a = create(UUID.randomUUID(), "Alpha", "#000000", "#FFFFFF", "Europe/Kyiv")
         val b = create(UUID.randomUUID(), "Bravo", "#000000", "#FFFFFF", "Europe/Warsaw")   // UTC+2 → different bucket
         val c = create(UUID.randomUUID(), "Charlie", "#000000", "#FFFFFF", "Europe/Kyiv")
@@ -52,7 +52,7 @@ class MatchdayRunnerTest {
     }
 
     @Test
-    fun `season rolls over after 28 rounds`() = runBlocking {
+    fun `season rolls over after 28 rounds`() = runBlocking<Unit> {
         val club = create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         var t = Instant.parse("2026-10-09T20:00:00Z")
         var total = 0
