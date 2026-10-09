@@ -35,6 +35,17 @@ object ClubTable : BaseTable("clubs") {
     val scoutSignedDate = date("scout_signed_date").nullable()
     val trophies = integer("trophies")
     val liveStreak = integer("live_streak")
+    val marketSalt = integer("market_salt")
+}
+
+object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases") {
+    val clubId = uuid("club_id").references(ClubTable.id)
+    val period = long("period")
+    val salt = integer("salt")
+    val idx = integer("idx")
+    val athleteId = uuid("athlete_id")
+    val createdAt = timestamp("created_at")
+    override val primaryKey = PrimaryKey(clubId, period, salt, idx)
 }
 
 object BuildingTable : BaseTable("buildings") {

@@ -3,6 +3,7 @@ package com.matchdayclub.data.repository
 import com.matchdayclub.common.extension.dbQuery
 import com.matchdayclub.data.database.BuildingTable
 import com.matchdayclub.data.database.ClubTable
+import com.matchdayclub.data.database.MarketPurchaseTable
 import com.matchdayclub.domain.model.Building
 import com.matchdayclub.domain.model.BuildingState
 import com.matchdayclub.domain.model.Club
@@ -37,7 +38,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
         this[ClubTable.scoutSignedDate] = c.scoutSignedDate
-        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak
+        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.marketSalt] = c.marketSalt
     }
 
 }
@@ -80,5 +81,14 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
     this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
     this[ClubTable.scoutSignedDate],
-    this[ClubTable.trophies], this[ClubTable.liveStreak],
+    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt],
 )
+
+class MarketRepositoryImpl : com.matchdayclub.domain.repository.MarketRepository {
+    override suspend fun purchased(clubId: UUID, period: Long, salt: Int): Set<Int> = dbQuery {
+        MarketPurchaseTable.selectAll().where { (MarketPurchaseTable.clubId eq clubId) and (MarketPurchaseTable.period eq period) and (MarketPurchaseTable.salt eq salt) }.map { it[MarketPurchaseTable.idx] }.toSet()
+    }
+    override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant): Boolean = dbQuery {
+        runCatching { MarketPurchaseTable.insert { it[this.clubId] = clubId; it[this.period] = period; it[this.salt] = salt; it[this.idx] = idx; it[this.athleteId] = athleteId; it[createdAt] = at } }.isSuccess
+    }
+}

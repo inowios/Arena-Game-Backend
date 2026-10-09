@@ -32,3 +32,9 @@ class FakeBuildingRepository : BuildingRepository {
     override suspend fun move(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun delete(id: UUID) { rows.remove(id) }
 }
+
+class FakeMarketRepository : com.matchdayclub.domain.repository.MarketRepository {
+    val rows = mutableSetOf<String>()
+    override suspend fun purchased(clubId: UUID, period: Long, salt: Int) = rows.filter { it.startsWith("$clubId:$period:$salt:") }.map { it.substringAfterLast(':').toInt() }.toSet()
+    override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant) = rows.add("$clubId:$period:$salt:$idx")
+}

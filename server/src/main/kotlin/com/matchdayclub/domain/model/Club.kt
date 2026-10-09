@@ -43,6 +43,8 @@ data class Club(
     /** Live-match trophies (arena ladder) and the current run of live wins (a player pack every third). */
     val trophies: Int = 0,
     val liveStreak: Int = 0,
+    /** Bumped by a paid market refresh: a new set of listings for the same period. */
+    val marketSalt: Int = 0,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

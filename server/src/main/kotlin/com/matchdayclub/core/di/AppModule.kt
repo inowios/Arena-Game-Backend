@@ -154,6 +154,12 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.live.FinishLiveMatchUseCase(get(), get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get(), tx = get(), buildings = get()) }
     single { com.matchdayclub.domain.usecase.live.StartLiveMatchUseCase(get(), get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.live.LiveReadinessUseCase(get(), get(), get(), get(), get()) }
+    single<com.matchdayclub.domain.repository.MarketRepository> { com.matchdayclub.data.repository.MarketRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.market.MarketService(get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.market.GetMarketUseCase(get(), get()) }
+    single { com.matchdayclub.domain.usecase.market.BuyListingUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.market.RefreshMarketUseCase(get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.market.SellAthleteUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.live.RestSquadUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { GetPublicClubUseCase(get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
