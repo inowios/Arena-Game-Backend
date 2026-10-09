@@ -11,6 +11,7 @@ import com.matchdayclub.domain.repository.AthleteRepository
 import com.matchdayclub.domain.repository.ClubRepository
 import com.matchdayclub.domain.repository.LiveMatchRepository
 import com.matchdayclub.domain.rules.*
+import com.matchdayclub.domain.rules.BuildingType
 import com.matchdayclub.domain.usecase.account.InboxService
 import com.matchdayclub.domain.usecase.athlete.LineupRules
 import com.matchdayclub.domain.usecase.club.ClubService
@@ -181,5 +182,42 @@ class FinishLiveMatchUseCase(
         }
         val fresh = athletes.listByClub(club.id)
         return LiveOutcome(finished, saved, outcome, Arenas.of(newTrophies), coins, rep, delta, packAthlete, fresh)
+    }
+}
+
+/** How ready the squad is for a live match: energy of the eleven, whether they can start, minutes until they can. */
+data class LiveReadiness(val energy: Int, val ready: Boolean, val restMinutes: Int, val tired: Int, val restGold: Int)
+
+class LiveReadinessUseCase(private val service: ClubService, private val athletes: AthleteRepository, private val lineupService: LineupService, private val buildings: com.matchdayclub.domain.repository.BuildingRepository, private val clock: Clock) {
+    suspend operator fun invoke(userId: UUID): LiveReadiness = of(service.clubOf(userId))
+
+    suspend fun of(club: Club): LiveReadiness {
+        val now = clock.now()
+        val squad = athletes.listByClub(club.id).filter { it.sport == Sport.FOOTBALL && it.retiredAt == null }
+        val lineup = lineupService.lineup(club, Sport.FOOTBALL, now, squad)
+        val byId = squad.associateBy { it.id }
+        val eleven = lineup.starters.mapNotNull { byId[it] }
+        val energy = if (eleven.isEmpty()) 100 else eleven.map { 100 - it.currentFatigue(now) }.average().roundToInt()
+        val tired = eleven.count { it.currentFatigue(now) >= Arenas.MAX_FATIGUE_TO_PLAY || it.isInjured(now) }
+        val ready = LiveRules.restedEleven(lineup, squad, now) != null
+        val medical = buildings.listByClub(club.id).firstOrNull { it.type == BuildingType.MEDICAL_CENTER }?.level ?: 0
+        return LiveReadiness(energy, ready, if (ready) 0 else LiveRules.minutesToRest(squad, now), tired, LiveRules.restGold(eleven.sumOf { it.currentFatigue(now) }, medical))
+    }
+}
+
+/** Gold for a full recovery of the eleven: a point of fatigue a gold per 20 points, cheaper with a medical centre, never free. */
+fun LiveRules.restGold(totalFatigue: Int, medicalLevel: Int): Int = ((totalFatigue / 20.0) * (1.0 - 0.15 * medicalLevel)).roundToInt().coerceAtLeast(2)
+
+/** Pays gold to rest the whole squad at once (the "army" is back): every athlete's fatigue goes to zero. */
+class RestSquadUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val readiness: LiveReadinessUseCase, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID): Club = tx {
+        val club = service.lockedClubOf(userId)
+        val now = clock.now()
+        val r = readiness.of(club)
+        val squad = athletes.listByClub(club.id).filter { it.sport == Sport.FOOTBALL && it.retiredAt == null }
+        if (squad.all { it.currentFatigue(now) == 0 }) throw ConflictException("Everyone is already rested")
+        val charged = service.charge(club, gold = r.restGold)
+        squad.filter { it.currentFatigue(now) > 0 }.forEach { athletes.update(it.copy(fatigue = 0, fatigueAt = now, updatedAt = now)) }
+        charged
     }
 }

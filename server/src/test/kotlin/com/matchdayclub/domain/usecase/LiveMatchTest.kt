@@ -90,3 +90,31 @@ class LiveMatchTest {
         assertEquals(LiveStatus.OPEN, live.rows.getValue(second.match.id).status)
     }
 }
+
+class LiveReadinessTest {
+    private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val live = FakeLiveMatchRepository(clubs)
+    private val bots = BotService(users, clubs, athletes, clock)
+    private val clubService = ClubService(clubs, buildings, clock)
+    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock)
+    private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
+    private val readiness = com.matchdayclub.domain.usecase.live.LiveReadinessUseCase(clubService, athletes, LineupService(athletes, lineups), buildings, clock)
+    private val rest = com.matchdayclub.domain.usecase.live.RestSquadUseCase(clubService, clubs, athletes, readiness, clock)
+    private val u1 = UUID.randomUUID()
+
+    @Test
+    fun `energy drops with matches and gold brings the squad back`() = runBlocking<Unit> {
+        val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        assertEquals(100, readiness(u1).energy); assertTrue(readiness(u1).ready)
+        repeat(4) { val s = start(u1, null); finish(u1, s.match.id, LiveReport(1, 0, duration = 250.0)) }
+        val r = readiness(u1)
+        assertFalse(r.ready); assertTrue(r.restMinutes > 0); assertTrue(r.energy < 50, "energy ${r.energy}")
+        clubs.rows[club.id] = clubs.rows.getValue(club.id).copy(gold = 100)
+        val after = rest(u1)
+        assertEquals(100 - r.restGold, after.gold)
+        assertTrue(readiness(u1).ready); assertEquals(100, readiness(u1).energy)
+        assertFailsWith<ConflictException> { rest(u1) }
+    }
+}
