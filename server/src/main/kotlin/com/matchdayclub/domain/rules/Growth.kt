@@ -6,7 +6,7 @@ import com.matchdayclub.engine.model.Position
 import kotlin.random.Random
 
 /** What a live match did for one athlete: experience earned, attribute points gained (and which). */
-data class GrowthResult(val athlete: Athlete, val xpGained: Int, val points: Int, val raised: List<AttributeKind>, val overallBefore: Int, val overallAfter: Int)
+data class GrowthResult(val athlete: Athlete, val xpGained: Int, val points: Int, val raised: List<AttributeKind>, val overallBefore: Int, val overallAfter: Int, val skillPoints: Int = 0)
 
 /**
  * Player development from matches (the FIFA-style side of the loop): starters earn experience for minutes, goals,
@@ -47,7 +47,9 @@ object Growth {
 
     /** Adds [xp] and turns full hundreds into attribute points while potential and [cap] allow. */
     fun apply(a: Athlete, xp: Int, cap: Int, r: Random): GrowthResult {
-        var cur = a.copy(xp = a.xp + xp); val raised = mutableListOf<AttributeKind>()
+        // skill points for the technique trees come with experience whatever the attributes do
+        val skill = Techniques.pointsFor(a.xpTotal + xp) - Techniques.pointsFor(a.xpTotal)
+        var cur = a.copy(xp = a.xp + xp, xpTotal = a.xpTotal + xp, skillPoints = a.skillPoints + skill); val raised = mutableListOf<AttributeKind>()
         while (cur.xp >= XP_PER_POINT) {
             if (!Careers.canTrain(cur, 1)) { cur = cur.copy(xp = XP_PER_POINT - 1); break }   // at potential: experience waits for the next season's growth
             var kind = pick(a.position, r); var guard = 0
@@ -55,6 +57,6 @@ object Growth {
             if (cur.attribute(kind) >= cap.coerceAtMost(99)) { cur = cur.copy(xp = XP_PER_POINT - 1); break }
             cur = cur.withAttribute(kind, cur.attribute(kind) + 1).copy(xp = cur.xp - XP_PER_POINT); raised += kind
         }
-        return GrowthResult(cur, xp, raised.size, raised, a.overall, cur.overall)
+        return GrowthResult(cur, xp, raised.size, raised, a.overall, cur.overall, skill)
     }
 }

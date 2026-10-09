@@ -33,6 +33,7 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.technique] = a.technique; this[AthleteTable.mental] = a.mental; this[AthleteTable.fatigue] = a.fatigue; this[AthleteTable.fatigueAt] = a.fatigueAt
         this[AthleteTable.injuredUntil] = a.injuredUntil; this[AthleteTable.morale] = a.morale; this[AthleteTable.updatedAt] = a.updatedAt
         this[AthleteTable.age] = a.age; this[AthleteTable.potential] = a.potential; this[AthleteTable.retiredAt] = a.retiredAt; this[AthleteTable.xp] = a.xp
+        this[AthleteTable.techniques] = TechniqueCodec.encode(a.techniques); this[AthleteTable.skillPoints] = a.skillPoints; this[AthleteTable.xpTotal] = a.xpTotal
     }
 
     private fun ResultRow.toAthlete() = Athlete(
@@ -40,7 +41,14 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.attack], this[AthleteTable.defense], this[AthleteTable.physical], this[AthleteTable.technique], this[AthleteTable.mental],
         this[AthleteTable.age], Rarity.valueOf(this[AthleteTable.rarity]), this[AthleteTable.fatigue], this[AthleteTable.fatigueAt], this[AthleteTable.injuredUntil], this[AthleteTable.morale],
         this[AthleteTable.createdAt], this[AthleteTable.updatedAt], this[AthleteTable.potential], this[AthleteTable.retiredAt], this[AthleteTable.xp],
+        TechniqueCodec.decode(this[AthleteTable.techniques]), this[AthleteTable.skillPoints], this[AthleteTable.xpTotal],
     )
+}
+
+/** Technique levels in one column: "SHOOT:2,FEINT:1". */
+object TechniqueCodec {
+    fun encode(t: Map<String, Int>): String = t.entries.filter { it.value > 0 }.sortedBy { it.key }.joinToString(",") { "${it.key}:${it.value}" }
+    fun decode(s: String?): Map<String, Int> = if (s.isNullOrBlank()) emptyMap() else s.split(",").mapNotNull { e -> val i = e.indexOf(':'); if (i <= 0) null else e.substring(0, i) to (e.substring(i + 1).toIntOrNull() ?: 0) }.filter { it.second > 0 }.toMap()
 }
 
 class TrainingRepositoryImpl : TrainingRepository {

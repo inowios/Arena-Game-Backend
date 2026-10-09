@@ -14,6 +14,7 @@ import com.matchdayclub.domain.rules.AthleteFactory
 import com.matchdayclub.domain.rules.BuildingType
 import com.matchdayclub.domain.rules.Careers
 import com.matchdayclub.domain.rules.Sections
+import com.matchdayclub.domain.rules.Techniques
 import com.matchdayclub.domain.usecase.club.ClubService
 import com.matchdayclub.domain.usecase.club.ClubState
 import java.time.Instant
@@ -107,5 +108,25 @@ class ScoutingUseCases(private val service: ClubService, private val clubs: Club
         athletes.createAll(listOf(signed))
         clubs.update(club.copy(scoutSignedDate = day, updatedAt = clock.now()))
         signed
+    }
+}
+
+/** One step up a technique tree, paid with the athlete's skill points. */
+class UpgradeTechniqueUseCase(private val service: ClubService, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    data class Result(val athlete: Athlete, val level: Int, val cost: Int)
+
+    suspend operator fun invoke(userId: UUID, athleteId: UUID, key: String): Result = tx {
+        val club = service.lockedClubOf(userId)
+        val a = athletes.findById(athleteId)?.takeIf { it.clubId == club.id && it.retiredAt == null } ?: throw NotFoundException("Athlete not found")
+        val k = key.uppercase()
+        if (k !in Techniques.KEYS) throw ValidationException("Unknown technique")
+        if (!Techniques.allowed(a.position, k)) throw ValidationException("This athlete cannot learn that move")
+        val level = a.technique(k) + 1
+        if (level > Techniques.MAX_LEVEL) throw ConflictException("That move is already mastered")
+        val cost = Techniques.cost(level)
+        if (a.skillPoints < cost) throw ValidationException("Not enough skill points: {0} needed", cost)
+        val now = clock.now()
+        val up = athletes.update(a.copy(techniques = a.techniques + (k to level), skillPoints = a.skillPoints - cost, updatedAt = now))
+        Result(up, level, cost)
     }
 }

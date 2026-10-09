@@ -79,6 +79,7 @@ val appModule = module {
     single<SeasonRepository> { SeasonRepositoryImpl() }
     single { CareerService(get(), get(), get()) }
     single { ReleaseAthleteUseCase(get(), get(), get(), get(), tx = get()) }
+    single { UpgradeTechniqueUseCase(get(), get(), get(), tx = get()) }
     single { ScoutingUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
     single { GetClubHistoryUseCase(get(), get()) }

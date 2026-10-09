@@ -15,6 +15,9 @@ import java.time.Instant
     val xp: Int = 0, val xpNext: Int = 100,
     /** Market value in coins (selling returns half). */
     val value: Long = 0,
+    /** Technique levels by key (SHOOT, PASS, CROSS, FEINT, TACKLE, SLIDE, BLOCK, JUMP → 1..5) and points to spend on them. */
+    val techniques: Map<String, Int> = emptyMap(),
+    val skillPoints: Int = 0,
 )
 @Serializable data class TrainingDto(val id: String, val athleteId: String, val attribute: String, val delta: Int, val endsAt: String, val remainingSeconds: Long)
 @Serializable data class SquadResponse(val athletes: List<AthleteDto>, val trainings: List<TrainingDto>, val trainingSlots: Int, val serverTime: String)
@@ -24,7 +27,8 @@ import java.time.Instant
 @Serializable data class LineupResponse(val lineup: LineupDto, val athletes: List<AthleteDto>)
 @Serializable data class SetLineupRequest(val starters: List<String>, val bench: List<String> = emptyList(), val tactics: Tactics = Tactics())
 
-fun Athlete.toDto(now: Instant) = AthleteDto(id.toString(), name, sport.name, position.name, overall, attack, defense, physical, technique, mental, age, rarity.name, currentFatigue(now), isInjured(now), injuredUntil?.toString(), morale, potential, xp, com.matchdayclub.domain.rules.Growth.XP_PER_POINT, com.matchdayclub.domain.rules.Market.price(this))
+fun Athlete.toDto(now: Instant) = AthleteDto(id.toString(), name, sport.name, position.name, overall, attack, defense, physical, technique, mental, age, rarity.name, currentFatigue(now), isInjured(now), injuredUntil?.toString(), morale, potential, xp, com.matchdayclub.domain.rules.Growth.XP_PER_POINT, com.matchdayclub.domain.rules.Market.price(this), techniques, skillPoints)
+@Serializable data class UpgradeTechniqueResponse(val athlete: AthleteDto, val level: Int, val cost: Int)
 fun Training.toDto(now: Instant) = TrainingDto(id.toString(), athleteId.toString(), attribute.name, delta, endsAt.toString(), maxOf(0, endsAt.epochSecond - now.epochSecond))
 fun Lineup.toDto() = LineupDto(sport.name, starters.map { it.toString() }, bench.map { it.toString() }, tactics, isDefault)
 

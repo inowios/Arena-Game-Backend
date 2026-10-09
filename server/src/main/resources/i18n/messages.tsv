@@ -161,3 +161,7 @@ Everyone is already rested	Everyone is already rested	Todos ya están descansado
 Bad listing	Bad listing	Oferta no válida	Oferta inválida	Неверный лот	Невірний лот
 Already sold	Already sold	Ya vendido	Já vendido	Уже продан	Уже продано
 The arena chest opens next week	The arena chest opens next week	El cofre de la arena se abre la próxima semana	O baú da arena abre na próxima semana	Сундук арены откроется на следующей неделе	Скриня арени відкриється наступного тижня
+Unknown technique	Unknown technique	Técnica desconocida	Técnica desconhecida	Неизвестный приём	Невідомий прийом
+This athlete cannot learn that move	This athlete cannot learn that move	Este atleta no puede aprender ese movimiento	Este atleta não pode aprender esse movimento	Этот игрок не может выучить этот приём	Цей гравець не може вивчити цей прийом
+That move is already mastered	That move is already mastered	Ese movimiento ya está dominado	Esse movimento já está dominado	Этот приём уже освоен полностью	Цей прийом уже опановано повністю
+Not enough skill points: {0} needed	Not enough skill points: {0} needed	No hay suficientes puntos de habilidad: se necesitan {0}	Pontos de habilidade insuficientes: são precisos {0}	Недостаточно очков навыков: нужно {0}	Недостатньо очок навичок: потрібно {0}

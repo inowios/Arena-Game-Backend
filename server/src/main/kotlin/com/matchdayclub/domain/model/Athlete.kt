@@ -33,7 +33,12 @@ data class Athlete(
     val retiredAt: Instant? = null,
     /** Match experience toward the next attribute point (see Growth). */
     val xp: Int = 0,
+    /** Levels of the learned techniques by key (see Techniques), skill points to spend, and experience over the career. */
+    val techniques: Map<String, Int> = emptyMap(),
+    val skillPoints: Int = 0,
+    val xpTotal: Int = 0,
 ) {
+    fun technique(key: String): Int = techniques[key] ?: 0
     val attributes get() = Attributes(attack, defense, physical, technique, mental)
     val attributeAverage: Int get() = (attack + defense + physical + technique + mental) / 5
     fun attribute(kind: AttributeKind) = when (kind) { AttributeKind.ATTACK -> attack; AttributeKind.DEFENSE -> defense; AttributeKind.PHYSICAL -> physical; AttributeKind.TECHNIQUE -> technique; AttributeKind.MENTAL -> mental }
