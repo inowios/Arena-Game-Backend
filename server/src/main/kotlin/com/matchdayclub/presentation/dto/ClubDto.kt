@@ -21,6 +21,7 @@ import java.time.Instant
     val academyNextAt: String?, val medicalNextAt: String?,
     val streak: Int = 0, val loginDay: Int = 0,
     val builderSlots: Int = 1,
+    val division: Int = 1, val seasonNo: Int = 1,
 )
 
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredClubLevel: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
@@ -35,7 +36,7 @@ import java.time.Instant
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"))
 @Serializable data class CollectResponse(val building: BuildingDto, val coins: Long, val club: ClubDto)
 
-fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, builderSlots)
+fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, builderSlots, division, seasonNo)
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredClubLevel, incomePerHour, capHours, effect, effect2)
 fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, if (maxPerClub == Int.MAX_VALUE) -1 else maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) })

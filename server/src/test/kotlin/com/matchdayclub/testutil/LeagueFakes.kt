@@ -12,12 +12,14 @@ class FakeLeagueRepository : LeagueRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun lockById(id: UUID) = rows[id]
     override suspend fun findByCode(code: String) = rows.values.firstOrNull { it.code == code }
-    override suspend fun listAll(kind: LeagueKind) = rows.values.filter { it.kind == kind }
+    override suspend fun listAll(kind: LeagueKind) = rows.values.filter { it.kind == kind && it.status == LeagueStatus.ACTIVE }
     override suspend fun listForClub(clubId: UUID) = rows.values.filter { members[it.id]?.contains(clubId) == true }
-    override suspend fun findOpenPublic(tzBucket: Int, division: Int, max: Int) = rows.values.firstOrNull { it.kind == LeagueKind.PUBLIC && it.tzBucket == tzBucket && it.division == division && it.currentRound == 0 && (members[it.id]?.size ?: 0) < max }
+    override suspend fun findOpenPublic(tzBucket: Int, division: Int, max: Int) = rows.values.firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == LeagueStatus.ACTIVE && it.tzBucket == tzBucket && it.division == division && it.currentRound == 0 && (members[it.id]?.size ?: 0) < max }
     override suspend fun create(league: League): League { rows[league.id] = league; members[league.id] = mutableListOf(); return league }
     override suspend fun update(league: League): League { rows[league.id] = league; return league }
     override suspend fun members(leagueId: UUID) = members[leagueId]?.toList() ?: emptyList()
+    override suspend fun activePublicMembers(tzBucket: Int, division: Int) =
+        rows.values.filter { it.kind == LeagueKind.PUBLIC && it.status == LeagueStatus.ACTIVE && it.tzBucket == tzBucket && it.division == division }.flatMap { members[it.id] ?: emptyList() }.toSet()
     override suspend fun addMember(leagueId: UUID, clubId: UUID) { members.getOrPut(leagueId) { mutableListOf() }.let { if (clubId !in it) it += clubId } }
     override suspend fun removeMember(leagueId: UUID, clubId: UUID) { members[leagueId]?.remove(clubId) }
 }
@@ -47,4 +49,14 @@ class FakeEconomyRepository : com.matchdayclub.domain.repository.EconomyReposito
     override suspend fun upsertTask(task: com.matchdayclub.domain.model.DailyTask) = task.also { tasks[Triple(it.clubId, it.day, it.task)] = it }
     override suspend fun purchaseByExternalId(externalId: String) = purchases[externalId]
     override suspend fun createPurchase(p: com.matchdayclub.domain.model.Purchase) = p.also { purchases[it.externalId] = it }
+}
+
+class FakeSeasonRepository : com.matchdayclub.domain.repository.SeasonRepository {
+    val seasons = mutableListOf<com.matchdayclub.domain.model.ClubSeason>()
+    val trophies = mutableListOf<com.matchdayclub.domain.model.Trophy>()
+    override suspend fun createSeason(season: com.matchdayclub.domain.model.ClubSeason) = season.also { seasons += it }
+    override suspend fun seasonsOf(clubId: UUID, limit: Int) = seasons.filter { it.clubId == clubId }.sortedByDescending { it.finishedAt }.take(limit)
+    override suspend fun seasonFor(clubId: UUID, leagueId: UUID) = seasons.firstOrNull { it.clubId == clubId && it.leagueId == leagueId }
+    override suspend fun createTrophy(trophy: com.matchdayclub.domain.model.Trophy) = trophy.also { trophies += it }
+    override suspend fun trophiesOf(clubId: UUID) = trophies.filter { it.clubId == clubId }
 }

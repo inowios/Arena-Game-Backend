@@ -16,7 +16,20 @@ import java.util.UUID
 fun botQuality(division: Int): Pair<Int, Int> = (40 + (division - 1) * 6).coerceAtMost(80) to (52 + (division - 1) * 6).coerceAtMost(90)
 
 /** Creates AI-controlled clubs that fill public leagues. */
-class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
+class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val leagues: LeagueRepository? = null) {
+    /** A bot of this bucket/division that is not in any active public league (finished seasons free their bots), else a new one. */
+    suspend fun acquire(tzBucket: Int, division: Int, timezone: String, index: Int, takenNames: Set<String>): Club {
+        if (leagues != null) {
+            val busy = leagues.activePublicMembers(tzBucket, division)
+            clubs.listBots(tzBucket).firstOrNull { it.division == division && it.id !in busy && it.name !in takenNames }?.let { return it }
+        }
+        var i = index
+        var bot = createBot(tzBucket, division, timezone, i)
+        var guard = 0
+        while (bot.name in takenNames && guard++ < names.size) { i++; bot = clubs.update(bot.copy(name = "FC ${names[i % names.size]}")) }
+        return bot
+    }
+
     private val names = listOf("Nordwind", "Riverside", "Ironbridge", "Sunset United", "Harbor City", "Granite Rovers", "Oakfield", "Steel Valley", "Blue Lagoon", "Red Canyon", "Silver Lake", "Pine Hill", "Westgate", "Falcon Park", "Lakeside", "Copper Town", "Highland", "Amber Coast", "Stone Bridge", "Golden Bay", "Maple Grove", "Northport", "Eastwood", "Summit")
     private val palette = listOf("#C8102E" to "#FFFFFF", "#003399" to "#FFD700", "#006400" to "#FFFFFF", "#000000" to "#FFFFFF", "#FF6600" to "#000000", "#800080" to "#FFFFFF", "#1E90FF" to "#FFFFFF", "#8B0000" to "#F5F5DC")
 
@@ -35,9 +48,8 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
 
 /** Public-league membership and fixture generation. Leagues are always full (humans + bots) so tables and fixtures exist from day one. */
 class LeagueService(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val bots: BotService, private val clock: Clock) {
-    suspend fun ensurePublicMembership(club: Club): League {
-        leagues.listForClub(club.id).firstOrNull { it.kind == LeagueKind.PUBLIC }?.let { return it }
-        val now = clock.now()
+    suspend fun ensurePublicMembership(club: Club, now: Instant = clock.now()): League {
+        leagues.listForClub(club.id).firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == LeagueStatus.ACTIVE }?.let { return it }
         val open = leagues.findOpenPublic(club.tzBucket, club.division, Int.MAX_VALUE)?.let { leagues.lockById(it.id) }?.takeIf { it.currentRound == 0 }
         if (open != null) {
             val members = leagues.members(open.id)   // read under the league lock: two joiners never take the same bot slot
@@ -51,7 +63,7 @@ class LeagueService(private val leagues: LeagueRepository, private val fixtures:
             }
         }
         val league = leagues.create(
-            League(UUID.randomUUID(), LeagueKind.PUBLIC, "Division ${club.division}", null, club.division, club.tzBucket, club.timezone, LeagueRules.MATCHDAY_HOUR, 1, LeagueRules.firstSeasonStart(club.timezone, now), 0, null, now, now),
+            League(UUID.randomUUID(), LeagueKind.PUBLIC, com.matchdayclub.domain.rules.Divisions.name(club.division), null, club.division, club.tzBucket, club.timezone, LeagueRules.MATCHDAY_HOUR, 1, LeagueRules.firstSeasonStart(club.timezone, now), 0, null, now, now),
         )
         leagues.addMember(league.id, club.id)
         prepareSeason(league)
@@ -65,9 +77,10 @@ class LeagueService(private val leagues: LeagueRepository, private val fixtures:
         var members = leagues.members(league.id)
         val offset = Math.floorMod(league.id.hashCode(), 24)
         var i = 0
+        val names = clubs.findByIds(members).map { it.name }.toMutableSet()
         while (members.size < LeagueRules.PUBLIC_SIZE) {
-            val bot = bots.createBot(league.tzBucket, league.division, league.timezone, (offset + i++).mod(24))   // distinct names within a league
-            leagues.addMember(league.id, bot.id); members = members + bot.id
+            val bot = bots.acquire(league.tzBucket, league.division, league.timezone, (offset + i++).mod(24), names)   // distinct names within a league
+            leagues.addMember(league.id, bot.id); members = members + bot.id; names += bot.name
         }
         val seed = league.id.leastSignificantBits xor league.seasonNumber.toLong() xor members.size.toLong()
         val now = clock.now()

@@ -38,7 +38,7 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
 
     suspend fun mine(clubId: UUID): Pair<LeagueView?, List<LeagueView>> {
         val all = leagues.listForClub(clubId)
-        return all.firstOrNull { it.kind == LeagueKind.PUBLIC }?.let { view(it) } to all.filter { it.kind == LeagueKind.PRIVATE }.map { view(it) }
+        return all.firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == LeagueStatus.ACTIVE }?.let { view(it) } to all.filter { it.kind == LeagueKind.PRIVATE }.map { view(it) }
     }
 
     suspend fun fixtures(leagueId: UUID, round: Int?): FixturesView {

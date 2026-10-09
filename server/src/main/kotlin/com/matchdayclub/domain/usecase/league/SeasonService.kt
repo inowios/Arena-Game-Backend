@@ -1,0 +1,83 @@
+package com.matchdayclub.domain.usecase.league
+
+import com.matchdayclub.common.time.Clock
+import com.matchdayclub.core.push.FcmSender
+import com.matchdayclub.domain.exception.NotFoundException
+import com.matchdayclub.domain.model.*
+import com.matchdayclub.domain.repository.*
+import com.matchdayclub.domain.rules.ClubLevels
+import com.matchdayclub.domain.rules.Divisions
+import com.matchdayclub.domain.rules.LeagueRules
+import com.matchdayclub.domain.rules.Standings
+import java.time.Instant
+import java.util.UUID
+
+/**
+ * Closes a public league after its 28th round: final table → prizes, history rows and trophies, promotion/relegation,
+ * then every human member is placed into next season's league of their (new) division. The finished league stays
+ * readable as history. Idempotent per club and league (history row is the marker).
+ */
+class SeasonService(
+    private val leagues: LeagueRepository,
+    private val fixtures: FixtureRepository,
+    private val clubs: ClubRepository,
+    private val seasons: SeasonRepository,
+    private val leagueService: LeagueService,
+    private val clock: Clock,
+    private val push: FcmSender? = null,
+) : SeasonCloser {
+
+    override suspend fun close(league: League, now: Instant): SeasonClose {
+        if (league.status == LeagueStatus.FINISHED) return SeasonClose(league)
+        val members = leagues.members(league.id)
+        val table = Standings.table(fixtures.listByLeagueSeason(league.id, league.seasonNumber), members)
+        val finished = leagues.update(league.copy(status = LeagueStatus.FINISHED, updatedAt = now))
+        val humans = mutableListOf<Pair<Club, ClubSeason>>()
+        table.forEachIndexed { i, row ->
+            val position = i + 1
+            val club = clubs.lockById(row.clubId) ?: return@forEachIndexed
+            if (seasons.seasonFor(club.id, league.id) != null) return@forEachIndexed
+            val movement = Divisions.movement(position, table.size, league.division)
+            val newDivision = Divisions.newDivision(league.division, movement)
+            val prize = Divisions.prize(position, league.division)
+            val record = seasons.createSeason(ClubSeason(
+                UUID.randomUUID(), club.id, league.id, club.seasonNo, league.division, position, row.played, row.won, row.drawn, row.lost, row.gf, row.ga, row.points,
+                movement, newDivision, if (club.isBot) 0 else prize.coins, if (club.isBot) 0 else prize.gold, if (club.isBot) 0 else prize.reputation, now,
+            ))
+            if (club.isBot) return@forEachIndexed
+            if (position == 1) seasons.createTrophy(Trophy(UUID.randomUUID(), club.id, TrophyKind.LEAGUE_TITLE, league.division, club.seasonNo, now))
+            if (movement == Movement.PROMOTED) seasons.createTrophy(Trophy(UUID.randomUUID(), club.id, TrophyKind.PROMOTION, newDivision, club.seasonNo, now))
+            val rep = club.reputation + prize.reputation
+            val updated = clubs.update(club.copy(
+                division = newDivision, seasonNo = club.seasonNo + 1, coins = club.coins + prize.coins, gold = club.gold + prize.gold,
+                reputation = rep, level = maxOf(club.level, ClubLevels.levelFor(rep)), tzBucket = LeagueRules.tzBucket(club.timezone, now), updatedAt = now,
+            ))
+            humans += updated to record
+        }
+        for ((club, _) in humans) leagueService.ensurePublicMembership(club, now)
+        val after: List<suspend () -> Unit> = humans.map { (club, rec) -> suspend { notify(club, rec) } }
+        return SeasonClose(finished, after)
+    }
+
+    private suspend fun notify(club: Club, rec: ClubSeason) {
+        val p = push ?: return
+        val title = "Season over: ${ordinal(rec.position)} place"
+        val body = when (rec.movement) {
+            Movement.PROMOTED -> "Promoted to ${Divisions.name(rec.newDivision)}! Prize: ${rec.prizeCoins} coins, ${rec.prizeGold} gold."
+            Movement.RELEGATED -> "Relegated to ${Divisions.name(rec.newDivision)}. Prize: ${rec.prizeCoins} coins. Next season starts tomorrow."
+            Movement.STAYED -> "You stay in ${Divisions.name(rec.newDivision)}. Prize: ${rec.prizeCoins} coins, ${rec.prizeGold} gold."
+        }
+        p.sendToUsers(listOf(club.userId), title, body, mapOf("type" to "SEASON_END", "seasonNo" to rec.seasonNo.toString()))
+    }
+
+    private fun ordinal(n: Int) = n.toString() + when { n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
+}
+
+data class ClubHistory(val seasons: List<ClubSeason>, val trophies: List<Trophy>)
+
+class GetClubHistoryUseCase(private val clubs: ClubRepository, private val seasons: SeasonRepository) {
+    suspend operator fun invoke(clubId: UUID): ClubHistory {
+        clubs.findById(clubId) ?: throw NotFoundException("Club not found")
+        return ClubHistory(seasons.seasonsOf(clubId), seasons.trophiesOf(clubId))
+    }
+}

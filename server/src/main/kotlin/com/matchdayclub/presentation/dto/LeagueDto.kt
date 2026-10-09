@@ -26,6 +26,12 @@ import java.util.UUID
 @Serializable data class MatchResponse(val fixture: FixtureDto, val result: MatchResult?, val athletes: Map<String, String> = emptyMap(), val sections: List<SectionDto> = emptyList())
 @Serializable data class ClubFixturesResponse(val next: FixtureDto?, val recent: List<FixtureDto>)
 @Serializable data class PublicClubDto(val club: ClubRefDto, val reputation: Int, val squadOverall: Int, val pitchLevel: Int, val sections: List<String> = listOf("FOOTBALL"), val sectionOverall: Map<String, Int> = emptyMap())
+@Serializable data class ClubSeasonDto(
+    val seasonNo: Int, val division: Int, val position: Int, val played: Int, val won: Int, val drawn: Int, val lost: Int, val gf: Int, val ga: Int, val points: Int,
+    val movement: String, val newDivision: Int, val prizeCoins: Long, val prizeGold: Int, val prizeReputation: Int, val finishedAt: String, val leagueId: String,
+)
+@Serializable data class TrophyDto(val kind: String, val division: Int, val seasonNo: Int, val createdAt: String)
+@Serializable data class ClubHistoryResponse(val seasons: List<ClubSeasonDto>, val trophies: List<TrophyDto>)
 @Serializable data class CreatePrivateLeagueRequest(val name: String)
 @Serializable data class JoinPrivateLeagueRequest(val code: String)
 @Serializable data class PlayFriendlyRequest(val opponentClubId: String? = null)
@@ -44,4 +50,7 @@ fun Fixture.toDto(clubs: Map<UUID, Club>) = FixtureDto(
     homePoints, awayPoints, resultJson?.let { runCatching { MatchdayResult.parse(it).sections.map { s -> SectionScoreDto(s.sport, s.homeScore, s.awayScore, s.walkover) } }.getOrNull() } ?: emptyList(),
 )
 fun MatchView.toDto() = MatchResponse(fixture.toDto(clubs), result?.primary, athleteNames, result?.sections?.map { SectionDto(it.sport, it.homeScore, it.awayScore, it.homePoints, it.awayPoints, it.walkover, it.result) } ?: emptyList())
+fun com.matchdayclub.domain.model.ClubSeason.toDto() = ClubSeasonDto(seasonNo, division, position, played, won, drawn, lost, gf, ga, points, movement.name, newDivision, prizeCoins, prizeGold, prizeReputation, finishedAt.toString(), leagueId.toString())
+fun com.matchdayclub.domain.model.Trophy.toDto() = TrophyDto(kind.name, division, seasonNo, createdAt.toString())
+fun ClubHistory.toDto() = ClubHistoryResponse(seasons.map { it.toDto() }, trophies.map { it.toDto() })
 fun PublicClub.toDto() = PublicClubDto(club.toRef(), club.reputation, squadOverall, pitchLevel, sections.map { it.name }, sectionOverall.mapKeys { it.key.name })

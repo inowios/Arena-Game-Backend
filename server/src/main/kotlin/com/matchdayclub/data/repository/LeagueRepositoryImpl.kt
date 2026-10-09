@@ -29,6 +29,11 @@ class LeagueRepositoryImpl : LeagueRepository {
     override suspend fun create(league: League) = dbQuery { LeagueTable.insert { it.fill(league); it[id] = league.id; it[kind] = league.kind.name; it[createdBy] = league.createdBy; it[createdAt] = league.createdAt }; league }
     override suspend fun update(league: League) = dbQuery { LeagueTable.update({ LeagueTable.id eq league.id }) { it.fill(league) }; league }
     override suspend fun members(leagueId: UUID) = dbQuery { LeagueMemberTable.selectAll().where { LeagueMemberTable.leagueId eq leagueId }.orderBy(LeagueMemberTable.joinedAt).map { it[LeagueMemberTable.clubId] } }
+    override suspend fun activePublicMembers(tzBucket: Int, division: Int): Set<UUID> = dbQuery {
+        (LeagueMemberTable innerJoin LeagueTable).select(LeagueMemberTable.clubId)
+            .where { (LeagueTable.kind eq LeagueKind.PUBLIC.name) and (LeagueTable.status eq LeagueStatus.ACTIVE.name) and (LeagueTable.tzBucket eq tzBucket) and (LeagueTable.division eq division) }
+            .map { it[LeagueMemberTable.clubId] }.toSet()
+    }
     override suspend fun addMember(leagueId: UUID, clubId: UUID) { dbQuery { LeagueMemberTable.insertIgnore { it[this.leagueId] = leagueId; it[this.clubId] = clubId; it[joinedAt] = Instant.now() } } }
     override suspend fun removeMember(leagueId: UUID, clubId: UUID) { dbQuery { LeagueMemberTable.deleteWhere { (LeagueMemberTable.leagueId eq leagueId) and (LeagueMemberTable.clubId eq clubId) } } }
 

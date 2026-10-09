@@ -25,6 +25,7 @@ fun Route.leagueRoutes() {
     val friendly: PlayFriendlyUseCase by inject()
     val publicClub: GetPublicClubUseCase by inject()
     val leagues: com.matchdayclub.domain.repository.LeagueRepository by inject()
+    val history: GetClubHistoryUseCase by inject()
 
     authenticate(AUTH_JWT) {
         route("/leagues") {
@@ -60,6 +61,8 @@ fun Route.leagueRoutes() {
             call.respond(HttpStatusCode.Created, friendly(call.userId(), opp).toDto().toSuccessResponse(201))
         }
         get("/clubs/{id}") { call.respond(publicClub(call.uuid("id")).toDto().toSuccessResponse()) }
+        get("/clubs/{id}/history") { call.respond(history(call.uuid("id")).toDto().toSuccessResponse()) }
+        get("/club/history") { call.respond(history(clubService.clubOf(call.userId()).id).toDto().toSuccessResponse()) }
     }
 }
 

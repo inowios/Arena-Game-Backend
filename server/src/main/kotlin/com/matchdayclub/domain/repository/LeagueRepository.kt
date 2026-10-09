@@ -15,6 +15,8 @@ interface LeagueRepository {
     suspend fun create(league: League): League
     suspend fun update(league: League): League
     suspend fun members(leagueId: UUID): List<UUID>
+    /** Clubs that are members of any ACTIVE public league of this bucket and division (bots there are not free). */
+    suspend fun activePublicMembers(tzBucket: Int, division: Int): Set<UUID>
     suspend fun addMember(leagueId: UUID, clubId: UUID)
     suspend fun removeMember(leagueId: UUID, clubId: UUID)
 }

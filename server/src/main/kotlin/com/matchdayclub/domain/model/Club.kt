@@ -32,6 +32,8 @@ data class Club(
     val doubleIncomeAdAt: Instant? = null,
     val freeSpeedupDate: java.time.LocalDate? = null,
     val builderSlots: Int = 1,
+    /** The club's own season counter (1 = first season); keys the season pass and history. */
+    val seasonNo: Int = 1,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

@@ -34,6 +34,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.loginDay] = c.loginDay; this[ClubTable.loginLast] = c.loginLast; this[ClubTable.streak] = c.streak
         this[ClubTable.doubleIncomeUntil] = c.doubleIncomeUntil; this[ClubTable.doubleIncomeAdAt] = c.doubleIncomeAdAt; this[ClubTable.freeSpeedupDate] = c.freeSpeedupDate
         this[ClubTable.builderSlots] = c.builderSlots
+        this[ClubTable.seasonNo] = c.seasonNo
     }
 
     private fun ResultRow.toClub() = Club(
@@ -42,7 +43,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
         this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
         this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
-        this[ClubTable.builderSlots],
+        this[ClubTable.builderSlots], this[ClubTable.seasonNo],
     )
 }
 

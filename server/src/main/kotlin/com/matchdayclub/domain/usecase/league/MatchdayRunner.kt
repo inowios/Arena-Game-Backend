@@ -28,8 +28,11 @@ import kotlin.math.roundToInt
 /** A stored fixture with its result; [home]/[away] are the clubs as they were before the effects. */
 data class PlayedFixture(val fixture: Fixture, val result: MatchdayResult, val home: Club, val away: Club)
 
+/** Result of closing a season: the updated league plus side effects (pushes) to run after the transaction commits. */
+data class SeasonClose(val league: League, val after: List<suspend () -> Unit> = emptyList())
+
 /** Hook for season end (divisions, prizes). Default: just start the next season in place. */
-fun interface SeasonCloser { suspend fun close(league: League, now: Instant): League }
+fun interface SeasonCloser { suspend fun close(league: League, now: Instant): SeasonClose }
 
 /**
  * Plays due league rounds. Single-instance by design (in-process mutex); each round runs in one transaction with the
@@ -53,7 +56,7 @@ class MatchdayRunner(
     private val log = LoggerFactory.getLogger("MatchdayRunner")
     private val mutex = Mutex()
 
-    private data class Step(val advanced: Boolean, val played: List<PlayedFixture> = emptyList())
+    private data class Step(val advanced: Boolean, val played: List<PlayedFixture> = emptyList(), val after: List<suspend () -> Unit> = emptyList())
 
     /** @return number of matches played in this tick. */
     suspend fun runDueRounds(now: Instant = clock.now()): Int = mutex.withLock {
@@ -76,6 +79,7 @@ class MatchdayRunner(
             played += step.played.size
             // pushes go out only after the round is committed
             step.played.forEach { p -> notifier?.let { n -> runCatching { n.notify(p.fixture, p.home, p.away, p.result) }.onFailure { e -> log.warn("notify failed", e) } } }
+            step.after.forEach { runCatching { it() }.onFailure { e -> log.warn("season notice failed", e) } }
             if (!step.advanced) break
         }
         return played
@@ -87,8 +91,9 @@ class MatchdayRunner(
         val next = l.currentRound + 1
         if (next > LeagueRules.ROUNDS) {
             if (!Schedule.seasonOver(l, now)) return Step(false)
-            val closed = seasonCloser?.close(l, now) ?: startNewSeason(l, now)
-            return Step(closed.status != LeagueStatus.FINISHED && closed.currentRound == 0 && closed.seasonNumber != l.seasonNumber)
+            val closed = seasonCloser?.close(l, now) ?: SeasonClose(startNewSeason(l, now))
+            val c = closed.league
+            return Step(c.status != LeagueStatus.FINISHED && c.currentRound == 0 && c.seasonNumber != l.seasonNumber, after = closed.after)
         }
         if (Schedule.roundInstant(l.seasonStart, next, l.timezone, l.matchdayHour).isAfter(now)) return Step(false)
         val all = leagueService.prepareSeason(l)
@@ -174,7 +179,7 @@ class MatchdayRunner(
             val mine = if (isHome) p.section.homePoints else p.section.awayPoints
             val walkoverLoss = p.section.walkover != null && mine == 0
             val outcome = Standings.outcomeFromPoints(mine)
-            if (kind == FixtureKind.LEAGUE && !walkoverLoss) { coins += Standings.coinsReward(outcome); rep += Standings.reputationDelta(outcome) }
+            if (kind == FixtureKind.LEAGUE && !walkoverLoss) { coins += Standings.coinsReward(outcome, club.division); rep += Standings.reputationDelta(outcome) }
             val result = p.section.result ?: continue
             val starters = if (isHome) p.homeStarters else p.awayStarters
             val tempo = if (isHome) p.homeTempo else p.awayTempo

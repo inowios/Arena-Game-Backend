@@ -46,6 +46,7 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
 | POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}`; DELETE `/private/{id}/leave` | private leagues (code, max 20) |
 | GET | `/api/v1/club/fixtures` | next scheduled + last 5 played |
+| GET | `/api/v1/club/history`, `/clubs/{id}/history` | finished seasons (position, movement, prizes) and trophies |
 | GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
 | GET | `/api/v1/clubs/{id}` | public club profile |
@@ -63,6 +64,11 @@ when its construction finishes; the venue level caps that section's attributes. 
 club fields; a section only one club has is a walkover (3:0 / 20:0 / 2:0). Table points = sum of section points (3/1/0), so a three-sport
 club can take 9 a matchday. `GET /club` returns `sections`; fixtures carry `homePoints/awayPoints` and per-section scores; `GET /matches/{id}`
 returns `sections[]` with each sport's full result (`result` stays the football match).
+
+Seasons & divisions: 7 divisions (1 Sunday League … 7 Champions League). After round 28 the league is closed (`status=FINISHED`):
+final table → prizes by position × division, a `club_seasons` history row per member, trophies (title, promotion), top 2 promoted,
+bottom 2 relegated, `clubs.season_no` + 1 (keys the season pass), and every human is placed in next season's league of their new
+division (season starts the next day; freed bots of that division are reused). Matchday coin rewards grow 25% per division.
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,

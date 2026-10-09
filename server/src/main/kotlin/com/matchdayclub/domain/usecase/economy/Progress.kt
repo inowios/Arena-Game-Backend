@@ -19,7 +19,7 @@ fun interface ProgressTracker { suspend fun record(clubId: UUID, event: Progress
 class EconomyService(private val economy: EconomyRepository, private val leagues: LeagueRepository, private val clock: Clock, private val sectionCount: (suspend (UUID) -> Int)? = null) : ProgressTracker {
     fun today(timezone: String): LocalDate = clock.now().atZone(ZoneId.of(timezone)).toLocalDate()
 
-    suspend fun publicLeague(clubId: UUID): League? = leagues.listForClub(clubId).firstOrNull { it.kind == LeagueKind.PUBLIC }
+    suspend fun publicLeague(clubId: UUID): League? = leagues.listForClub(clubId).firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == com.matchdayclub.domain.model.LeagueStatus.ACTIVE }
 
     /** Today's 3 tasks, created on first access. */
     suspend fun todaysTasks(clubId: UUID, timezone: String): List<DailyTask> {

@@ -75,7 +75,10 @@ val appModule = module {
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("league")) { JoinPublicLeagueInitializer(get(), get(), get()) }
     single<LeagueRepository> { LeagueRepositoryImpl() }
     single<FixtureRepository> { FixtureRepositoryImpl() }
-    single { BotService(get(), get(), get(), get()) }
+    single { BotService(get(), get(), get(), get(), get()) }
+    single<SeasonRepository> { SeasonRepositoryImpl() }
+    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>()) }
+    single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }
     single { LineupService(get(), get()) }
     single<EconomyRepository> { EconomyRepositoryImpl() }
@@ -89,7 +92,7 @@ val appModule = module {
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString())
     }
     single { MatchdayNotifier(get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
     single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single<Map<Store, ReceiptVerifier>> {

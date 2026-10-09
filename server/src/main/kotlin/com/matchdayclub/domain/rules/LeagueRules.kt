@@ -57,6 +57,41 @@ object Schedule {
 enum class Outcome { WIN, DRAW, LOSS }
 
 /**
+ * Seven divisions, 1 = entry ("Sunday League") … 7 = top ("Champions League"). After 28 rounds the top two of each
+ * 8-club league go up, the bottom two go down; prizes scale with position and division.
+ */
+object Divisions {
+    const val MAX = 7
+    const val PROMOTED = 2
+    const val RELEGATED = 2
+    val NAMES = listOf("Sunday League", "County League", "Regional League", "National League", "Pro League", "Premier League", "Champions League")
+    fun name(division: Int) = NAMES[(division - 1).coerceIn(0, MAX - 1)]
+
+    fun movement(position: Int, size: Int, division: Int): com.matchdayclub.domain.model.Movement = when {
+        position <= PROMOTED && division < MAX -> com.matchdayclub.domain.model.Movement.PROMOTED
+        position > size - RELEGATED && division > 1 -> com.matchdayclub.domain.model.Movement.RELEGATED
+        else -> com.matchdayclub.domain.model.Movement.STAYED
+    }
+
+    fun newDivision(division: Int, m: com.matchdayclub.domain.model.Movement) = when (m) {
+        com.matchdayclub.domain.model.Movement.PROMOTED -> division + 1
+        com.matchdayclub.domain.model.Movement.RELEGATED -> division - 1
+        com.matchdayclub.domain.model.Movement.STAYED -> division
+    }
+
+    private val coins = listOf(5_000L, 3_500, 2_500, 1_800, 1_300, 1_000, 800, 600)
+    private val gold = listOf(30, 20, 12, 5, 0, 0, 0, 0)
+    private val reputation = listOf(100, 60, 40, 25, 15, 10, 5, 0)
+    fun multiplier(division: Int) = 1.0 + 0.5 * (division - 1)
+
+    data class Prize(val coins: Long, val gold: Int, val reputation: Int)
+    fun prize(position: Int, division: Int): Prize {
+        val i = (position - 1).coerceIn(0, coins.size - 1)
+        return Prize((coins[i] * multiplier(division)).toLong(), gold[i] + if (i == 0) division * 5 else 0, reputation[i])
+    }
+}
+
+/**
  * One club's row. [points] = sum of section points (3 win / 1 draw / 0 loss per section, so multi-sport clubs can earn up to
  * 9 a matchday); won/drawn/lost compare the fixture's points; gf/ga are football goals (tiebreak after points).
  */
@@ -84,7 +119,7 @@ object Standings {
     fun outcome(forScore: Int, againstScore: Int) = when { forScore > againstScore -> Outcome.WIN; forScore == againstScore -> Outcome.DRAW; else -> Outcome.LOSS }
     fun outcomeFromPoints(sectionPoints: Int) = when (sectionPoints) { 3 -> Outcome.WIN; 1 -> Outcome.DRAW; else -> Outcome.LOSS }
     fun reputationDelta(o: Outcome) = when (o) { Outcome.WIN -> 12; Outcome.DRAW -> 5; Outcome.LOSS -> 1 }
-    fun coinsReward(o: Outcome): Long = when (o) { Outcome.WIN -> 300; Outcome.DRAW -> 150; Outcome.LOSS -> 60 }
+    fun coinsReward(o: Outcome, division: Int = 1): Long = ((when (o) { Outcome.WIN -> 300L; Outcome.DRAW -> 150L; Outcome.LOSS -> 60L }) * (1.0 + 0.25 * (division - 1))).toLong()
     const val FRIENDLY_COINS = 40L
     const val MATCH_FATIGUE = 10
     const val FRIENDLY_FATIGUE = 8

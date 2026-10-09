@@ -33,8 +33,9 @@ class ClaimDailyRewardUseCase(private val service: ClubService, private val club
 data class PassView(val pass: SeasonPass, val level: Int, val tasks: List<DailyTask>, val seasonNumber: Int)
 
 class SeasonPassUseCases(private val service: ClubService, private val clubs: ClubRepository, private val repo: EconomyRepository, private val economy: EconomyService, private val clock: Clock, private val tx: Tx = NoTx) {
+    /** The pass follows the club's own season counter (leagues are re-formed every season, so their numbers restart). */
     private suspend fun passOf(club: Club): Pair<SeasonPass, Int> {
-        val season = economy.publicLeague(club.id)?.seasonNumber ?: 1
+        val season = club.seasonNo
         val pass = repo.pass(club.id, season) ?: repo.upsertPass(SeasonPass(club.id, season, 0, false, 0, 0))
         return pass to season
     }
