@@ -16,6 +16,8 @@ import java.util.UUID
 object LineupRules {
     const val STARTERS = 11
     const val MAX_BENCH = 7
+    /** Football shapes the client can lay a lineup out in; stored in [Tactics.formation]. */
+    val FORMATIONS = setOf("4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "5-3-2")
 
     fun starters(sport: Sport) = Sections.profile(sport).startersCount
     fun maxBench(sport: Sport) = Sections.profile(sport).benchMax
@@ -101,6 +103,7 @@ class SetLineupUseCase(private val service: ClubService, private val squads: Squ
     suspend operator fun invoke(userId: UUID, sport: Sport, starters: List<UUID>, bench: List<UUID>, tactics: Tactics): Lineup {
         val club = service.clubOf(userId)
         LineupRules.validate(sport, starters, bench, squads.squad(userId).athletes)
+        if (tactics.formation !in LineupRules.FORMATIONS) throw ValidationException("Unknown formation")
         val saved = lineups.upsert(Lineup(club.id, sport, starters, bench, tactics, clock.now()))
         progress.record(club.id, com.matchdayclub.domain.rules.ProgressEvent.LINEUP_SAVED)
         return saved
