@@ -52,6 +52,7 @@ class MatchdayRunner(
     private val tx: Tx = NoTx,
     private val sections: SectionService? = null,
     private val seasonCloser: SeasonCloser? = null,
+    private val failures: com.matchdayclub.common.ops.FailureSink = com.matchdayclub.common.ops.NoFailures,
 ) {
     private val log = LoggerFactory.getLogger("MatchdayRunner")
     private val mutex = Mutex()
@@ -66,6 +67,7 @@ class MatchdayRunner(
                 played += runLeague(league.id, now)
             } catch (e: Exception) {
                 log.error("league ${league.id} failed", e)
+                failures.report("league", e)
             }
         }
         played
@@ -98,6 +100,8 @@ class MatchdayRunner(
         if (Schedule.roundInstant(l.seasonStart, next, l.timezone, l.matchdayHour).isAfter(now)) return Step(false)
         val all = leagueService.prepareSeason(l)
         val round = all.filter { it.round == next && it.status == FixtureStatus.SCHEDULED }
+        // all clubs of the round locked in one global order first, so a parallel two-club transaction can't deadlock with the round
+        round.flatMap { listOf(it.homeClubId, it.awayClubId) }.distinct().sorted().forEach { clubs.lockById(it) }
         val played = round.mapNotNull { playFixture(it, now) }
         leagues.update(l.copy(currentRound = next, updatedAt = now))
         return Step(true, played)

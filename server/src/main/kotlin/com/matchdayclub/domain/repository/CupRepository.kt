@@ -28,6 +28,6 @@ interface CupRepository {
     suspend fun addTies(ties: List<CupTie>)
     suspend fun setWinner(cupId: UUID, round: Int, slot: Int, winnerClubId: UUID)
 
-    /** Human clubs whose owner was active on or after [since] (UTC day), with their timezone bucket. */
-    suspend fun activeHumanClubs(since: LocalDate): List<Pair<UUID, Int>>
+    /** Human clubs whose owner was active on or after [since] (UTC day), with their time zone. */
+    suspend fun activeHumanClubs(since: LocalDate): List<Pair<UUID, String>>
 }

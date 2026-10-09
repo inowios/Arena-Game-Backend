@@ -39,7 +39,7 @@ class CupTest {
         if (rating != null) athletes.rows.values.filter { it.clubId == c.id }.forEach { athletes.update(it.copy(attack = rating, defense = rating, physical = rating, technique = rating, mental = rating)) }
         clubs.update(clubs.rows.getValue(c.id).copy(division = division))
     }
-    private fun activate(vararg list: Club) { cupRepo.active = cupRepo.active + list.map { it.id to it.tzBucket } }
+    private fun activate(vararg list: Club) { cupRepo.active = cupRepo.active + list.map { it.id to it.timezone } }
     private fun at(t: String) { clock.instant = Instant.parse(t) }
 
     @Test
@@ -77,6 +77,8 @@ class CupTest {
         assertEquals(Instant.parse("2026-10-08T12:00:00Z"), queries.current(me.userId).drawAt)
 
         assertEquals(0, cupService.tick(clock.now())); assertTrue(cupRepo.cups.isEmpty())   // before the draw
+        at("2026-10-08T12:01:00Z")   // the draw time has passed, the scheduler hasn't drawn yet: "draw in progress", not next week
+        assertEquals(Instant.parse("2026-10-08T12:00:00Z"), queries.current(me.userId).drawAt)
         at("2026-10-08T12:05:00Z")
         assertEquals(0, cupService.tick(clock.now()))
         val cup = cupRepo.cups.values.single()
@@ -178,6 +180,20 @@ class CupTest {
     }
 
     @Test
+    fun `cups play at 18h in their players' zone, across daylight-saving changes`() = runBlocking<Unit> {
+        val berlin = newClub("Spree FC", timezone = "Europe/Berlin")   // created in October summer time: stored bucket +2
+        assertEquals(2, berlin.tzBucket)
+        activate(berlin)
+        at("2026-10-29T11:30:00Z")   // Thursday after the clocks went back: Berlin is UTC+1, 12:30 local
+        cupService.tick(clock.now())
+        val cup = cupRepo.cupsOf(1, LocalDate.parse("2026-10-26")).single()
+        assertEquals("Europe/Berlin", cup.timezone)
+        val first = fixtures.rows.values.filter { it.kind == FixtureKind.CUP }
+        assertTrue(first.all { it.scheduledAt == Instant.parse("2026-10-29T17:00:00Z") }, "18:00 Berlin time")
+        assertEquals("ACTIVE", queries.current(berlin.userId).state)
+    }
+
+    @Test
     fun `push texts`() {
         val n = CupNotifier()
         val now = clock.now()
@@ -188,6 +204,6 @@ class CupTest {
             MatchdayResult(2, listOf(SectionResult("FOOTBALL", 1, 1, 1, 1)), Shootout(3, 4)))
         val clubs = mapOf(home.id to home, away.id to away)
         assertEquals("Cup: knocked out" to "Lions 1–1 Wolves, penalties 3–4. Prize: 600 coins.", n.message(d, home.id, 2, clubs, Cups.prize(Cups.Stage.QUARTER_FINAL, 1), "en"))
-        assertEquals("Кубок: вы в полуфинале!" to "Wolves 1–1 Lions, пенальти 4–3. Следующий раунд завтра в 18:00.", n.message(d, away.id, 2, clubs, null, "ru"))
+        assertEquals("Кубок: вы в полуфинале!" to "Wolves 1–1 Lions, пенальти 4–3. Следующий раунд завтра.", n.message(d, away.id, 2, clubs, null, "ru"))
     }
 }

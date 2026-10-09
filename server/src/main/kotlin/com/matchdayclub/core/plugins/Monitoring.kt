@@ -13,6 +13,7 @@ private val StartedAt = AttributeKey<Long>("mdc-metrics-start")
 private val RouteTemplate = AttributeKey<String>("mdc-metrics-route")
 private val selector = Regex("""\([^()]*\)""")
 private val slashes = Regex("/{2,}")
+private val StandardMethods = setOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 
 /** Route template of a matched call ("/api/v1/club/buildings/{id}/speedup"), without method/auth/rate-limit selectors. */
 internal fun routeTemplate(node: RoutingNode): String = cleanTemplate(node.toString())
@@ -34,7 +35,9 @@ val HttpMetrics = createApplicationPlugin("HttpMetrics") {
         val route = call.attributes.getOrNull(RouteTemplate) ?: "unmatched"
         if (route == "/metrics") return@on
         val status = call.response.status()?.value ?: 0
-        Metrics.inc("http_requests_total", "route" to route, "method" to call.request.httpMethod.value, "status" to status.toString())
+        // any method string reaches us; only standard ones become label values (no unbounded series from scanners)
+        val method = call.request.httpMethod.value.uppercase().takeIf { it in StandardMethods } ?: "OTHER"
+        Metrics.inc("http_requests_total", "route" to route, "method" to method, "status" to status.toString())
         Metrics.observe("http_request_duration_seconds", (System.nanoTime() - start) / 1e9)
     }
 }

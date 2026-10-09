@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
 object CupTable : BaseTable("cups") {
     val tzBucket = integer("tz_bucket"); val weekStart = date("week_start"); val tier = integer("tier"); val division = integer("division")
     val currentRound = integer("current_round"); val status = varchar("status", 10); val winnerClubId = uuid("winner_club_id").nullable()
+    val timezone = varchar("timezone", 64).nullable()
 }
 
 object CupEntryTable : Table("cup_entries") {

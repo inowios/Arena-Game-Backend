@@ -38,14 +38,15 @@ class ActivityTracker(private val repo: AnalyticsRepository, private val clock: 
     }
 }
 
-/** Keeps product events for [Analytics.RETENTION_DAYS] (privacy policy); run from the scheduler at most once a day. */
+/** Keeps product events and activity days for [Analytics.RETENTION_DAYS] (privacy policy); run from the scheduler at most once a day. */
 class AnalyticsRetention(private val repo: AnalyticsRepository, private val clock: Clock) {
     @Volatile private var lastRun: Instant? = null
     suspend fun runIfDue(): Int {
         val now = clock.now()
         if (lastRun?.isAfter(now.minusSeconds(86_400)) == true) return 0
         lastRun = now
-        return repo.purgeEventsBefore(now.minusSeconds(Analytics.RETENTION_DAYS * 86_400))
+        val cutoff = now.minusSeconds(Analytics.RETENTION_DAYS * 86_400)
+        return repo.purgeEventsBefore(cutoff) + repo.purgeActivityBefore(utcDay(cutoff))
     }
 }
 

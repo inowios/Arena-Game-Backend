@@ -24,6 +24,15 @@ object SchedulerStatus {
     val failures = AtomicLong()
 }
 
+/** Failures the scheduler's jobs survive: counted by job, last one shown in /admin/stats. */
+object SchedulerFailures : com.matchdayclub.common.ops.FailureSink {
+    override fun report(job: String, error: Throwable) {
+        SchedulerStatus.failures.incrementAndGet()
+        Metrics.inc("scheduler_failures_total", "job" to job)
+        SchedulerStatus.lastError = "$job: ${error.message ?: error.javaClass.simpleName}".take(300)
+    }
+}
+
 /** One pass: due league rounds (and their season ends), then cup draws and rounds. Shared by the timer loop and POST /admin/scheduler/run. */
 class SchedulerTick(
     private val runner: MatchdayRunner,
@@ -35,12 +44,12 @@ class SchedulerTick(
 
     suspend fun run(): Pair<Int, Int> = mutex.withLock {
         SchedulerStatus.ticks.incrementAndGet(); Metrics.inc("scheduler_ticks_total")
+        SchedulerStatus.lastError = null   // errors of this pass (also those reported by the jobs) stay until the next one
         var matches = 0
         try {
             matches = runner.runDueRounds()
-            SchedulerStatus.lastError = null
         } catch (e: Exception) {
-            SchedulerStatus.failures.incrementAndGet(); Metrics.inc("scheduler_failures_total"); SchedulerStatus.lastError = e.message ?: e.javaClass.simpleName
+            SchedulerFailures.report("league_tick", e)
             log.error("Matchday tick failed", e)
         }
         if (matches > 0) { Metrics.inc("matches_played_total", "kind" to "league", by = matches.toLong()); log.info("Matchday tick: played $matches matches") }
@@ -48,7 +57,7 @@ class SchedulerTick(
         if (cups != null) try {
             cupMatches = cups.tick()
         } catch (e: Exception) {
-            SchedulerStatus.failures.incrementAndGet(); Metrics.inc("scheduler_failures_total"); SchedulerStatus.lastError = e.message ?: e.javaClass.simpleName
+            SchedulerFailures.report("cup_tick", e)
             log.error("Cup tick failed", e)
         }
         if (cupMatches > 0) { Metrics.inc("matches_played_total", "kind" to "cup", by = cupMatches.toLong()); log.info("Cup tick: played $cupMatches matches") }

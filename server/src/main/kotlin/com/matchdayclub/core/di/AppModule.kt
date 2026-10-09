@@ -95,7 +95,7 @@ val appModule = module {
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
     }
     single { MatchdayNotifier(get(), get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>(), failures = com.matchdayclub.core.plugins.SchedulerFailures) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
     single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get(), athletes = get()) }
     single<com.matchdayclub.core.store.HttpGateway> { com.matchdayclub.core.store.KtorHttpGateway(get()) }
@@ -178,7 +178,7 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.admin.AdminGrantUseCase(get(), get(), get(), get(), tx = get()) }
     single<CupRepository> { CupRepositoryImpl() }
     single { com.matchdayclub.domain.usecase.cup.CupNotifier(get<FcmSender>(), get()) }
-    single { com.matchdayclub.domain.usecase.cup.CupService(get(), get(), get(), get(), get(), get(), get(), tx = get(), notifier = get()) }
+    single { com.matchdayclub.domain.usecase.cup.CupService(get(), get(), get(), get(), get(), get(), get(), tx = get(), notifier = get(), failures = com.matchdayclub.core.plugins.SchedulerFailures) }
     single { com.matchdayclub.domain.usecase.cup.CupQueries(get(), get(), get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.analytics.AnalyticsRetention(get(), get()) }
     single { com.matchdayclub.core.plugins.SchedulerTick(get(), get(), get()) }

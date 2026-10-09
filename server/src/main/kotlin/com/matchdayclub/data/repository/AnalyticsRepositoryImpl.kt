@@ -37,6 +37,8 @@ class AnalyticsRepositoryImpl : AnalyticsRepository {
 
     override suspend fun deleteEventsOf(userId: UUID) { dbQuery { AnalyticsEventTable.deleteWhere { AnalyticsEventTable.userId eq userId } } }
     override suspend fun purgeEventsBefore(before: Instant): Int = dbQuery { AnalyticsEventTable.deleteWhere { AnalyticsEventTable.createdAt less before } }
+    override suspend fun deleteActivityOf(userId: UUID) { dbQuery { UserDayTable.deleteWhere { UserDayTable.userId eq userId } } }
+    override suspend fun purgeActivityBefore(day: LocalDate): Int = dbQuery { UserDayTable.deleteWhere { UserDayTable.day less day } }
 
     private fun <T> query(sql: String, read: (java.sql.ResultSet) -> T): T = TransactionManager.current().exec(sql) { rs -> read(rs) }!!
 

@@ -18,6 +18,8 @@ data class Cup(
     val winnerClubId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Local zone of the cup (most common among its human entrants); null = the bucket's whole-hour offset. */
+    val timezone: String? = null,
 )
 
 /** A club's place in a week's cup: [outRound] is the round it lost in (null while alive, or as champion). */

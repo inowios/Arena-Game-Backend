@@ -15,7 +15,7 @@ import java.util.UUID
 class CupRepositoryImpl : CupRepository {
     private fun ResultRow.toCup() = Cup(
         this[CupTable.id], this[CupTable.tzBucket], this[CupTable.weekStart], this[CupTable.tier], this[CupTable.division], this[CupTable.currentRound],
-        CupStatus.valueOf(this[CupTable.status]), this[CupTable.winnerClubId], this[CupTable.createdAt], this[CupTable.updatedAt],
+        CupStatus.valueOf(this[CupTable.status]), this[CupTable.winnerClubId], this[CupTable.createdAt], this[CupTable.updatedAt], this[CupTable.timezone],
     )
     private fun ResultRow.toEntry() = CupEntry(
         this[CupEntryTable.weekStart], this[CupEntryTable.clubId], this[CupEntryTable.cupId], this[CupEntryTable.tzBucket], this[CupEntryTable.seed], this[CupEntryTable.outRound],
@@ -28,6 +28,7 @@ class CupRepositoryImpl : CupRepository {
             CupTable.insert {
                 it[id] = cup.id; it[tzBucket] = cup.tzBucket; it[weekStart] = cup.weekStart; it[tier] = cup.tier; it[division] = cup.division
                 it[currentRound] = cup.currentRound; it[status] = cup.status.name; it[winnerClubId] = cup.winnerClubId; it[createdAt] = cup.createdAt; it[updatedAt] = cup.updatedAt
+                it[timezone] = cup.timezone
             }
             CupEntryTable.batchInsert(entries, shouldReturnGeneratedValues = false) { e ->
                 this[CupEntryTable.weekStart] = e.weekStart; this[CupEntryTable.clubId] = e.clubId; this[CupEntryTable.cupId] = e.cupId; this[CupEntryTable.tzBucket] = e.tzBucket
@@ -83,7 +84,7 @@ class CupRepositoryImpl : CupRepository {
 
     override suspend fun activeHumanClubs(since: LocalDate) = dbQuery {
         ClubTable.join(UserDayTable, JoinType.INNER, ClubTable.userId, UserDayTable.userId)
-            .select(ClubTable.id, ClubTable.tzBucket).where { (ClubTable.isBot eq false) and (UserDayTable.day greaterEq since) }
-            .withDistinct().map { it[ClubTable.id] to it[ClubTable.tzBucket] }
+            .select(ClubTable.id, ClubTable.timezone).where { (ClubTable.isBot eq false) and (UserDayTable.day greaterEq since) }
+            .withDistinct().map { it[ClubTable.id] to it[ClubTable.timezone] }
     }
 }

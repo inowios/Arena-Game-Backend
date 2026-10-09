@@ -99,7 +99,7 @@ class DeleteAccountUseCase(
             clubs.lockByUserId(userId)?.let { retirement.retire(it) }
             accounts.deletePushTokens(userId)
             refreshTokens.revokeAllForUser(userId)
-            analytics?.deleteEventsOf(userId)
+            analytics?.deleteEventsOf(userId); analytics?.deleteActivityOf(userId)
             users.update(user.copy(isActive = false, providerId = "deleted:${user.id}", email = null, displayName = null, avatarUrl = null, locale = null, updatedAt = clock.now()))
         }
         events?.track(null, "account_deleted")   // anonymous: the user's own events are gone

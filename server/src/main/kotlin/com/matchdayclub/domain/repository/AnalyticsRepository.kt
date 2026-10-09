@@ -11,8 +11,11 @@ interface AnalyticsRepository {
     suspend fun markActive(userId: UUID, day: LocalDate): Boolean
     suspend fun record(events: List<AnalyticsEvent>)
     suspend fun deleteEventsOf(userId: UUID)
+    suspend fun deleteActivityOf(userId: UUID)
     /** Retention: drops events older than [before]. @return rows deleted. */
     suspend fun purgeEventsBefore(before: Instant): Int
+    /** Retention: drops activity days before [day]. @return rows deleted. */
+    suspend fun purgeActivityBefore(day: LocalDate): Int
 
     /** Human signups per UTC day in [from, to] with the number of them active on day+1 and day+7. */
     suspend fun cohorts(from: LocalDate, to: LocalDate): List<CohortRow>

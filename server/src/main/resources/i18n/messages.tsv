@@ -131,7 +131,7 @@ push.join_title	New rival in {0}	Nuevo rival en {0}	Novo rival na {0}	Новый
 push.join_body	{0} joined your league.	{0} se unió a tu liga.	{0} entrou na sua liga.	«{0}» вступает в вашу лигу.	«{0}» вступає до вашої ліги.
 # --- cups
 push.cup_draw_title	Weekly Cup draw	Sorteo de la Copa semanal	Sorteio da Copa semanal	Жеребьёвка недельного кубка	Жеребкування тижневого кубка
-push.cup_draw_body	Round of 16 today at 18:00: {0} vs {1}	Octavos hoy a las 18:00: {0} vs {1}	Oitavas hoje às 18:00: {0} x {1}	1/8 финала сегодня в 18:00: {0} — {1}	1/8 фіналу сьогодні о 18:00: {0} — {1}
+push.cup_draw_body	Round of 16: {0} vs {1}	Octavos: {0} vs {1}	Oitavas: {0} x {1}	1/8 финала: {0} — {1}	1/8 фіналу: {0} — {1}
 push.cup_through_2	Cup: into the quarter-finals!	Copa: ¡a cuartos de final!	Copa: rumo às quartas de final!	Кубок: вы в 1/4 финала!	Кубок: ви в 1/4 фіналу!
 push.cup_through_3	Cup: into the semi-finals!	Copa: ¡a semifinales!	Copa: rumo às semifinais!	Кубок: вы в полуфинале!	Кубок: ви в півфіналі!
 push.cup_through_4	Cup: into the final!	Copa: ¡a la final!	Copa: rumo à final!	Кубок: вы в финале!	Кубок: ви у фіналі!
@@ -139,7 +139,7 @@ push.cup_out_title	Cup: knocked out	Copa: eliminado	Copa: eliminado	Кубок: 
 push.cup_champion_title	You won the Weekly Cup!	¡Ganaste la Copa semanal!	Você venceu a Copa semanal!	Вы выиграли недельный кубок!	Ви виграли тижневий кубок!
 push.cup_score	{0} {1}–{2} {3}	{0} {1}–{2} {3}	{0} {1}–{2} {3}	{0} {1}–{2} {3}	{0} {1}–{2} {3}
 push.cup_pens	{0}, penalties {1}–{2}	{0}, penaltis {1}–{2}	{0}, pênaltis {1}–{2}	{0}, пенальти {1}–{2}	{0}, пенальті {1}–{2}
-push.cup_next	{0}. Next round tomorrow at 18:00.	{0}. Siguiente ronda mañana a las 18:00.	{0}. Próxima fase amanhã às 18:00.	{0}. Следующий раунд завтра в 18:00.	{0}. Наступний раунд завтра о 18:00.
+push.cup_next	{0}. Next round tomorrow.	{0}. Siguiente ronda mañana.	{0}. Próxima fase amanhã.	{0}. Следующий раунд завтра.	{0}. Наступний раунд завтра.
 push.cup_prize	{0}. Prize: {1} coins.	{0}. Premio: {1} monedas.	{0}. Prêmio: {1} moedas.	{0}. Приз: {1} монет.	{0}. Приз: {1} монет.
 push.cup_prize_gold	{0}. Prize: {1} coins and {2} gold.	{0}. Premio: {1} monedas y {2} de oro.	{0}. Prêmio: {1} moedas e {2} de ouro.	{0}. Приз: {1} монет и {2} золота.	{0}. Приз: {1} монет і {2} золота.
 # --- account

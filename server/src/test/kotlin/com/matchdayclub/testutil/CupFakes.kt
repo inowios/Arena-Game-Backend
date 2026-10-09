@@ -12,8 +12,8 @@ class FakeCupRepository : CupRepository {
     val cups = linkedMapOf<UUID, Cup>()
     val entries = linkedMapOf<Pair<LocalDate, UUID>, CupEntry>()
     val ties = mutableListOf<CupTie>()
-    /** What activeHumanClubs returns: (clubId, tzBucket) of clubs whose owners were active. */
-    var active: List<Pair<UUID, Int>> = emptyList()
+    /** What activeHumanClubs returns: (clubId, timezone) of clubs whose owners were active. */
+    var active: List<Pair<UUID, String>> = emptyList()
 
     override suspend fun create(cup: Cup, entries: List<CupEntry>, ties: List<CupTie>) {
         require(cups.values.none { it.tzBucket == cup.tzBucket && it.weekStart == cup.weekStart && it.tier == cup.tier }) { "duplicate cup" }

@@ -6,6 +6,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
@@ -28,11 +29,16 @@ object Cups {
     enum class Stage { ROUND_OF_16, QUARTER_FINAL, SEMI_FINAL, RUNNER_UP, CHAMPION }
 
     fun zone(bucket: Int): ZoneOffset = ZoneOffset.ofHours(bucket.coerceIn(-18, 18))
+    /** The cup's own zone when it has one (rounds at 18:00 local, DST included), else the bucket offset. */
+    fun zoneOf(cup: com.matchdayclub.domain.model.Cup): ZoneId = cup.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: zone(cup.tzBucket)
     /** Monday of the bucket-local week containing [now]. */
     fun weekStart(now: Instant, bucket: Int): LocalDate = now.atZone(zone(bucket)).toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    fun drawAt(weekStart: LocalDate, bucket: Int): Instant = weekStart.plusDays(3).atTime(LocalTime.of(DRAW_HOUR, 0)).atZone(zone(bucket)).toInstant()
+    fun drawAt(weekStart: LocalDate, bucket: Int): Instant = drawAt(weekStart, zone(bucket))
+    fun drawAt(weekStart: LocalDate, zone: ZoneId): Instant = weekStart.plusDays(3).atTime(LocalTime.of(DRAW_HOUR, 0)).atZone(zone).toInstant()
     /** Round 1 Thursday … round 4 (final) Sunday, 18:00 bucket time. */
-    fun roundAt(weekStart: LocalDate, round: Int, bucket: Int): Instant = weekStart.plusDays(2L + round).atTime(LocalTime.of(ROUND_HOUR, 0)).atZone(zone(bucket)).toInstant()
+    fun roundAt(weekStart: LocalDate, round: Int, bucket: Int): Instant = roundAt(weekStart, round, zone(bucket))
+    fun roundAt(weekStart: LocalDate, round: Int, zone: ZoneId): Instant = weekStart.plusDays(2L + round).atTime(LocalTime.of(ROUND_HOUR, 0)).atZone(zone).toInstant()
+    fun roundAt(cup: com.matchdayclub.domain.model.Cup, round: Int): Instant = roundAt(cup.weekStart, round, zoneOf(cup))
     /** The draw of this week when it is still ahead, else next week's. */
     fun nextDraw(now: Instant, bucket: Int): Instant {
         val week = weekStart(now, bucket)
