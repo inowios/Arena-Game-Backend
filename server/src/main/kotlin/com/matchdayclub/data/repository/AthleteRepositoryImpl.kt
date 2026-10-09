@@ -32,14 +32,14 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.name] = a.name; this[AthleteTable.attack] = a.attack; this[AthleteTable.defense] = a.defense; this[AthleteTable.physical] = a.physical
         this[AthleteTable.technique] = a.technique; this[AthleteTable.mental] = a.mental; this[AthleteTable.fatigue] = a.fatigue; this[AthleteTable.fatigueAt] = a.fatigueAt
         this[AthleteTable.injuredUntil] = a.injuredUntil; this[AthleteTable.morale] = a.morale; this[AthleteTable.updatedAt] = a.updatedAt
-        this[AthleteTable.age] = a.age; this[AthleteTable.potential] = a.potential; this[AthleteTable.retiredAt] = a.retiredAt
+        this[AthleteTable.age] = a.age; this[AthleteTable.potential] = a.potential; this[AthleteTable.retiredAt] = a.retiredAt; this[AthleteTable.xp] = a.xp
     }
 
     private fun ResultRow.toAthlete() = Athlete(
         this[AthleteTable.id], this[AthleteTable.clubId], this[AthleteTable.name], Sport.valueOf(this[AthleteTable.sport]), Position.valueOf(this[AthleteTable.position]),
         this[AthleteTable.attack], this[AthleteTable.defense], this[AthleteTable.physical], this[AthleteTable.technique], this[AthleteTable.mental],
         this[AthleteTable.age], Rarity.valueOf(this[AthleteTable.rarity]), this[AthleteTable.fatigue], this[AthleteTable.fatigueAt], this[AthleteTable.injuredUntil], this[AthleteTable.morale],
-        this[AthleteTable.createdAt], this[AthleteTable.updatedAt], this[AthleteTable.potential], this[AthleteTable.retiredAt],
+        this[AthleteTable.createdAt], this[AthleteTable.updatedAt], this[AthleteTable.potential], this[AthleteTable.retiredAt], this[AthleteTable.xp],
     )
 }
 

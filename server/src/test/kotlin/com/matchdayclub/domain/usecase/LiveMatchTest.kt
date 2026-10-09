@@ -118,3 +118,35 @@ class LiveReadinessTest {
         assertFailsWith<ConflictException> { rest(u1) }
     }
 }
+
+class GrowthTest {
+    private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val live = FakeLiveMatchRepository(clubs)
+    private val bots = BotService(users, clubs, athletes, clock)
+    private val clubService = ClubService(clubs, buildings, clock)
+    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock, buildings = buildings)
+    private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
+    private val u1 = UUID.randomUUID()
+
+    @Test
+    fun `starters earn experience and a scorer grows`() = runBlocking<Unit> {
+        val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val s = start(u1, null)
+        val scorer = s.home.starters.first { it.position == com.matchdayclub.engine.model.Position.FWD }
+        val before = scorer.overall
+        // a hat-trick and a win by a youngster: enough for a point or two
+        val r = finish(u1, s.match.id, LiveReport(3, 0, duration = 260.0, minutes = listOf(com.matchdayclub.domain.usecase.live.LiveMinutes(scorer.id.toString(), 90, 3, 0))))
+        assertEquals(11, r.growth.size)
+        val g = r.growth.first { it.athlete.id == scorer.id }
+        assertTrue(g.xpGained >= 60, "xp ${g.xpGained}")
+        val after = athletes.rows.getValue(scorer.id)
+        assertTrue(after.xp + g.points * com.matchdayclub.domain.rules.Growth.XP_PER_POINT >= g.xpGained)
+        assertTrue(after.overall >= before)
+        // experience never pushes past potential
+        val capped = athletes.rows.values.first { it.clubId == club.id }.copy(xp = 950, potential = 1)
+        val res = com.matchdayclub.domain.rules.Growth.apply(capped, 100, 99, kotlin.random.Random(1))
+        assertEquals(0, res.points); assertEquals(99, res.athlete.xp)
+    }
+}

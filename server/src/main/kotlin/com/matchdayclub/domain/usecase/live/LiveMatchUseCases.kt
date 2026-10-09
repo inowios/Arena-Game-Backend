@@ -43,7 +43,7 @@ data class LiveStart(val match: LiveMatch, val home: LiveTeam, val away: LiveTea
     val events: List<LiveReportEvent> = emptyList(), val minutes: List<LiveMinutes> = emptyList(),
 )
 
-data class LiveOutcome(val match: LiveMatch, val club: Club, val outcome: Outcome, val arena: Arena, val coins: Long, val reputation: Int, val trophiesDelta: Int, val pack: Athlete?, val athletes: List<Athlete>)
+data class LiveOutcome(val match: LiveMatch, val club: Club, val outcome: Outcome, val arena: Arena, val coins: Long, val reputation: Int, val trophiesDelta: Int, val pack: Athlete?, val athletes: List<Athlete>, val growth: List<GrowthResult> = emptyList())
 
 object LiveRules {
     const val HALF_SECONDS = 120
@@ -126,6 +126,7 @@ class StartLiveMatchUseCase(
 class FinishLiveMatchUseCase(
     private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val live: LiveMatchRepository,
     private val clock: Clock, private val progress: ProgressTracker = ProgressTracker { _, _ -> }, private val inbox: InboxService? = null, private val tx: Tx = NoTx,
+    private val buildings: com.matchdayclub.domain.repository.BuildingRepository? = null,
 ) {
     private val json = Json { encodeDefaults = true }
 
@@ -157,8 +158,18 @@ class FinishLiveMatchUseCase(
         val points = when (outcome) { Outcome.WIN -> 3; Outcome.DRAW -> 1; Outcome.LOSS -> 0 }
         val squad = athletes.listByClub(club.id)
         val starterIds = m.starters.toSet()
+        // experience: minutes, goals, assists, saves and the result; the venue caps attributes like training does
+        val cap = TrainingRules.attributeCap(Sport.FOOTBALL, buildings?.listByClub(club.id)?.firstOrNull { it.type == BuildingType.PITCH }?.level ?: 1)
+        val byAthlete = report.minutes.associateBy { it.athleteId }
+        val saves = report.events.count { it.type == "SAVE" && it.side == "HOME" }
+        val rnd = Random(m.seed xor now.toEpochMilli())
+        val growth = mutableListOf<GrowthResult>()
         val updated = squad.filter { it.id in starterIds }.map {
-            it.copy(fatigue = (it.currentFatigue(now) + fatigue).coerceAtMost(100), fatigueAt = now, morale = Careers.moraleAfter(it.morale, true, points), updatedAt = now)
+            val tired = it.copy(fatigue = (it.currentFatigue(now) + fatigue).coerceAtMost(100), fatigueAt = now, morale = Careers.moraleAfter(it.morale, true, points), updatedAt = now)
+            if (status != LiveStatus.FINISHED) return@map tired
+            val mine = byAthlete[it.id.toString()]
+            val xp = Growth.xpFor(it, mine?.minutes ?: 90, mine?.goals ?: 0, mine?.assists ?: 0, if (it.position == Position.GK) saves else 0, outcome)
+            val g = Growth.apply(tired, xp, cap, rnd); growth += g; g.athlete
         }
         updated.forEach { athletes.update(it) }
         // a player pack every third win in a row (while the squad has room)
@@ -181,7 +192,7 @@ class FinishLiveMatchUseCase(
             inbox?.add(opp.id, "LIVE_DEFENCE", mapOf("club" to club.name, "home" to report.homeScore.toString(), "away" to report.awayScore.toString(), "trophies" to dd.toString()))
         }
         val fresh = athletes.listByClub(club.id)
-        return LiveOutcome(finished, saved, outcome, Arenas.of(newTrophies), coins, rep, delta, packAthlete, fresh)
+        return LiveOutcome(finished, saved, outcome, Arenas.of(newTrophies), coins, rep, delta, packAthlete, fresh, growth)
     }
 }
 

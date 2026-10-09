@@ -31,6 +31,8 @@ data class Athlete(
     val potential: Int = 60,
     /** Set when the athlete retired or was released; the row stays for old match highlights. */
     val retiredAt: Instant? = null,
+    /** Match experience toward the next attribute point (see Growth). */
+    val xp: Int = 0,
 ) {
     val attributes get() = Attributes(attack, defense, physical, technique, mental)
     val attributeAverage: Int get() = (attack + defense + physical + technique + mental) / 5
