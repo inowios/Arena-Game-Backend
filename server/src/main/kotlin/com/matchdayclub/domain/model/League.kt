@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class LeagueKind { PUBLIC, PRIVATE }
+enum class LeagueStatus { ACTIVE, FINISHED }
 enum class FixtureKind { LEAGUE, FRIENDLY }
 enum class FixtureStatus { SCHEDULED, PLAYED }
 
@@ -23,6 +24,7 @@ data class League(
     val createdBy: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val status: LeagueStatus = LeagueStatus.ACTIVE,
 )
 
 data class Fixture(
@@ -41,6 +43,10 @@ data class Fixture(
     val resultJson: String?,
     val playedAt: Instant?,
     val createdAt: Instant,
+    /** Table points earned in this fixture (sum over sections); null until played. */
+    val homePoints: Int? = null,
+    val awayPoints: Int? = null,
 ) {
     fun involves(clubId: UUID) = homeClubId == clubId || awayClubId == clubId
+    fun pointsFor(clubId: UUID): Int? = if (clubId == homeClubId) homePoints else if (clubId == awayClubId) awayPoints else null
 }

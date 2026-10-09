@@ -121,7 +121,7 @@ class AdRewardUseCase(private val service: ClubService, private val clubs: ClubR
                 val b = service.building(club, buildingId ?: throw ValidationException("buildingId required"))
                 if (b.state != BuildingState.UPGRADING || b.upgradeEndsAt == null) throw ConflictException("Nothing to speed up")
                 if (b.upgradeEndsAt.epochSecond - now.epochSecond > Economy.FREE_SPEEDUP_MAX_SECONDS) throw ValidationException("Free speed-up only for timers under 30 minutes")
-                buildings.update(b.copy(state = BuildingState.IDLE, upgradeEndsAt = null, lastCollectedAt = now, updatedAt = now))
+                service.complete(b, now)
                 clubs.update(club.copy(freeSpeedupDate = today, updatedAt = now))
             }
         }

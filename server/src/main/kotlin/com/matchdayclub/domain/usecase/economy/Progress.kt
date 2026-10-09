@@ -16,7 +16,7 @@ import java.util.UUID
 /** Other modules report what happened; the economy decides what it means. Never throws. */
 fun interface ProgressTracker { suspend fun record(clubId: UUID, event: ProgressEvent) }
 
-class EconomyService(private val economy: EconomyRepository, private val leagues: LeagueRepository, private val clock: Clock) : ProgressTracker {
+class EconomyService(private val economy: EconomyRepository, private val leagues: LeagueRepository, private val clock: Clock, private val sectionCount: (suspend (UUID) -> Int)? = null) : ProgressTracker {
     fun today(timezone: String): LocalDate = clock.now().atZone(ZoneId.of(timezone)).toLocalDate()
 
     suspend fun publicLeague(clubId: UUID): League? = leagues.listForClub(clubId).firstOrNull { it.kind == LeagueKind.PUBLIC }
@@ -28,7 +28,8 @@ class EconomyService(private val economy: EconomyRepository, private val leagues
         if (stored.isNotEmpty()) return stored
         val league = publicLeague(clubId)
         val matchToday = league != null && league.currentRound < 28
-        return Economy.tasksFor(clubId, day, matchToday).map { economy.upsertTask(DailyTask(clubId, day, it.name, 0, false)) }
+        val multi = (sectionCount?.invoke(clubId) ?: 1) >= 2
+        return Economy.tasksFor(clubId, day, matchToday, multi).map { economy.upsertTask(DailyTask(clubId, day, it.name, 0, false)) }
     }
 
     override suspend fun record(clubId: UUID, event: ProgressEvent) {

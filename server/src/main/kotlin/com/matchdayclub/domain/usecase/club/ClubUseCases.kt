@@ -17,13 +17,16 @@ import java.util.UUID
 /** Hook for other modules to seed a new club (e.g. starter squad). */
 fun interface ClubInitializer { suspend fun onClubCreated(club: Club) }
 
+/** Fires exactly once when a construction or upgrade finishes (timer, speed-up or free ad speed-up). */
+fun interface BuildingListener { suspend fun onCompleted(building: Building) }
+
 data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant) {
     /** Constructions (first build or upgrade) occupying a builder. Decor is placed instantly and never occupies one. */
     val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type != BuildingType.DECOR }
 }
 
 /** Shared loading + lazy finalisation of finished timers ("finalise on read"). */
-class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock) {
+class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList()) {
     suspend fun clubOf(userId: UUID): Club = clubs.findByUserId(userId) ?: throw NotFoundException("Club not found")
 
     /** Locks the club row for the rest of the surrounding transaction. Use before changing currencies or timers. */
@@ -41,8 +44,14 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         return finalise(b, clock.now())
     }
 
-    private suspend fun finalise(b: Building, now: Instant): Building =
-        if (b.isDone(now)) buildings.update(b.copy(state = BuildingState.IDLE, upgradeEndsAt = null, lastCollectedAt = now, updatedAt = now)) else b
+    private suspend fun finalise(b: Building, now: Instant): Building = if (b.isDone(now)) complete(b, now) else b
+
+    /** Finishes a construction now. Conditional on UPGRADING so concurrent readers never fire listeners twice. */
+    suspend fun complete(b: Building, now: Instant): Building {
+        val done = b.copy(state = BuildingState.IDLE, upgradeEndsAt = null, lastCollectedAt = now, updatedAt = now)
+        if (buildings.completeConstruction(done)) listeners.forEach { it.onCompleted(done) }
+        return done
+    }
 
     suspend fun charge(club: Club, coins: Long = 0, gold: Int = 0): Club {
         if (coins < 0 || gold < 0) throw ValidationException("Negative charge")
@@ -144,7 +153,7 @@ class SpeedUpUseCase(private val service: ClubService, private val buildings: Bu
         val now = clock.now()
         val cost = BuildingCatalog.speedUpGold(b.upgradeEndsAt.epochSecond - now.epochSecond)
         service.charge(club, gold = cost)
-        buildings.update(b.copy(state = BuildingState.IDLE, upgradeEndsAt = null, lastCollectedAt = now, updatedAt = now))
+        service.complete(b, now)
     }
 }
 

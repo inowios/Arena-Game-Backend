@@ -21,7 +21,7 @@ import java.util.UUID
 
 data class LeagueView(val league: League, val table: List<StandingRow>, val clubs: Map<UUID, Club>, val nextRoundAt: Instant?, val memberCount: Int)
 data class FixturesView(val fixtures: List<Fixture>, val clubs: Map<UUID, Club>)
-data class MatchView(val fixture: Fixture, val result: MatchResult?, val clubs: Map<UUID, Club>, val athleteNames: Map<String, String> = emptyMap())
+data class MatchView(val fixture: Fixture, val result: MatchdayResult?, val clubs: Map<UUID, Club>, val athleteNames: Map<String, String> = emptyMap())
 
 class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
     suspend fun view(leagueId: UUID): LeagueView = view(leagues.findById(leagueId) ?: throw NotFoundException("League not found"))
@@ -56,7 +56,7 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
 
     suspend fun match(fixtureId: UUID): MatchView {
         val f = fixtures.findById(fixtureId) ?: throw NotFoundException("Match not found")
-        val result = f.resultJson?.let { Json.decodeFromString<MatchResult>(it) }
+        val result = f.resultJson?.let { MatchdayResult.parse(it) }
         return MatchView(f, result, clubsOf(listOf(f)), athleteNames(f))
     }
 
@@ -116,18 +116,21 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
         clubs.update(club.copy(friendliesDate = today, friendliesPlayed = playedToday + 1, updatedAt = now))
         val fixture = Fixture(UUID.randomUUID(), null, FixtureKind.FRIENDLY, 0, 0, now, club.id, opponent.id, FixtureStatus.SCHEDULED, null, null, now.toEpochMilli() xor club.id.leastSignificantBits, null, null, now)
         fixtures.createAll(listOf(fixture))
-        val (played, result) = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
-        MatchView(played, result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(played))
+        val p = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
+        MatchView(p.fixture, p.result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(p.fixture))
     }
 }
 
-data class PublicClub(val club: Club, val squadOverall: Int, val pitchLevel: Int)
+data class PublicClub(val club: Club, val squadOverall: Int, val pitchLevel: Int, val sections: List<Sport> = listOf(Sport.FOOTBALL), val sectionOverall: Map<Sport, Int> = emptyMap())
 
-class GetPublicClubUseCase(private val clubs: ClubRepository, private val athletes: AthleteRepository, private val buildings: BuildingRepository) {
+class GetPublicClubUseCase(private val clubs: ClubRepository, private val athletes: AthleteRepository, private val buildings: BuildingRepository, private val sections: com.matchdayclub.domain.usecase.athlete.SectionService? = null) {
     suspend operator fun invoke(clubId: UUID): PublicClub {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
         val squad = athletes.listByClub(clubId)
-        val pitch = buildings.listByClub(clubId).firstOrNull { it.type == com.matchdayclub.domain.rules.BuildingType.PITCH }?.level ?: 1
-        return PublicClub(club, if (squad.isEmpty()) 0 else squad.sortedByDescending { it.overall }.take(11).map { it.overall }.average().toInt(), pitch)
+        val bs = buildings.listByClub(clubId)
+        val pitch = bs.firstOrNull { it.type == com.matchdayclub.domain.rules.BuildingType.PITCH }?.level ?: 1
+        val active = sections?.active(club, squad, bs) ?: listOf(Sport.FOOTBALL)
+        fun overallOf(s: Sport) = squad.filter { it.sport == s }.sortedByDescending { it.overall }.take(com.matchdayclub.domain.rules.Sections.profile(s).startersCount).map { it.overall }.let { if (it.isEmpty()) 0 else it.average().toInt() }
+        return PublicClub(club, overallOf(Sport.FOOTBALL), pitch, active, active.associateWith(::overallOf))
     }
 }

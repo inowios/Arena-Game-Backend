@@ -35,7 +35,10 @@ fun Route.athleteRoutes() {
                 val s = list(call.userId()); val now = clock.now()
                 call.respond(SquadResponse(s.athletes.map { it.toDto(now) }, s.trainings.map { it.toDto(now) }, s.slots, now.toString()).toSuccessResponse())
             }
-            post("/academy/claim") { call.respond(HttpStatusCode.Created, claim(call.userId()).toDto(clock.now()).toSuccessResponse(201)) }
+            post("/academy/claim") {
+                val sport = runCatching { call.receive<AcademyClaimRequest>() }.getOrNull()?.sport?.let { parseEnum<Sport>(it, "sport") } ?: Sport.FOOTBALL
+                call.respond(HttpStatusCode.Created, claim(call.userId(), sport).toDto(clock.now()).toSuccessResponse(201))
+            }
             post("/trainings") {
                 val r = call.receive<StartTrainingRequest>()
                 val t = start(call.userId(), runCatching { UUID.fromString(r.athleteId) }.getOrElse { throw ValidationException("Bad athleteId") }, parseEnum<AttributeKind>(r.attribute, "attribute"))

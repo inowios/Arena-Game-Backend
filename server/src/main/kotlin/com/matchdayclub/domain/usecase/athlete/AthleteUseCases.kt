@@ -21,6 +21,29 @@ class StarterSquadInitializer(private val athletes: AthleteRepository, private v
     override suspend fun onClubCreated(club: Club) = athletes.createAll(AthleteFactory.starterSquad(club.id, clock.now()))
 }
 
+/** When a basketball or tennis court is first completed, the new section gets its starter squad (once). */
+class SectionSquadOnCourt(private val athletes: AthleteRepository, private val clock: Clock) : com.matchdayclub.domain.usecase.club.BuildingListener {
+    override suspend fun onCompleted(building: Building) {
+        val sport = com.matchdayclub.domain.rules.Sections.sportOfVenue(building.type) ?: return
+        if (sport == Sport.FOOTBALL || building.level != 1) return
+        if (athletes.listByClub(building.clubId).any { it.sport == sport }) return
+        athletes.createAll(AthleteFactory.starterSquad(building.clubId, sport, clock.now()))
+    }
+}
+
+/** Which sport sections a club fields: enough athletes for a lineup and (for humans) an operational venue. */
+class SectionService(private val buildings: com.matchdayclub.domain.repository.BuildingRepository, private val athletes: AthleteRepository) {
+    suspend fun active(club: Club, squad: List<Athlete>? = null, clubBuildings: List<Building>? = null): List<Sport> {
+        val list = squad ?: athletes.listByClub(club.id)
+        fun enough(s: Sport) = list.count { it.sport == s } >= com.matchdayclub.domain.rules.Sections.profile(s).startersCount
+        if (club.isBot) return com.matchdayclub.domain.rules.Sections.ORDER.filter(::enough)
+        val bs = clubBuildings ?: buildings.listByClub(club.id)
+        return com.matchdayclub.domain.rules.Sections.ORDER.filter { s ->
+            enough(s) && (s == Sport.FOOTBALL || bs.any { it.type == com.matchdayclub.domain.rules.Sections.venue(s) && com.matchdayclub.domain.rules.Sections.venueOperational(it) })
+        }
+    }
+}
+
 data class Squad(val athletes: List<Athlete>, val trainings: List<Training>, val slots: Int)
 
 /** Loads the squad and applies finished trainings ("finalise on read"). */
@@ -46,15 +69,16 @@ class ListAthletesUseCase(private val squads: SquadService) {
     suspend operator fun invoke(userId: UUID) = squads.squad(userId)
 }
 
-class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
-    suspend operator fun invoke(userId: UUID): Athlete = tx {
+class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx, private val sections: SectionService? = null) {
+    suspend operator fun invoke(userId: UUID, sport: Sport = Sport.FOOTBALL): Athlete = tx {
         val st = service.state(userId, lock = true)
+        if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club, clubBuildings = st.buildings)) throw ValidationException("Build the ${sport.name.lowercase()} venue first")
         val academy = st.buildings.firstOrNull { it.type == BuildingType.ACADEMY && it.state == BuildingState.IDLE } ?: throw ValidationException("Build an academy first")
         val now = clock.now()
         val next = st.club.academyNextAt
         if (next != null && now.isBefore(next)) throw ConflictException("Next graduate at $next")
         val q = TrainingRules.academyQuality(academy.level)
-        val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, Sport.FOOTBALL, q.first, q.last, null, now)
+        val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, sport, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
         clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.ACADEMY_INTERVAL_SECONDS), updatedAt = now))
         athlete
@@ -72,8 +96,8 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (squad.trainings.any { it.athleteId == a.id }) throw ConflictException("Athlete is already training")
         if (a.isInjured(now)) throw ConflictException("Athlete is injured")
         if (a.currentFatigue(now) > TrainingRules.MAX_FATIGUE_TO_TRAIN) throw ConflictException("Athlete is too tired")
-        val pitch = st.buildings.first { it.type == BuildingType.PITCH }
-        if (a.attribute(attribute) >= TrainingRules.attributeCap(pitch.level)) throw ValidationException("Attribute capped by pitch level; upgrade the pitch")
+        val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the ${a.sport.name.lowercase()} venue first")
+        if (a.attribute(attribute) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
         trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))

@@ -6,8 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class StrengthTest {
-    private fun squad(v: Int, team: String = "t") = Lineup(team, Position.values().flatMap { p ->
-        val n = when (p) { Position.GK -> 1; Position.DEF -> 4; Position.MID -> 4; Position.FWD -> 2 }
+    private fun squad(v: Int, team: String = "t") = Lineup(team, listOf(Position.GK to 1, Position.DEF to 4, Position.MID to 4, Position.FWD to 2).flatMap { (p, n) ->
         (1..n).map { Athlete("$team-$p-$it", "n", p, Attributes(v, v, v, v, v)) }
     })
 

@@ -16,6 +16,7 @@ object LeagueTable : BaseTable("leagues") {
     val seasonStart = date("season_start")
     val currentRound = integer("current_round")
     val createdBy = uuid("created_by").nullable()
+    val status = varchar("status", 10)
 }
 
 object LeagueMemberTable : Table("league_members") {
@@ -41,5 +42,7 @@ object FixtureTable : Table("fixtures") {
     val resultJson = text("result_json").nullable()
     val playedAt = timestamp("played_at").nullable()
     val createdAt = timestamp("created_at")
+    val homePoints = integer("home_points").nullable()
+    val awayPoints = integer("away_points").nullable()
     override val primaryKey = PrimaryKey(id)
 }

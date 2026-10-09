@@ -26,6 +26,7 @@ fun Route.clubRoutes() {
     val updateClub: UpdateClubUseCase by inject()
     val move: MoveBuildingUseCase by inject()
     val buyBuilder: BuyBuilderUseCase by inject()
+    val sections: com.matchdayclub.domain.usecase.athlete.SectionService by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -42,7 +43,8 @@ fun Route.clubRoutes() {
             }
             get {
                 val st = getClub(call.userId())
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString()).toSuccessResponse())
+                val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active).toSuccessResponse())
             }
             post("/builders") { call.respond(buyBuilder(call.userId()).toDto().toSuccessResponse()) }
             route("/buildings") {

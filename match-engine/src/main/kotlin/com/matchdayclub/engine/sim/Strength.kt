@@ -5,18 +5,23 @@ import com.matchdayclub.engine.model.*
 data class TeamStrength(val attack: Double, val defense: Double, val midfield: Double, val keeper: Double, val tempoCost: Double)
 
 object Strength {
+    /**
+     * Each component (attack, defense, midfield, keeper) is a weighted mean of role means, weights from the sport profile.
+     * Football weights reproduce the original formula: attack = FWD .6 + MID .4, defense = DEF .6 + MID .2 + GK .2, midfield = MID, keeper = GK.
+     */
     fun of(lineup: Lineup, sport: SportProfile, isHome: Boolean): TeamStrength {
         val fit = lineup.starters.filter { !it.injured }.take(sport.startersCount)
         val coverage = fit.size.toDouble() / sport.startersCount
-        fun mean(p: Position, fallback: Double) = fit.filter { it.position == p }.map { it.effective }.let { if (it.isEmpty()) fallback else it.average() }
-        val fwd = mean(Position.FWD, 35.0)
-        val mid = mean(Position.MID, 35.0)
-        val def = mean(Position.DEF, 35.0)
-        val gk = fit.filter { it.position == Position.GK }.maxOfOrNull { it.effective } ?: 30.0
-
-        var attack = fwd * 0.6 + mid * 0.4
-        var defense = def * 0.6 + mid * 0.2 + gk * 0.2
-        var midfield = mid
+        val roleMean = sport.roles.keys.associateWith { p -> fit.filter { it.position == p }.map { it.effective }.let { if (it.isEmpty()) sport.fallbackRating[p] ?: 35.0 else it.average() } }
+        fun component(weight: (RoleWeights) -> Double): Double {
+            var sum = 0.0; var total = 0.0
+            for ((p, w) in sport.roles) { val x = weight(w); if (x <= 0.0) continue; sum += x * roleMean.getValue(p); total += x }
+            return if (total == 0.0) 35.0 else sum / total
+        }
+        var attack = component { it.attack }
+        var defense = component { it.defense }
+        var midfield = component { it.midfield }
+        val keeper = component { it.keeper }
         val t = lineup.tactics
         when (t.style) {
             Style.ATTACK -> { attack *= 1.08; defense *= 0.92 }
@@ -37,7 +42,7 @@ object Strength {
             attack = attack * tempoMul * homeMul * coverage,
             defense = defense * tempoMul * coverage,
             midfield = midfield * tempoMul * homeMul * coverage,
-            keeper = gk * coverage,
+            keeper = keeper * coverage,
             tempoCost = tempoCost,
         )
     }

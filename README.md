@@ -38,10 +38,10 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`, `/move` `{x,y,rotation}`; DELETE | building actions (one builder; constructions queue on it) |
 | POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |
 | GET | `/api/v1/club/athletes` | squad, active trainings, slots |
-| POST | `/api/v1/club/academy/claim` | new graduate every 8 h |
+| POST | `/api/v1/club/academy/claim` `{sport?}` | new graduate every 8 h (football, or any open section) |
 | POST | `/api/v1/club/trainings`, `/trainings/{id}/complete` | train one attribute for 1 h |
 | POST | `/api/v1/club/athletes/{id}/heal` | medical centre |
-| GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics |
+| GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics per section (`football` 11+7, `basketball` 5+5, `tennis` 1+1) |
 | GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
 | GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
 | POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}`; DELETE `/private/{id}/leave` | private leagues (code, max 20) |
@@ -57,6 +57,12 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
 Not yet implemented: real Google Play / App Store receipt verifiers (interface `ReceiptVerifier` is in place; production needs store credentials), rewarded-ad server-side verification (SSV).
+
+Sections: football always; a basketball court (club level 3) or tennis court (level 5) opens that section with a starter squad
+when its construction finishes; the venue level caps that section's attributes. A matchday is one opponent across all sections either
+club fields; a section only one club has is a walkover (3:0 / 20:0 / 2:0). Table points = sum of section points (3/1/0), so a three-sport
+club can take 9 a matchday. `GET /club` returns `sections`; fixtures carry `homePoints/awayPoints` and per-section scores; `GET /matches/{id}`
+returns `sections[]` with each sport's full result (`result` stays the football match).
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,
@@ -76,6 +82,10 @@ Integration tests (real PostgreSQL, skipped when the variable is unset):
 - **One engine, many sports.** Sport differences live in `SportProfile` (possessions, chance rate, conversion, duration, subs). The simulator never branches on sport id.
 - **Events are the API.** `MatchResult.events` is what the client plays back as highlights; every event has a minute, type, team and optional athlete.
 - **Tuning knobs.** `SportProfile.baseChanceRate`, `baseConversion`, `homeAdvantage` and `Possession.CHANCE_EXP` / `CONVERSION_EXP`. Change them only together with the balance table and `BalanceTest` bounds.
+
+Sports: `FOOTBALL` (possession-based, 90'), `BASKETBALL` (alternating possessions, 2/3-point shots, overtime, no draws),
+`TENNIS` (`SimMode.SETS`: best of three, serve-point model, tiebreak at 6-6). Run the balance table for all three with
+`./gradlew :match-engine:run --args=3000`.
 
 ### Adding a sport
 

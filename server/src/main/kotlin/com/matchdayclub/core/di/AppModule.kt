@@ -54,7 +54,9 @@ val appModule = module {
     single<ClubRepository> { ClubRepositoryImpl() }
     single<BuildingRepository> { BuildingRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it) != null } }
-    single { ClubService(get(), get(), get()) }
+    single { ClubService(get(), get(), get(), getAll<BuildingListener>()) }
+    single { SectionService(get(), get()) }
+    single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
     single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
     single { PlaceBuildingUseCase(get(), get(), get(), tx = get()) }
@@ -78,13 +80,16 @@ val appModule = module {
     single { LineupService(get(), get()) }
     single<EconomyRepository> { EconomyRepositoryImpl() }
     single<PushTokenRepository> { PushTokenRepositoryImpl() }
-    single { EconomyService(get(), get(), get()) }
+    single {
+        val sections = get<SectionService>(); val clubs = get<ClubRepository>()
+        EconomyService(get(), get(), get()) { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }
+    }
     single {
         val c = get<Application>().environment.config
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString())
     }
     single { MatchdayNotifier(get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
     single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single<Map<Store, ReceiptVerifier>> {
@@ -99,10 +104,10 @@ val appModule = module {
     single { JoinPrivateLeagueUseCase(get(), get(), tx = get()) }
     single { LeavePrivateLeagueUseCase(get(), get()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
-    single { GetPublicClubUseCase(get(), get(), get()) }
+    single { GetPublicClubUseCase(get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
-    single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get()) }
+    single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get(), sections = get()) }
     single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
     single { CompleteTrainingUseCase(get(), get(), get(), get(), tx = get()) }
     single { HealAthleteUseCase(get(), get(), get(), get(), get(), tx = get()) }

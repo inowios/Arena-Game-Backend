@@ -10,7 +10,7 @@ class BuildingRulesTest {
             assertEquals(3, s.maxLevel)
             assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.requiredClubLevel >= a.requiredClubLevel })
         }
-        assertFalse(BuildingCatalog.spec(BuildingType.TENNIS_COURT).enabled)
+        assertTrue(BuildingCatalog.spec(BuildingType.TENNIS_COURT).enabled)
     }
 
     @Test

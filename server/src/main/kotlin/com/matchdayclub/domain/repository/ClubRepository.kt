@@ -21,6 +21,8 @@ interface BuildingRepository {
     suspend fun findById(id: UUID): Building?
     suspend fun create(building: Building): Building
     suspend fun update(building: Building): Building
+    /** Marks a construction finished only if it is still UPGRADING; true when this call did it (listeners fire once). */
+    suspend fun completeConstruction(building: Building): Boolean
     /** Updates grid position and rotation only. */
     suspend fun move(building: Building): Building
     suspend fun delete(id: UUID)

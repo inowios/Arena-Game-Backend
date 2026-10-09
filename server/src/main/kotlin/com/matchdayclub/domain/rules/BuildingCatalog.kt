@@ -35,8 +35,9 @@ object BuildingCatalog {
             LevelSpec(2_000, 2 * H, 3, effect = 75, effect2 = 2_000),
             LevelSpec(12_000, 12 * H, 6, effect = 90, effect2 = 8_000),
         )),
-        BuildingSpec(BuildingType.BASKETBALL_COURT, 3, 2, 1, false, listOf(LevelSpec(1_500, H, 4, effect = 60), LevelSpec(6_000, 6 * H, 6, effect = 75), LevelSpec(20_000, 16 * H, 8, effect = 90))),
-        BuildingSpec(BuildingType.TENNIS_COURT, 3, 2, 1, false, listOf(LevelSpec(1_500, H, 4, effect = 60), LevelSpec(6_000, 6 * H, 6, effect = 75), LevelSpec(20_000, 16 * H, 8, effect = 90))),
+        // courts open a sport section (starter squad on completion); level = attribute cap of that section, like the pitch
+        BuildingSpec(BuildingType.BASKETBALL_COURT, 3, 2, 1, true, listOf(LevelSpec(2_500, 2 * H, 3, effect = 60), LevelSpec(8_000, 8 * H, 6, effect = 75), LevelSpec(25_000, 18 * H, 8, effect = 90))),
+        BuildingSpec(BuildingType.TENNIS_COURT, 3, 2, 1, true, listOf(LevelSpec(4_000, 3 * H, 5, effect = 60), LevelSpec(10_000, 10 * H, 7, effect = 75), LevelSpec(30_000, 20 * H, 9, effect = 90))),
         BuildingSpec(BuildingType.ACADEMY, 2, 2, 1, true, listOf(
             LevelSpec(500, 10 * M, 1, effect = 40), LevelSpec(3_000, 4 * H, 3, effect = 50), LevelSpec(15_000, 16 * H, 6, effect = 60),
         )),

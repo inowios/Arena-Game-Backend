@@ -32,7 +32,7 @@ import java.time.Instant
     val nextLevel: LevelSpecDto?,
 )
 
-@Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String)
+@Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"))
 @Serializable data class CollectResponse(val building: BuildingDto, val coins: Long, val club: ClubDto)
 
 fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, builderSlots)

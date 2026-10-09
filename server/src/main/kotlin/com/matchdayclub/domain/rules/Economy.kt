@@ -8,10 +8,11 @@ enum class TaskKind(val target: Int, val xp: Int, val title: String) {
     TRAIN_2(2, 40, "Start 2 training sessions"),
     PLAY_FRIENDLY(1, 30, "Play a friendly"),
     WIN_MATCH(1, 60, "Win your matchday match"),
+    WIN_SECTIONS(2, 70, "Win 2 sections on matchday"),
     SET_LINEUP(1, 20, "Save your lineup"),
 }
 
-enum class ProgressEvent(val task: TaskKind?) { INCOME_COLLECTED(TaskKind.COLLECT_3), TRAINING_STARTED(TaskKind.TRAIN_2), FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY), MATCH_WON(TaskKind.WIN_MATCH), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null) }
+enum class ProgressEvent(val task: TaskKind?) { INCOME_COLLECTED(TaskKind.COLLECT_3), TRAINING_STARTED(TaskKind.TRAIN_2), FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY), MATCH_WON(TaskKind.WIN_MATCH), SECTION_WON(TaskKind.WIN_SECTIONS), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null) }
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
 
@@ -44,8 +45,8 @@ object Economy {
     fun loginReward(day: Int) = LOGIN_CALENDAR[(day - 1).coerceIn(0, LOGIN_CALENDAR.size - 1)]
 
     /** Deterministic 3 tasks per club per day. WIN_MATCH only on days a league match is scheduled (caller filters). */
-    fun tasksFor(clubId: UUID, day: LocalDate, includeMatch: Boolean): List<TaskKind> {
-        val pool = TaskKind.values().filter { includeMatch || it != TaskKind.WIN_MATCH }
+    fun tasksFor(clubId: UUID, day: LocalDate, includeMatch: Boolean, multiSection: Boolean = false): List<TaskKind> {
+        val pool = TaskKind.values().filter { (includeMatch || (it != TaskKind.WIN_MATCH && it != TaskKind.WIN_SECTIONS)) && (multiSection || it != TaskKind.WIN_SECTIONS) }
         val seed = Math.floorMod(clubId.hashCode() + day.toEpochDay().toInt() * 31, pool.size)
         return (0 until TASKS_PER_DAY).map { pool[(seed + it * 2) % pool.size] }.distinct().let { if (it.size < TASKS_PER_DAY) (it + pool).distinct().take(TASKS_PER_DAY) else it }
     }

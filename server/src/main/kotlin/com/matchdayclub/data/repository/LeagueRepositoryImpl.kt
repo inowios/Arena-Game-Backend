@@ -17,12 +17,12 @@ class LeagueRepositoryImpl : LeagueRepository {
     override suspend fun findById(id: UUID) = dbQuery { LeagueTable.selectAll().where { LeagueTable.id eq id }.singleOrNull()?.toLeague() }
     override suspend fun lockById(id: UUID) = dbQuery { LeagueTable.selectAll().where { LeagueTable.id eq id }.forUpdate().singleOrNull()?.toLeague() }
     override suspend fun findByCode(code: String) = dbQuery { LeagueTable.selectAll().where { LeagueTable.code eq code }.singleOrNull()?.toLeague() }
-    override suspend fun listAll(kind: LeagueKind) = dbQuery { LeagueTable.selectAll().where { LeagueTable.kind eq kind.name }.map { it.toLeague() } }
+    override suspend fun listAll(kind: LeagueKind) = dbQuery { LeagueTable.selectAll().where { (LeagueTable.kind eq kind.name) and (LeagueTable.status eq LeagueStatus.ACTIVE.name) }.map { it.toLeague() } }
     override suspend fun listForClub(clubId: UUID) = dbQuery {
         (LeagueTable innerJoin LeagueMemberTable).selectAll().where { LeagueMemberTable.clubId eq clubId }.map { it.toLeague() }
     }
     override suspend fun findOpenPublic(tzBucket: Int, division: Int, max: Int): League? = dbQuery {
-        LeagueTable.selectAll().where { (LeagueTable.kind eq LeagueKind.PUBLIC.name) and (LeagueTable.tzBucket eq tzBucket) and (LeagueTable.division eq division) and (LeagueTable.currentRound eq 0) }
+        LeagueTable.selectAll().where { (LeagueTable.kind eq LeagueKind.PUBLIC.name) and (LeagueTable.tzBucket eq tzBucket) and (LeagueTable.division eq division) and (LeagueTable.currentRound eq 0) and (LeagueTable.status eq LeagueStatus.ACTIVE.name) }
             .orderBy(LeagueTable.createdAt).map { it.toLeague() }
             .firstOrNull { l -> LeagueMemberTable.selectAll().where { LeagueMemberTable.leagueId eq l.id }.count() < max }
     }
@@ -36,12 +36,13 @@ class LeagueRepositoryImpl : LeagueRepository {
         this[LeagueTable.name] = l.name; this[LeagueTable.code] = l.code; this[LeagueTable.division] = l.division; this[LeagueTable.tzBucket] = l.tzBucket
         this[LeagueTable.timezone] = l.timezone; this[LeagueTable.matchdayHour] = l.matchdayHour; this[LeagueTable.seasonNumber] = l.seasonNumber
         this[LeagueTable.seasonStart] = l.seasonStart; this[LeagueTable.currentRound] = l.currentRound; this[LeagueTable.updatedAt] = l.updatedAt
+        this[LeagueTable.status] = l.status.name
     }
 
     private fun ResultRow.toLeague() = League(
         this[LeagueTable.id], LeagueKind.valueOf(this[LeagueTable.kind]), this[LeagueTable.name], this[LeagueTable.code], this[LeagueTable.division], this[LeagueTable.tzBucket],
         this[LeagueTable.timezone], this[LeagueTable.matchdayHour], this[LeagueTable.seasonNumber], this[LeagueTable.seasonStart], this[LeagueTable.currentRound],
-        this[LeagueTable.createdBy], this[LeagueTable.createdAt], this[LeagueTable.updatedAt],
+        this[LeagueTable.createdBy], this[LeagueTable.createdAt], this[LeagueTable.updatedAt], LeagueStatus.valueOf(this[LeagueTable.status]),
     )
 }
 
@@ -53,6 +54,7 @@ class FixtureRepositoryImpl : FixtureRepository {
                 this[FixtureTable.round] = f.round; this[FixtureTable.scheduledAt] = f.scheduledAt; this[FixtureTable.homeClubId] = f.homeClubId; this[FixtureTable.awayClubId] = f.awayClubId
                 this[FixtureTable.status] = f.status.name; this[FixtureTable.homeScore] = f.homeScore; this[FixtureTable.awayScore] = f.awayScore; this[FixtureTable.seed] = f.seed
                 this[FixtureTable.resultJson] = f.resultJson; this[FixtureTable.playedAt] = f.playedAt; this[FixtureTable.createdAt] = f.createdAt
+                this[FixtureTable.homePoints] = f.homePoints; this[FixtureTable.awayPoints] = f.awayPoints
             }
         }
     }
@@ -77,6 +79,7 @@ class FixtureRepositoryImpl : FixtureRepository {
     override suspend fun markPlayed(fixture: Fixture): Boolean = dbQuery {
         FixtureTable.update({ (FixtureTable.id eq fixture.id) and (FixtureTable.status eq FixtureStatus.SCHEDULED.name) }) {
             it[status] = FixtureStatus.PLAYED.name; it[homeScore] = fixture.homeScore; it[awayScore] = fixture.awayScore; it[resultJson] = fixture.resultJson; it[playedAt] = fixture.playedAt
+            it[homePoints] = fixture.homePoints; it[awayPoints] = fixture.awayPoints
         } == 1
     }
 
@@ -84,5 +87,6 @@ class FixtureRepositoryImpl : FixtureRepository {
         this[FixtureTable.id], this[FixtureTable.leagueId], FixtureKind.valueOf(this[FixtureTable.kind]), this[FixtureTable.seasonNumber], this[FixtureTable.round], this[FixtureTable.scheduledAt],
         this[FixtureTable.homeClubId], this[FixtureTable.awayClubId], FixtureStatus.valueOf(this[FixtureTable.status]), this[FixtureTable.homeScore], this[FixtureTable.awayScore],
         this[FixtureTable.seed], this[FixtureTable.resultJson], this[FixtureTable.playedAt], this[FixtureTable.createdAt],
+        this[FixtureTable.homePoints], this[FixtureTable.awayPoints],
     )
 }

@@ -3,6 +3,7 @@ package com.matchdayclub.presentation.dto
 import com.matchdayclub.domain.model.Club
 import com.matchdayclub.domain.model.Fixture
 import com.matchdayclub.domain.model.League
+import com.matchdayclub.domain.model.MatchdayResult
 import com.matchdayclub.domain.rules.StandingRow
 import com.matchdayclub.domain.usecase.league.*
 import com.matchdayclub.engine.model.MatchResult
@@ -14,10 +15,17 @@ import java.util.UUID
 @Serializable data class StandingRowDto(val position: Int, val club: ClubRefDto, val played: Int, val won: Int, val drawn: Int, val lost: Int, val gf: Int, val ga: Int, val gd: Int, val points: Int)
 @Serializable data class LeagueTableResponse(val league: LeagueDto, val table: List<StandingRowDto>)
 @Serializable data class MyLeaguesResponse(val public: LeagueTableResponse?, val private: List<LeagueTableResponse>)
-@Serializable data class FixtureDto(val id: String, val leagueId: String?, val kind: String, val seasonNumber: Int, val round: Int, val scheduledAt: String, val status: String, val home: ClubRefDto, val away: ClubRefDto, val homeScore: Int?, val awayScore: Int?, val playedAt: String?)
-@Serializable data class MatchResponse(val fixture: FixtureDto, val result: MatchResult?, val athletes: Map<String, String> = emptyMap())
+@Serializable data class SectionScoreDto(val sport: String, val home: Int, val away: Int, val walkover: String? = null)
+@Serializable data class FixtureDto(
+    val id: String, val leagueId: String?, val kind: String, val seasonNumber: Int, val round: Int, val scheduledAt: String, val status: String,
+    val home: ClubRefDto, val away: ClubRefDto, val homeScore: Int?, val awayScore: Int?, val playedAt: String?,
+    val homePoints: Int? = null, val awayPoints: Int? = null, val sections: List<SectionScoreDto> = emptyList(),
+)
+@Serializable data class SectionDto(val sport: String, val homeScore: Int, val awayScore: Int, val homePoints: Int, val awayPoints: Int, val walkover: String? = null, val result: MatchResult? = null)
+/** [result] is the football match (kept for single-sport clients); [sections] has every sport played that matchday. */
+@Serializable data class MatchResponse(val fixture: FixtureDto, val result: MatchResult?, val athletes: Map<String, String> = emptyMap(), val sections: List<SectionDto> = emptyList())
 @Serializable data class ClubFixturesResponse(val next: FixtureDto?, val recent: List<FixtureDto>)
-@Serializable data class PublicClubDto(val club: ClubRefDto, val reputation: Int, val squadOverall: Int, val pitchLevel: Int)
+@Serializable data class PublicClubDto(val club: ClubRefDto, val reputation: Int, val squadOverall: Int, val pitchLevel: Int, val sections: List<String> = listOf("FOOTBALL"), val sectionOverall: Map<String, Int> = emptyMap())
 @Serializable data class CreatePrivateLeagueRequest(val name: String)
 @Serializable data class JoinPrivateLeagueRequest(val code: String)
 @Serializable data class PlayFriendlyRequest(val opponentClubId: String? = null)
@@ -31,6 +39,9 @@ fun LeagueView.toDto() = LeagueTableResponse(
     table.mapIndexed { i, r -> StandingRowDto(i + 1, clubs.ref(r.clubId), r.played, r.won, r.drawn, r.lost, r.gf, r.ga, r.gd, r.points) },
 )
 fun League.toDto(memberCount: Int) = LeagueDto(id.toString(), kind.name, name, code, division, seasonNumber, seasonStart.toString(), currentRound, 28, matchdayHour, timezone, null, memberCount)
-fun Fixture.toDto(clubs: Map<UUID, Club>) = FixtureDto(id.toString(), leagueId?.toString(), kind.name, seasonNumber, round, scheduledAt.toString(), status.name, clubs.ref(homeClubId), clubs.ref(awayClubId), homeScore, awayScore, playedAt?.toString())
-fun MatchView.toDto() = MatchResponse(fixture.toDto(clubs), result, athleteNames)
-fun PublicClub.toDto() = PublicClubDto(club.toRef(), club.reputation, squadOverall, pitchLevel)
+fun Fixture.toDto(clubs: Map<UUID, Club>) = FixtureDto(
+    id.toString(), leagueId?.toString(), kind.name, seasonNumber, round, scheduledAt.toString(), status.name, clubs.ref(homeClubId), clubs.ref(awayClubId), homeScore, awayScore, playedAt?.toString(),
+    homePoints, awayPoints, resultJson?.let { runCatching { MatchdayResult.parse(it).sections.map { s -> SectionScoreDto(s.sport, s.homeScore, s.awayScore, s.walkover) } }.getOrNull() } ?: emptyList(),
+)
+fun MatchView.toDto() = MatchResponse(fixture.toDto(clubs), result?.primary, athleteNames, result?.sections?.map { SectionDto(it.sport, it.homeScore, it.awayScore, it.homePoints, it.awayPoints, it.walkover, it.result) } ?: emptyList())
+fun PublicClub.toDto() = PublicClubDto(club.toRef(), club.reputation, squadOverall, pitchLevel, sections.map { it.name }, sectionOverall.mapKeys { it.key.name })

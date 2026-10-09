@@ -24,6 +24,11 @@ class FakeBuildingRepository : BuildingRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun create(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun update(building: Building): Building { rows[building.id] = building; return building }
+    override suspend fun completeConstruction(building: Building): Boolean {
+        val cur = rows[building.id] ?: return false
+        if (cur.state != com.matchdayclub.domain.model.BuildingState.UPGRADING) return false
+        rows[building.id] = building; return true
+    }
     override suspend fun move(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun delete(id: UUID) { rows.remove(id) }
 }

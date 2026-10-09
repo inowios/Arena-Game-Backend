@@ -15,6 +15,7 @@ import java.time.Instant
 @Serializable data class TrainingDto(val id: String, val athleteId: String, val attribute: String, val delta: Int, val endsAt: String, val remainingSeconds: Long)
 @Serializable data class SquadResponse(val athletes: List<AthleteDto>, val trainings: List<TrainingDto>, val trainingSlots: Int, val serverTime: String)
 @Serializable data class StartTrainingRequest(val athleteId: String, val attribute: String)
+@Serializable data class AcademyClaimRequest(val sport: String? = null)
 @Serializable data class LineupDto(val sport: String, val starters: List<String>, val bench: List<String>, val tactics: Tactics, val isDefault: Boolean)
 @Serializable data class LineupResponse(val lineup: LineupDto, val athletes: List<AthleteDto>)
 @Serializable data class SetLineupRequest(val starters: List<String>, val bench: List<String> = emptyList(), val tactics: Tactics = Tactics())

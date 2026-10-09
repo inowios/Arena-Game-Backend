@@ -12,6 +12,9 @@ import com.matchdayclub.domain.usecase.club.ClubInitializer
 import java.time.Instant
 import java.util.UUID
 
+/** Bot squad quality band by division: the entry division is beatable with a starter squad, the top one is not. */
+fun botQuality(division: Int): Pair<Int, Int> = (40 + (division - 1) * 6).coerceAtMost(80) to (52 + (division - 1) * 6).coerceAtMost(90)
+
 /** Creates AI-controlled clubs that fill public leagues. */
 class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
     private val names = listOf("Nordwind", "Riverside", "Ironbridge", "Sunset United", "Harbor City", "Granite Rovers", "Oakfield", "Steel Valley", "Blue Lagoon", "Red Canyon", "Silver Lake", "Pine Hill", "Westgate", "Falcon Park", "Lakeside", "Copper Town", "Highland", "Amber Coast", "Stone Bridge", "Golden Bay", "Maple Grove", "Northport", "Eastwood", "Summit")
@@ -24,7 +27,8 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
         val clubId = UUID.randomUUID()
         val (p, s) = palette[index % palette.size]
         val club = clubs.create(Club(clubId, userId, "FC ${names[index % names.size]}", p, s, null, 1, 0, 0, 0, timezone, null, null, now, now, isBot = true, division = division, tzBucket = tzBucket))
-        athletes.createAll(AthleteFactory.squad(clubId, now, 45, 58))
+        val (lo, hi) = botQuality(division)
+        for (sport in com.matchdayclub.domain.rules.Sections.botSections(division)) athletes.createAll(AthleteFactory.squad(clubId, now, lo, hi, sport))
         return club
     }
 }
@@ -84,12 +88,16 @@ class JoinPublicLeagueInitializer(private val clubs: ClubRepository, private val
     }
 }
 
-/** "Stored or default" lineup by club id, for the simulator. */
+/** The lineup that plays for a club in one section: stored (with injured starters auto-replaced) or default. */
 class LineupService(private val athletes: AthleteRepository, private val lineups: LineupRepository) {
-    suspend fun engineLineup(club: Club, now: Instant): Pair<com.matchdayclub.engine.model.Lineup, List<Athlete>> {
-        val squad = athletes.listByClub(club.id)
-        val stored = lineups.find(club.id, Sport.FOOTBALL)?.takeIf { runCatching { LineupRules.validate(it.starters, it.bench, squad) }.isSuccess }
-        val lineup = stored ?: LineupRules.default(club.id, Sport.FOOTBALL, squad, now)
-        return EngineBridge.toEngineLineup(club.id.toString(), lineup, squad, now) to squad
+    suspend fun lineup(club: Club, sport: Sport, now: Instant, squad: List<Athlete>? = null): Lineup {
+        val list = squad ?: athletes.listByClub(club.id)
+        return LineupRules.effective(club.id, sport, lineups.find(club.id, sport), list, now)
+    }
+
+    suspend fun engineLineup(club: Club, now: Instant, sport: Sport = Sport.FOOTBALL, squad: List<Athlete>? = null): Pair<com.matchdayclub.engine.model.Lineup, List<Athlete>> {
+        val list = squad ?: athletes.listByClub(club.id)
+        val lineup = lineup(club, sport, now, list)
+        return EngineBridge.toEngineLineup(club.id.toString(), lineup, list, now).copy(tactics = lineup.tactics) to list
     }
 }

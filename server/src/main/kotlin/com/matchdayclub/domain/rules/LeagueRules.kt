@@ -49,12 +49,18 @@ object Schedule {
 
     fun roundInstant(seasonStart: LocalDate, round: Int, timezone: String, hour: Int): Instant =
         seasonStart.plusDays((round - 1).toLong()).atTime(LocalTime.of(hour, 0)).atZone(ZoneId.of(timezone)).toInstant()
+
+    /** The last round's kick-off time has passed (all rounds are played by the runner before it closes the season). */
+    fun seasonOver(l: com.matchdayclub.domain.model.League, now: Instant) = !roundInstant(l.seasonStart, LeagueRules.ROUNDS, l.timezone, l.matchdayHour).isAfter(now)
 }
 
 enum class Outcome { WIN, DRAW, LOSS }
 
-data class StandingRow(val clubId: UUID, val played: Int = 0, val won: Int = 0, val drawn: Int = 0, val lost: Int = 0, val gf: Int = 0, val ga: Int = 0) {
-    val points get() = won * 3 + drawn
+/**
+ * One club's row. [points] = sum of section points (3 win / 1 draw / 0 loss per section, so multi-sport clubs can earn up to
+ * 9 a matchday); won/drawn/lost compare the fixture's points; gf/ga are football goals (tiebreak after points).
+ */
+data class StandingRow(val clubId: UUID, val played: Int = 0, val won: Int = 0, val drawn: Int = 0, val lost: Int = 0, val gf: Int = 0, val ga: Int = 0, val points: Int = 0) {
     val gd get() = gf - ga
 }
 
@@ -63,15 +69,20 @@ object Standings {
         val rows = memberIds.associateWith { StandingRow(it) }.toMutableMap()
         for (f in fixtures.filter { it.status == FixtureStatus.PLAYED }) {
             val hs = f.homeScore ?: continue; val `as` = f.awayScore ?: continue
-            rows[f.homeClubId]?.let { rows[f.homeClubId] = it.add(hs, `as`) }
-            rows[f.awayClubId]?.let { rows[f.awayClubId] = it.add(`as`, hs) }
+            val hp = f.homePoints ?: Sections.points(hs, `as`); val ap = f.awayPoints ?: Sections.points(`as`, hs)
+            rows[f.homeClubId]?.let { rows[f.homeClubId] = it.add(hs, `as`, hp, ap) }
+            rows[f.awayClubId]?.let { rows[f.awayClubId] = it.add(`as`, hs, ap, hp) }
         }
-        return rows.values.sortedWith(compareByDescending<StandingRow> { it.points }.thenByDescending { it.gd }.thenByDescending { it.gf }.thenBy { it.clubId })
+        return rows.values.sortedWith(compareByDescending<StandingRow> { it.points }.thenByDescending { it.won }.thenByDescending { it.gd }.thenByDescending { it.gf }.thenBy { it.clubId })
     }
 
-    private fun StandingRow.add(gf: Int, ga: Int) = copy(played = played + 1, won = won + if (gf > ga) 1 else 0, drawn = drawn + if (gf == ga) 1 else 0, lost = lost + if (gf < ga) 1 else 0, gf = this.gf + gf, ga = this.ga + ga)
+    private fun StandingRow.add(gf: Int, ga: Int, pf: Int, pa: Int) = copy(
+        played = played + 1, won = won + if (pf > pa) 1 else 0, drawn = drawn + if (pf == pa) 1 else 0, lost = lost + if (pf < pa) 1 else 0,
+        gf = this.gf + gf, ga = this.ga + ga, points = points + pf,
+    )
 
     fun outcome(forScore: Int, againstScore: Int) = when { forScore > againstScore -> Outcome.WIN; forScore == againstScore -> Outcome.DRAW; else -> Outcome.LOSS }
+    fun outcomeFromPoints(sectionPoints: Int) = when (sectionPoints) { 3 -> Outcome.WIN; 1 -> Outcome.DRAW; else -> Outcome.LOSS }
     fun reputationDelta(o: Outcome) = when (o) { Outcome.WIN -> 12; Outcome.DRAW -> 5; Outcome.LOSS -> 1 }
     fun coinsReward(o: Outcome): Long = when (o) { Outcome.WIN -> 300; Outcome.DRAW -> 150; Outcome.LOSS -> 60 }
     const val FRIENDLY_COINS = 40L

@@ -54,6 +54,9 @@ class BuildingRepositoryImpl : BuildingRepository {
         building
     }
     override suspend fun update(building: Building) = dbQuery { BuildingTable.update({ BuildingTable.id eq building.id }) { it.fill(building) }; building }
+    override suspend fun completeConstruction(building: Building): Boolean = dbQuery {
+        BuildingTable.update({ (BuildingTable.id eq building.id) and (BuildingTable.state eq BuildingState.UPGRADING.name) }) { it.fill(building) } == 1
+    }
     override suspend fun move(building: Building) = dbQuery {
         BuildingTable.update({ BuildingTable.id eq building.id }) { it[gridX] = building.gridX; it[gridY] = building.gridY; it[rotation] = building.rotation; it[updatedAt] = building.updatedAt }
         building
