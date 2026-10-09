@@ -24,6 +24,7 @@ interface LeagueRepository {
 interface FixtureRepository {
     suspend fun createAll(fixtures: List<Fixture>)
     suspend fun findById(id: UUID): Fixture?
+    suspend fun findByIds(ids: Collection<UUID>): List<Fixture>
     suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int? = null): List<Fixture>
     suspend fun listByClub(clubId: UUID, kind: FixtureKind? = null, limit: Int = 50): List<Fixture>
     /** Fixtures between two clubs (any kind), newest first. */

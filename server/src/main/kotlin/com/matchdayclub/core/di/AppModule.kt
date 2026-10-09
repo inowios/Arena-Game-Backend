@@ -176,7 +176,11 @@ val appModule = module {
     single<OpsRepository> { OpsRepositoryImpl(get()) }
     single { com.matchdayclub.domain.usecase.admin.SupportQueries(get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.admin.AdminGrantUseCase(get(), get(), get(), get(), tx = get()) }
-    single { com.matchdayclub.core.plugins.SchedulerTick(get()) }
+    single<CupRepository> { CupRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.cup.CupNotifier(get<FcmSender>(), get()) }
+    single { com.matchdayclub.domain.usecase.cup.CupService(get(), get(), get(), get(), get(), get(), get(), tx = get(), notifier = get()) }
+    single { com.matchdayclub.domain.usecase.cup.CupQueries(get(), get(), get(), get(), get()) }
+    single { com.matchdayclub.core.plugins.SchedulerTick(get(), get()) }
     single { GuestLoginUseCase(get(), get(), get()) }
     single { OAuthLoginUseCase(get(), get(), get(), get()) }
     single { RefreshTokenUseCase(get(), get(), get(), get()) }

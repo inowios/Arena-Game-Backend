@@ -20,6 +20,8 @@ import java.util.UUID
     val id: String, val leagueId: String?, val kind: String, val seasonNumber: Int, val round: Int, val scheduledAt: String, val status: String,
     val home: ClubRefDto, val away: ClubRefDto, val homeScore: Int?, val awayScore: Int?, val playedAt: String?,
     val homePoints: Int? = null, val awayPoints: Int? = null, val sections: List<SectionScoreDto> = emptyList(),
+    /** Cup ties level after every section: the penalty shootout. */
+    val shootout: ShootoutDto? = null,
 )
 @Serializable data class SectionDto(val sport: String, val homeScore: Int, val awayScore: Int, val homePoints: Int, val awayPoints: Int, val walkover: String? = null, val result: MatchResult? = null)
 /** [result] is the football match (kept for single-sport clients); [sections] has every sport played that matchday. */
@@ -45,10 +47,14 @@ fun LeagueView.toDto() = LeagueTableResponse(
     table.mapIndexed { i, r -> StandingRowDto(i + 1, clubs.ref(r.clubId), r.played, r.won, r.drawn, r.lost, r.gf, r.ga, r.gd, r.points) },
 )
 fun League.toDto(memberCount: Int) = LeagueDto(id.toString(), kind.name, name, code, division, seasonNumber, seasonStart.toString(), currentRound, 28, matchdayHour, timezone, null, memberCount, createdBy?.toString(), status.name)
-fun Fixture.toDto(clubs: Map<UUID, Club>) = FixtureDto(
-    id.toString(), leagueId?.toString(), kind.name, seasonNumber, round, scheduledAt.toString(), status.name, clubs.ref(homeClubId), clubs.ref(awayClubId), homeScore, awayScore, playedAt?.toString(),
-    homePoints, awayPoints, resultJson?.let { runCatching { MatchdayResult.parse(it).sections.map { s -> SectionScoreDto(s.sport, s.homeScore, s.awayScore, s.walkover) } }.getOrNull() } ?: emptyList(),
-)
+fun Fixture.toDto(clubs: Map<UUID, Club>): FixtureDto {
+    val parsed = resultJson?.let { runCatching { MatchdayResult.parse(it) }.getOrNull() }
+    return FixtureDto(
+        id.toString(), leagueId?.toString(), kind.name, seasonNumber, round, scheduledAt.toString(), status.name, clubs.ref(homeClubId), clubs.ref(awayClubId), homeScore, awayScore, playedAt?.toString(),
+        homePoints, awayPoints, parsed?.sections?.map { s -> SectionScoreDto(s.sport, s.homeScore, s.awayScore, s.walkover) } ?: emptyList(),
+        parsed?.shootout?.let { ShootoutDto(it.home, it.away) },
+    )
+}
 fun MatchView.toDto() = MatchResponse(fixture.toDto(clubs), result?.primary, athleteNames, result?.sections?.map { SectionDto(it.sport, it.homeScore, it.awayScore, it.homePoints, it.awayPoints, it.walkover, it.result) } ?: emptyList())
 fun com.matchdayclub.domain.model.ClubSeason.toDto() = ClubSeasonDto(seasonNo, division, position, played, won, drawn, lost, gf, ga, points, movement.name, newDivision, prizeCoins, prizeGold, prizeReputation, finishedAt.toString(), leagueId.toString())
 fun com.matchdayclub.domain.model.Trophy.toDto() = TrophyDto(kind.name, division, seasonNo, createdAt.toString())

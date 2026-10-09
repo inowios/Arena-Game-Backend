@@ -1,0 +1,82 @@
+package com.matchdayclub.domain.rules
+
+import com.matchdayclub.domain.model.Fixture
+import com.matchdayclub.domain.model.MatchdayResult
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
+import java.util.UUID
+import kotlin.random.Random
+
+/**
+ * Weekly knockout cup per timezone bucket (spec post-release: cups). Every club active in the last [ACTIVE_DAYS] days
+ * is entered automatically; entrants are grouped by strength into 16-club cups (bots fill the last one). Draw on
+ * Thursday 12:00, round of 16 Thursday 18:00, quarter-finals Friday, semi-finals Saturday, final Sunday — two hours
+ * before the 20:00 league matchday, bucket time. A tie plays the sections both clubs have (like a challenge); more
+ * section points wins, level ties go to a penalty shootout. Prizes by the round reached.
+ */
+object Cups {
+    const val SIZE = 16
+    const val ROUNDS = 4
+    const val ACTIVE_DAYS = 7L
+    const val DRAW_HOUR = 12
+    const val ROUND_HOUR = 18
+
+    enum class Stage { ROUND_OF_16, QUARTER_FINAL, SEMI_FINAL, RUNNER_UP, CHAMPION }
+
+    fun zone(bucket: Int): ZoneOffset = ZoneOffset.ofHours(bucket.coerceIn(-18, 18))
+    /** Monday of the bucket-local week containing [now]. */
+    fun weekStart(now: Instant, bucket: Int): LocalDate = now.atZone(zone(bucket)).toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    fun drawAt(weekStart: LocalDate, bucket: Int): Instant = weekStart.plusDays(3).atTime(LocalTime.of(DRAW_HOUR, 0)).atZone(zone(bucket)).toInstant()
+    /** Round 1 Thursday … round 4 (final) Sunday, 18:00 bucket time. */
+    fun roundAt(weekStart: LocalDate, round: Int, bucket: Int): Instant = weekStart.plusDays(2L + round).atTime(LocalTime.of(ROUND_HOUR, 0)).atZone(zone(bucket)).toInstant()
+    /** The draw of this week when it is still ahead, else next week's. */
+    fun nextDraw(now: Instant, bucket: Int): Instant {
+        val week = weekStart(now, bucket)
+        val d = drawAt(week, bucket)
+        return if (now.isBefore(d)) d else drawAt(week.plusDays(7), bucket)
+    }
+
+    /** Stage reached by a club that lost in [outRound] (null = never lost: champion). */
+    fun stage(outRound: Int?): Stage = when (outRound) { null -> Stage.CHAMPION; 1 -> Stage.ROUND_OF_16; 2 -> Stage.QUARTER_FINAL; 3 -> Stage.SEMI_FINAL; else -> Stage.RUNNER_UP }
+
+    private val coins = listOf(300L, 600, 1_200, 2_500, 5_000)
+    private val gold = listOf(0, 0, 3, 8, 20)
+    private val reputation = listOf(5, 10, 20, 35, 60)
+    fun prize(stage: Stage, division: Int): Divisions.Prize =
+        Divisions.Prize((coins[stage.ordinal] * Divisions.multiplier(division)).toLong(), gold[stage.ordinal], reputation[stage.ordinal])
+
+    /** Chance to score one penalty: shooters' technique and nerve against the other side's. */
+    fun kickChance(mine: Double, theirs: Double) = (0.75 + (mine - theirs) / 250.0).coerceIn(0.55, 0.92)
+
+    /** Five kicks each (home first, stops once decided), then sudden death; never ends level. */
+    fun shootout(pHome: Double, pAway: Double, seed: Long): Pair<Int, Int> {
+        val r = Random(seed)
+        var h = 0; var a = 0
+        for (i in 1..5) {
+            if (r.nextDouble() < pHome) h++
+            if (h > a + (5 - i + 1) || a > h + (5 - i)) return h to a
+            if (r.nextDouble() < pAway) a++
+            if (h > a + (5 - i) || a > h + (5 - i)) return h to a
+        }
+        repeat(30) {
+            val x = r.nextDouble() < pHome; val y = r.nextDouble() < pAway
+            if (x) h++; if (y) a++
+            if (x != y) return h to a
+        }
+        return if (r.nextBoolean()) (h + 1) to a else h to (a + 1)
+    }
+
+    /** Winner of a played cup fixture: more section points, else the shootout. */
+    fun winner(f: Fixture, result: MatchdayResult?): UUID {
+        val hp = f.homePoints ?: 0; val ap = f.awayPoints ?: 0
+        if (hp != ap) return if (hp > ap) f.homeClubId else f.awayClubId
+        val so = result?.shootout ?: return if ((f.homeScore ?: 0) >= (f.awayScore ?: 0)) f.homeClubId else f.awayClubId
+        return if (so.home > so.away) f.homeClubId else f.awayClubId
+    }
+
+    fun seed(cupId: UUID, round: Int, slot: Int) = cupId.leastSignificantBits xor (round * 1_000_003L + slot * 7_919L) xor cupId.mostSignificantBits.rotateLeft(round)
+}

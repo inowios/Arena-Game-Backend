@@ -20,6 +20,7 @@ class OpsRepositoryImpl(private val clubs: ClubRepository) : OpsRepository {
         "privateLeagues" to "SELECT count(*) FROM leagues WHERE kind = 'PRIVATE'",
         "scheduledFixtures" to "SELECT count(*) FROM fixtures WHERE status = 'SCHEDULED'",
         "playedFixtures" to "SELECT count(*) FROM fixtures WHERE status = 'PLAYED'",
+        "activeCups" to "SELECT count(*) FROM cups WHERE status = 'ACTIVE'",
         "purchases" to "SELECT count(*) FROM purchases WHERE status = 'GRANTED' AND store <> 'DEV'",
         "pushTokens" to "SELECT count(*) FROM push_tokens",
         "analyticsEvents" to "SELECT count(*) FROM analytics_events",

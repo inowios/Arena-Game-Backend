@@ -41,6 +41,7 @@ class AchievementService(
                 Metric.DIVISION -> club.division.toLong()
                 Metric.TITLES -> trophies.count { it.kind == TrophyKind.LEAGUE_TITLE }.toLong()
                 Metric.PROMOTIONS -> trophies.count { it.kind == TrophyKind.PROMOTION }.toLong()
+                Metric.CUPS -> trophies.count { it.kind == TrophyKind.CUP }.toLong()
                 Metric.BUILDINGS_MAXED -> list.count { it.type != BuildingType.DECOR && it.state == BuildingState.IDLE && it.level >= BuildingCatalog.spec(it.type).maxLevel }.toLong()
                 Metric.SECTIONS_OPEN -> (sections?.active(club, clubBuildings = list)?.size ?: 1).toLong()
                 else -> counters[m] ?: 0L

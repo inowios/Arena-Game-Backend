@@ -24,8 +24,8 @@ object SchedulerStatus {
     val failures = AtomicLong()
 }
 
-/** One pass: due league rounds (and their season ends). Shared by the timer loop and POST /admin/scheduler/run. */
-class SchedulerTick(private val runner: MatchdayRunner) {
+/** One pass: due league rounds (and their season ends), then cup draws and rounds. Shared by the timer loop and POST /admin/scheduler/run. */
+class SchedulerTick(private val runner: MatchdayRunner, private val cups: com.matchdayclub.domain.usecase.cup.CupService? = null) {
     private val mutex = Mutex()
     private val log = LoggerFactory.getLogger("MatchdayScheduler")
 
@@ -40,12 +40,20 @@ class SchedulerTick(private val runner: MatchdayRunner) {
             log.error("Matchday tick failed", e)
         }
         if (matches > 0) { Metrics.inc("matches_played_total", "kind" to "league", by = matches.toLong()); log.info("Matchday tick: played $matches matches") }
-        SchedulerStatus.lastMatches = matches; SchedulerStatus.lastTickAt = Instant.now()
-        matches to 0
+        var cupMatches = 0
+        if (cups != null) try {
+            cupMatches = cups.tick()
+        } catch (e: Exception) {
+            SchedulerStatus.failures.incrementAndGet(); Metrics.inc("scheduler_failures_total"); SchedulerStatus.lastError = e.message ?: e.javaClass.simpleName
+            log.error("Cup tick failed", e)
+        }
+        if (cupMatches > 0) { Metrics.inc("matches_played_total", "kind" to "cup", by = cupMatches.toLong()); log.info("Cup tick: played $cupMatches matches") }
+        SchedulerStatus.lastMatches = matches; SchedulerStatus.lastCupMatches = cupMatches; SchedulerStatus.lastTickAt = Instant.now()
+        matches to cupMatches
     }
 }
 
-/** Plays due league rounds every 5 minutes (and shortly after startup). Single instance assumed. */
+/** Plays due league rounds and cup rounds every 5 minutes (and shortly after startup). Single instance assumed. */
 fun Application.configureMatchdayScheduler() {
     val tick: SchedulerTick by inject()
     val log = LoggerFactory.getLogger("MatchdayScheduler")

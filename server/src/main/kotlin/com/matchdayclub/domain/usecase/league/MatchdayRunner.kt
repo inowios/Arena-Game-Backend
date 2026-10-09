@@ -140,7 +140,15 @@ class MatchdayRunner(
                     emptySet(), emptySet(), 1.0, 1.0)
             }
         }
-        val result = MatchdayResult(2, plays.map { it.section })
+        var result = MatchdayResult(2, plays.map { it.section })
+        if (fixture.kind == FixtureKind.CUP && result.homePoints == result.awayPoints) {
+            // a level cup tie is settled from the spot: the starters' technique and nerve decide the kick odds
+            fun nerve(squad: List<Athlete>, ids: Set<String>) = squad.filter { it.id.toString() in ids }.map { (it.technique + it.mental) / 2.0 }.average().takeUnless { it.isNaN() } ?: 50.0
+            val main = plays.firstOrNull { it.sport == Sport.FOOTBALL } ?: plays.first()
+            val h = nerve(homeSquad, main.homeStarters); val a = nerve(awaySquad, main.awayStarters)
+            val (hs, aws) = com.matchdayclub.domain.rules.Cups.shootout(com.matchdayclub.domain.rules.Cups.kickChance(h, a), com.matchdayclub.domain.rules.Cups.kickChance(a, h), fixture.seed xor 0x5EED5L)
+            result = result.copy(shootout = Shootout(hs, aws))
+        }
         val football = result.section(Sport.FOOTBALL) ?: result.sections.firstOrNull()
         val played = fixture.copy(
             status = FixtureStatus.PLAYED, homeScore = football?.homeScore ?: 0, awayScore = football?.awayScore ?: 0,
@@ -155,6 +163,14 @@ class MatchdayRunner(
                     applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now)
                     if (!home.isBot) recordProgress(home.id, plays, true, result.homePoints > result.awayPoints)
                     if (!away.isBot) recordProgress(away.id, plays, false, result.awayPoints > result.homePoints)
+                } else if (fixture.kind == FixtureKind.CUP) {
+                    // cup ties tire both squads like a friendly; prizes are paid by the cup for the round reached
+                    val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
+                    if (!home.isBot) applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now, fixedCoins = 0)
+                    if (!away.isBot) applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now, fixedCoins = 0)
+                    val homeWon = com.matchdayclub.domain.rules.Cups.winner(played, result) == home.id
+                    if (!home.isBot) { progress.record(home.id, ProgressEvent.MATCH_PLAYED); if (homeWon) progress.record(home.id, ProgressEvent.MATCH_WON) }
+                    if (!away.isBot) { progress.record(away.id, ProgressEvent.MATCH_PLAYED); if (!homeWon) progress.record(away.id, ProgressEvent.MATCH_WON) }
                 } else if (fixture.kind == FixtureKind.CHALLENGE) {
                     // both clubs agreed to a challenge: both get the friendly reward and fatigue
                     val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
@@ -179,7 +195,7 @@ class MatchdayRunner(
         progress.record(clubId, ProgressEvent.MATCH_PLAYED)
     }
 
-    private suspend fun applyEffects(club: Club, squad: List<Athlete>, plays: List<SectionPlay>, isHome: Boolean, kind: FixtureKind, now: Instant) {
+    private suspend fun applyEffects(club: Club, squad: List<Athlete>, plays: List<SectionPlay>, isHome: Boolean, kind: FixtureKind, now: Instant, fixedCoins: Long? = null) {
         val teamId = club.id.toString()
         var coins = 0L; var rep = 0
         val updates = mutableMapOf<UUID, Athlete>()
@@ -208,7 +224,7 @@ class MatchdayRunner(
                 updates[a.id] = n
             }
         }
-        if (kind != FixtureKind.LEAGUE) coins = Standings.FRIENDLY_COINS
+        if (kind != FixtureKind.LEAGUE) coins = fixedCoins ?: Standings.FRIENDLY_COINS
         val newRep = club.reputation + rep
         clubs.update(club.copy(coins = club.coins + coins, reputation = newRep, level = maxOf(club.level, ClubLevels.levelFor(newRep)), updatedAt = now))
         updates.values.forEach { athletes.update(it) }

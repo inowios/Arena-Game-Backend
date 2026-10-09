@@ -17,9 +17,13 @@ data class SectionResult(
     val result: MatchResult? = null,
 )
 
+/** Penalty shootout that decided a level cup tie. */
+@Serializable
+data class Shootout(val home: Int, val away: Int)
+
 /** Stored in fixtures.result_json (v2). Legacy rows hold a bare football [MatchResult]; [parse] reads both. */
 @Serializable
-data class MatchdayResult(val v: Int = 2, val sections: List<SectionResult>) {
+data class MatchdayResult(val v: Int = 2, val sections: List<SectionResult>, val shootout: Shootout? = null) {
     val homePoints get() = sections.sumOf { it.homePoints }
     val awayPoints get() = sections.sumOf { it.awayPoints }
     fun section(sport: Sport) = sections.firstOrNull { it.sport == sport.name }

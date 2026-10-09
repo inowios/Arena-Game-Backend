@@ -7,7 +7,7 @@ package com.matchdayclub.domain.rules
 enum class Metric(val counted: Boolean) {
     MATCHES_WON(true), SECTIONS_WON(true), TRAININGS(true), INCOME_COLLECTIONS(true), ACADEMY_GRADUATES(true),
     FRIENDLIES(true), INVITES(true), BEST_STREAK(true),
-    CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), BUILDINGS_MAXED(false), SECTIONS_OPEN(false),
+    CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), BUILDINGS_MAXED(false), SECTIONS_OPEN(false), CUPS(false),
 }
 
 /** Tiered achievement: reaching tiers[i] pays gold[i] (+ an achievement cosmetic for some tiers, see [Cosmetics]). */
@@ -24,6 +24,7 @@ object Achievements {
         Achievement("climber", Metric.DIVISION, listOf(2, 3, 4, 5, 6, 7), listOf(15, 25, 40, 60, 90, 150)),
         Achievement("champion", Metric.TITLES, listOf(1, 3, 10), listOf(50, 100, 250)),
         Achievement("promoted", Metric.PROMOTIONS, listOf(1, 3, 6), listOf(20, 40, 80)),
+        Achievement("cup_winner", Metric.CUPS, listOf(1, 3, 10), listOf(30, 80, 200)),
         Achievement("growing_club", Metric.CLUB_LEVEL, listOf(3, 5, 7, 10), listOf(10, 25, 50, 100)),
         Achievement("master_builder", Metric.BUILDINGS_MAXED, listOf(1, 3, 6, 10), listOf(10, 20, 40, 80)),
         Achievement("multisport", Metric.SECTIONS_OPEN, listOf(2, 3), listOf(20, 40)),

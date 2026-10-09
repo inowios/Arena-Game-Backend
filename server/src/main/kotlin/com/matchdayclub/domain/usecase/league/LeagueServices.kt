@@ -30,6 +30,16 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
         return bot
     }
 
+    /** A new bot whose name is not in [takenNames] (cups need 16 distinct names). */
+    suspend fun createUnique(tzBucket: Int, division: Int, timezone: String, takenNames: Set<String>, start: Int = 0): Club {
+        val free = (0 until names.size).map { (start + it) % names.size }.firstOrNull { "FC ${names[it]}" !in takenNames }
+        val bot = createBot(tzBucket, division, timezone, free ?: start)
+        if (free != null) return bot
+        var n = 2
+        while ("${bot.name} $n" in takenNames) n++
+        return clubs.update(bot.copy(name = "${bot.name} $n"))
+    }
+
     private val names = listOf("Nordwind", "Riverside", "Ironbridge", "Sunset United", "Harbor City", "Granite Rovers", "Oakfield", "Steel Valley", "Blue Lagoon", "Red Canyon", "Silver Lake", "Pine Hill", "Westgate", "Falcon Park", "Lakeside", "Copper Town", "Highland", "Amber Coast", "Stone Bridge", "Golden Bay", "Maple Grove", "Northport", "Eastwood", "Summit")
     private val palette = listOf("#C8102E" to "#FFFFFF", "#003399" to "#FFD700", "#006400" to "#FFFFFF", "#000000" to "#FFFFFF", "#FF6600" to "#000000", "#800080" to "#FFFFFF", "#1E90FF" to "#FFFFFF", "#8B0000" to "#F5F5DC")
 

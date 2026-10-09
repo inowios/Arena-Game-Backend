@@ -58,6 +58,7 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
 | GET | `/api/v1/clubs/{id}` | public club profile |
+| GET | `/api/v1/cups/current` | weekly cup: `state` UPCOMING (next `drawAt`, last week's result in `previous`) / ACTIVE / FINISHED, bracket `ties` (round 1–4, slot, score or section points, `shootout`, `winnerId`, `fixtureId` → `/matches/{id}`), `me` (alive, stage, prize), prize table |
 | POST | `/api/v1/club/daily/claim` | 7-day login calendar + streak |
 | GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks, 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
 | GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold packs + premium pass. `GOOGLE`: Play purchase token (`purchases.products.get`, order id = idempotency key); `APPLE`: transaction id (App Store Server API, production then sandbox; optional x5c chain check against Apple Root CA G3); `DEV` with `IAP_DEV_MODE=true`, token `dev:<order>` |
@@ -95,6 +96,14 @@ Seasons & divisions: 7 divisions (1 Sunday League … 7 Legends League). After r
 final table → prizes by position × division, a `club_seasons` history row per member, trophies (title, promotion), top 2 promoted,
 bottom 2 relegated, `clubs.season_no` + 1 (keys the season pass), and every human is placed in next season's league of their new
 division (season starts the next day; freed bots of that division are reused). Matchday coin rewards grow 25% per division.
+
+Cups: every week each timezone bucket plays knockout cups. Clubs active in the last 7 days are entered automatically and grouped
+by strength (division, reputation) into 16-club brackets, bots of the group's division fill the last one; open draw on Thursday
+12:00, round of 16 Thursday 18:00, quarter-finals Friday, semi-finals Saturday, final Sunday (bucket time, two hours before the league
+matchday). A tie plays the sections both clubs have; more section points wins, level ties go to a penalty shootout (kick odds from the
+starters' technique and mental; `shootout` in the result). Fatigue like a friendly; prizes by the round reached (300 / 600 / 1 200 /
+2 500 / 5 000 coins × division multiplier, gold from the semi-final, reputation), a `CUP` trophy for the winner (achievement
+`cup_winner`); inbox `CUP_DRAW` / `CUP_RESULT` and pushes. Rounds missed during downtime are played in order on the next pass.
 
 Careers: every athlete has a potential (the attribute average training can reach); at season end everyone ages a year —
 young players grow, veterans decline, 34+ may retire (replaced by a youth prospect; retired rows stay for old highlights,

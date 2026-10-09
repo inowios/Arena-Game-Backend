@@ -16,13 +16,19 @@ object TestDb {
     val user: String = System.getenv("TEST_DATABASE_USER") ?: "postgres"
     val password: String = System.getenv("TEST_DATABASE_PASSWORD") ?: ""
 
+    private var last: HikariDataSource? = null
+
+    /** Wipes and migrates the schema; the previous test's pool is closed so connections never pile up. */
     fun fresh(): HikariDataSource {
+        last?.takeUnless { it.isClosed }?.close()
         val ds = HikariDataSource(HikariConfig().apply {
             driverClassName = "org.postgresql.Driver"; jdbcUrl = url; username = user; password = this@TestDb.password
             maximumPoolSize = 12; isAutoCommit = false; transactionIsolation = "TRANSACTION_READ_COMMITTED"
         })
         Flyway.configure().dataSource(ds).locations("classpath:db/migration").cleanDisabled(false).load().apply { clean(); migrate() }
-        Database.connect(ds)
+        // explicit default: earlier test classes' pools are closed by now
+        org.jetbrains.exposed.sql.transactions.TransactionManager.defaultDatabase = Database.connect(ds)
+        last = ds
         return ds
     }
 

@@ -28,6 +28,7 @@ class FakeFixtureRepository : FixtureRepository {
     val rows = linkedMapOf<UUID, Fixture>()
     override suspend fun createAll(fixtures: List<Fixture>) { fixtures.forEach { rows[it.id] = it } }
     override suspend fun findById(id: UUID) = rows[id]
+    override suspend fun findByIds(ids: Collection<UUID>) = ids.mapNotNull { rows[it] }
     override suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int?) = rows.values.filter { it.leagueId == leagueId && it.seasonNumber == season && (round == null || it.round == round) }.sortedBy { it.round }
     override suspend fun listByClub(clubId: UUID, kind: FixtureKind?, limit: Int) = rows.values.filter { it.involves(clubId) && (kind == null || it.kind == kind) }.sortedByDescending { it.scheduledAt }.take(limit)
     override suspend fun listBetween(a: UUID, b: UUID, limit: Int) = rows.values.filter { (it.homeClubId == a && it.awayClubId == b) || (it.homeClubId == b && it.awayClubId == a) }.sortedByDescending { it.scheduledAt }.take(limit)

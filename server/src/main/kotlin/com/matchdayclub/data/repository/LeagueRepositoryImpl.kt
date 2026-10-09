@@ -65,6 +65,7 @@ class FixtureRepositoryImpl : FixtureRepository {
         }
     }
     override suspend fun findById(id: UUID) = dbQuery { FixtureTable.selectAll().where { FixtureTable.id eq id }.singleOrNull()?.toFixture() }
+    override suspend fun findByIds(ids: Collection<UUID>) = if (ids.isEmpty()) emptyList() else dbQuery { FixtureTable.selectAll().where { FixtureTable.id inList ids }.map { it.toFixture() } }
     override suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int?) = dbQuery {
         var cond: Op<Boolean> = (FixtureTable.leagueId eq leagueId) and (FixtureTable.seasonNumber eq season)
         if (round != null) cond = cond and (FixtureTable.round eq round)

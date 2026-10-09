@@ -56,4 +56,14 @@ curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","produ
 curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","productId":"gold_small","token":"dev:smoke-'$DEV'"}' | j "assert d['data']['status']=='DUPLICATE'"
 curl -sf -X POST "$B/ads/reward" -H "$H" -H "$A" -d '{"placement":"DOUBLE_INCOME"}' | j "assert d['data']['id']"
 curl -sf -X POST "$B/push-tokens" -H "$H" -H "$A" -d '{"token":"fcm-smoke-'$DEV'","platform":"android"}' | j "assert d['data']['ok']"
+step "weekly cup tab, analytics batch, legal pages"
+curl -sf "$B/cups/current" -H "$A" | j "assert d['data']['state'] in ('UPCOMING','ACTIVE','FINISHED') and len(d['data']['prizes'])==5"
+curl -sf -X POST "$B/analytics/events" -H "$H" -H "$A" -d '{"platform":"other","appVersion":"smoke","events":[{"name":"session_start"}]}' | j "assert d['data']['accepted']==1"
+for P in privacy terms delete-account; do test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL:-http://localhost:8080}/$P")" = "200"; done
+if [ -n "${ADMIN_TOKEN:-}" ]; then
+  step "ops endpoints (ADMIN_TOKEN set)"
+  curl -sf "${BASE_URL:-http://localhost:8080}/metrics" -H "X-Admin-Token: $ADMIN_TOKEN" | grep -q "^http_requests_total"
+  curl -sf "${BASE_URL:-http://localhost:8080}/admin/stats" -H "X-Admin-Token: $ADMIN_TOKEN" | j "assert d['data']['counts']['clubs']>=1"
+  curl -sf "${BASE_URL:-http://localhost:8080}/admin/metrics?days=7" -H "X-Admin-Token: $ADMIN_TOKEN" | j "assert d['data']['dau']>=1"
+fi
 echo "SMOKE OK"

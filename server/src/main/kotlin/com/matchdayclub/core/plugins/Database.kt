@@ -21,8 +21,9 @@ fun Application.configureDatabase() {
         validate()
     }
     val dataSource = HikariDataSource(hikari)
+    monitor.subscribe(ApplicationStopped) { dataSource.close() }   // graceful shutdown returns the connections
     runMigrations(dataSource)
-    Database.connect(dataSource, databaseConfig = DatabaseConfig { defaultMaxAttempts = 1 })
+    org.jetbrains.exposed.sql.transactions.TransactionManager.defaultDatabase = Database.connect(dataSource, databaseConfig = DatabaseConfig { defaultMaxAttempts = 1 })
     environment.log.info("Database configured")
 }
 

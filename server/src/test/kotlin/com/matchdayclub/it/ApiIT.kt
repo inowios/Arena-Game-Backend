@@ -235,7 +235,14 @@ class ApiIT {
         admin(HttpMethod.Post, "/admin/clubs/$clubId/grant", """{"gold":5,"reason":" "}""", expect = 400)
         val gift = call(HttpMethod.Get, "/club/inbox", t).data.o()["items"]!!.jsonArray.first { it.o()["kind"]!!.jsonPrimitive.content == "GIFT" }
         assertEquals("Matchday outage", gift.o()["data"]!!.o()["reason"]!!.jsonPrimitive.content)
+        // weekly cup tab before any draw (the scheduler is off in tests)
+        val cupView = call(HttpMethod.Get, "/cups/current", t).data.o()
+        assertEquals("UPCOMING", cupView["state"]!!.jsonPrimitive.content)
+        assertEquals(5, cupView["prizes"]!!.jsonArray.size); assertEquals(4, cupView["roundTimes"]!!.jsonArray.size)
         assertTrue(admin(HttpMethod.Post, "/admin/scheduler/run").data.o()["matches"]!!.jsonPrimitive.int >= 0)
+        // between Thursday 12:00 and Sunday 18:00 that pass draws this active club into a cup
+        val afterRun = call(HttpMethod.Get, "/cups/current", t).data.o()
+        if (afterRun["state"]!!.jsonPrimitive.content != "UPCOMING") assertTrue(afterRun["ties"]!!.jsonArray.size >= 8)
         // store-required public pages
         val privacy = client.get("/privacy").bodyAsText()
         assertTrue(privacy.contains("Privacy Policy") && privacy.contains("mailto:help@mdc.test"))

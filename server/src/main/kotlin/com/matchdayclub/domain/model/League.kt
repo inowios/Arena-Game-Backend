@@ -6,7 +6,7 @@ import java.util.UUID
 
 enum class LeagueKind { PUBLIC, PRIVATE }
 enum class LeagueStatus { ACTIVE, FINISHED }
-enum class FixtureKind { LEAGUE, FRIENDLY, CHALLENGE }
+enum class FixtureKind { LEAGUE, FRIENDLY, CHALLENGE, CUP }
 enum class FixtureStatus { SCHEDULED, PLAYED }
 
 data class League(
