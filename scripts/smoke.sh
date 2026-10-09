@@ -27,6 +27,8 @@ curl -sf -X PUT "$B/club/lineup/football" -H "$H" -H "$A" -d "$BODY" | j "assert
 step "collect ticket office income (0 right after creation)"
 OID=$(curl -sf "$B/club" -H "$A" | j "print([b['id'] for b in d['data']['buildings'] if b['type']=='TICKET_OFFICE'][0])")
 curl -sf -X POST "$B/club/buildings/$OID/collect" -H "$A" | j "assert d['data']['coins']==0"
+step "update club colours + emblem"
+curl -sf -X PATCH "$B/club" -H "$H" -H "$A" -d '{"primaryColor":"#ff6600","emblemJson":"{\"shape\":\"shield\",\"icon\":\"ball\"}"}' | j "assert d['data']['primaryColor']=='#FF6600' and 'shield' in d['data']['emblemJson']"
 step "my leagues: public league with me in it"
 LID=$(curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert p and len(p['table'])>=1; print(p['league']['id'])")
 step "friendly vs bot"

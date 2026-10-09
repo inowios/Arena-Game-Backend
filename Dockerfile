@@ -5,8 +5,8 @@ COPY . .
 RUN --mount=type=cache,target=/home/gradle/.gradle gradle :server:buildFatJar --no-daemon
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S app && adduser -S app -G app && apk add --no-cache wget
+FROM eclipse-temurin:17-jre-jammy
+RUN groupadd -r app && useradd -r -g app app && apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /src/server/build/libs/*-all.jar /app/server.jar
 USER app

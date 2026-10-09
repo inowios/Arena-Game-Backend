@@ -22,7 +22,18 @@ class ClubUseCasesTest {
     private val upgrade = UpgradeBuildingUseCase(service, buildings, clock)
     private val collect = CollectIncomeUseCase(service, clubs, buildings, clock)
     private val speed = SpeedUpUseCase(service, buildings, clock)
+    private val update = UpdateClubUseCase(service, clubs, clock)
     private val user = UUID.randomUUID()
+
+    @Test
+    fun `update club validates and keeps unspecified fields`() = runBlocking {
+        newClub()
+        val c = update(user, null, "#112233", null, """{"shape":"shield","icon":"ball"}""")
+        assertEquals("Red Lions", c.name); assertEquals("#112233", c.primaryColor); assertEquals("#FFFFFF", c.secondaryColor); assertTrue(c.emblemJson!!.contains("shield"))
+        assertFailsWith<ValidationException> { update(user, "ab", null, null, null) }
+        assertFailsWith<ValidationException> { update(user, null, "red", null, null) }
+        Unit
+    }
 
     private fun newClub() = runBlocking { create(user, "Red Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv") }
 

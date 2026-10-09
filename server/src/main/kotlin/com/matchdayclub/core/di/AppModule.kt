@@ -61,6 +61,7 @@ val appModule = module {
     single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>()) }
     single { SpeedUpUseCase(get(), get(), get()) }
     single { RemoveBuildingUseCase(get(), get()) }
+    single { UpdateClubUseCase(get(), get(), get()) }
 
     single<AthleteRepository> { AthleteRepositoryImpl() }
     single<TrainingRepository> { TrainingRepositoryImpl() }

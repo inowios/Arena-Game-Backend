@@ -23,6 +23,7 @@ fun Route.clubRoutes() {
     val collect: CollectIncomeUseCase by inject()
     val speedUp: SpeedUpUseCase by inject()
     val remove: RemoveBuildingUseCase by inject()
+    val updateClub: UpdateClubUseCase by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -32,6 +33,10 @@ fun Route.clubRoutes() {
                 val r = call.receive<CreateClubRequest>()
                 val club = createClub(call.userId(), r.name, r.primaryColor, r.secondaryColor, r.timezone)
                 call.respond(HttpStatusCode.Created, club.toDto().toSuccessResponse(201))
+            }
+            patch {
+                val r = call.receive<UpdateClubRequest>()
+                call.respond(updateClub(call.userId(), r.name, r.primaryColor, r.secondaryColor, r.emblemJson).toDto().toSuccessResponse())
             }
             get {
                 val st = getClub(call.userId())

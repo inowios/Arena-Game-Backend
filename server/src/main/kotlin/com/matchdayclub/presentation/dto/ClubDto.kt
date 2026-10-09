@@ -11,12 +11,14 @@ import kotlinx.serialization.Serializable
 import java.time.Instant
 
 @Serializable data class CreateClubRequest(val name: String, val primaryColor: String, val secondaryColor: String, val timezone: String = "UTC")
+@Serializable data class UpdateClubRequest(val name: String? = null, val primaryColor: String? = null, val secondaryColor: String? = null, val emblemJson: String? = null)
 @Serializable data class PlaceBuildingRequest(val type: String, val x: Int, val y: Int, val rotation: Int = 0)
 
 @Serializable data class ClubDto(
     val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val emblemJson: String?,
     val level: Int, val reputation: Int, val reputationForNextLevel: Int?, val coins: Long, val gold: Int, val timezone: String,
     val academyNextAt: String?, val medicalNextAt: String?,
+    val streak: Int = 0, val loginDay: Int = 0,
 )
 
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredClubLevel: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
@@ -31,7 +33,7 @@ import java.time.Instant
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String)
 @Serializable data class CollectResponse(val building: BuildingDto, val coins: Long, val club: ClubDto)
 
-fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString())
+fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay)
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredClubLevel, incomePerHour, capHours, effect, effect2)
 fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, if (maxPerClub == Int.MAX_VALUE) -1 else maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) })

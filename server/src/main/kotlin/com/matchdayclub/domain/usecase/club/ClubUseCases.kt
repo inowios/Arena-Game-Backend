@@ -137,3 +137,18 @@ class RemoveBuildingUseCase(private val service: ClubService, private val buildi
         buildings.delete(b.id)
     }
 }
+
+class UpdateClubUseCase(private val service: ClubService, private val clubs: ClubRepository, private val clock: Clock) {
+    private val hex = Regex("^#[0-9A-Fa-f]{6}$")
+    suspend operator fun invoke(userId: UUID, name: String?, primaryColor: String?, secondaryColor: String?, emblemJson: String?): Club {
+        val club = service.clubOf(userId)
+        if (name != null && name.trim().length !in 3..24) throw ValidationException("Club name must be 3..24 characters")
+        if (primaryColor != null && !hex.matches(primaryColor)) throw ValidationException("Colors must be #RRGGBB")
+        if (secondaryColor != null && !hex.matches(secondaryColor)) throw ValidationException("Colors must be #RRGGBB")
+        if (emblemJson != null && emblemJson.length > 2048) throw ValidationException("Emblem too large")
+        return clubs.update(club.copy(
+            name = name?.trim() ?: club.name, primaryColor = primaryColor?.uppercase() ?: club.primaryColor, secondaryColor = secondaryColor?.uppercase() ?: club.secondaryColor,
+            emblemJson = emblemJson ?: club.emblemJson, updatedAt = clock.now(),
+        ))
+    }
+}
