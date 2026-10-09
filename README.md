@@ -20,7 +20,8 @@ Kotlin backend for the Matchday Club mobile game. Design spec and plans live in
     ./scripts/smoke.sh                        # end-to-end smoke against a running server
 
 Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides: `DATABASE_URL`, `DATABASE_USER`,
-`DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`).
+`DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
+`ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`).
 
 ## API (v1)
 
@@ -54,6 +55,13 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` | season pass: 3 daily tasks, 30 levels, free/premium tracks |
 | GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold/coins/premium pass; receipts verified server-side (dev verifier with `IAP_DEV_MODE=true`, token `dev:<order>`) |
 | POST | `/api/v1/ads/reward` `{placement, buildingId?}` | rewarded ads: `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
+| GET/POST | `/api/v1/leagues/{id}/messages` `?before=&after=` / `{text}` | private-league chat (members only, 2 s / 20 per 5 min, masked; system lines `join|Name`, `leave|…`, `restart|n|winner`, `kick|…`) |
+| POST/DELETE | `/api/v1/messages/{id}/report`, `/messages/{id}`; `/clubs/{id}/block` | moderation: 3 reports hide a line; author or creator deletes; blocks hide a club's lines |
+| POST/DELETE/GET | `/api/v1/leagues/private/{id}/restart`, `/members/{clubId}`, `/history` | creator: new private season (table frozen into history), remove members |
+| GET | `/api/v1/clubs/{id}/h2h`, `/clubs/{id}/grounds` | head-to-head record; another club's buildings (visit) |
+| POST/GET | `/api/v1/challenges`, `/challenges/mine`, `/challenges/{code}`, `/challenges/{code}/accept` | one-off friendly by link (7 days, first taker plays; both clubs rewarded) |
+| GET | `/l/{code}`, `/c/{code}`, `/.well-known/assetlinks.json`, `/.well-known/apple-app-site-association` | invite landing pages (5 languages, store links, clipboard hand-off) and app-link association |
+| GET | `/api/v1/config` | public client config: base URL, link templates, store URLs, minimum client version |
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 

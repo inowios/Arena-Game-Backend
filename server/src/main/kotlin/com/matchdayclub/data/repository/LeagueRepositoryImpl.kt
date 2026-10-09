@@ -42,6 +42,7 @@ class LeagueRepositoryImpl : LeagueRepository {
         this[LeagueTable.timezone] = l.timezone; this[LeagueTable.matchdayHour] = l.matchdayHour; this[LeagueTable.seasonNumber] = l.seasonNumber
         this[LeagueTable.seasonStart] = l.seasonStart; this[LeagueTable.currentRound] = l.currentRound; this[LeagueTable.updatedAt] = l.updatedAt
         this[LeagueTable.status] = l.status.name
+        this[LeagueTable.createdBy] = l.createdBy
     }
 
     private fun ResultRow.toLeague() = League(
@@ -73,6 +74,10 @@ class FixtureRepositoryImpl : FixtureRepository {
         var cond: Op<Boolean> = (FixtureTable.homeClubId eq clubId) or (FixtureTable.awayClubId eq clubId)
         if (kind != null) cond = cond and (FixtureTable.kind eq kind.name)
         FixtureTable.selectAll().where { cond }.orderBy(FixtureTable.scheduledAt, SortOrder.DESC).limit(limit).map { it.toFixture() }
+    }
+    override suspend fun listBetween(a: UUID, b: UUID, limit: Int) = dbQuery {
+        FixtureTable.selectAll().where { ((FixtureTable.homeClubId eq a) and (FixtureTable.awayClubId eq b)) or ((FixtureTable.homeClubId eq b) and (FixtureTable.awayClubId eq a)) }
+            .orderBy(FixtureTable.scheduledAt, SortOrder.DESC).limit(limit).map { it.toFixture() }
     }
     override suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: Instant) = if (clubIds.isEmpty()) emptyList() else dbQuery {
         FixtureTable.selectAll().where { ((FixtureTable.homeClubId inList clubIds) or (FixtureTable.awayClubId inList clubIds)) and (FixtureTable.kind eq FixtureKind.LEAGUE.name) and (FixtureTable.status eq FixtureStatus.PLAYED.name) and (FixtureTable.playedAt greaterEq since) }.map { it.toFixture() }

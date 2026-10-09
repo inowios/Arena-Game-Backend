@@ -63,6 +63,38 @@ class ApiIT {
     }
 
     @Test
+    fun `chat, challenges, invite landing pages and app links over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig(mapOf("links.baseUrl" to "https://mdc.test", "links.androidCertSha256" to "AA:BB", "links.iosTeamId" to "TEAM1")) }
+        application { module() }
+        val a = guestWithClub("it-device-0101", "Alpha FC")
+        val b = guestWithClub("it-device-0102", "Bravo FC")
+        val league = call(HttpMethod.Post, "/leagues/private", a, """{"name":"Office <b>"}""", expect = 201).data.o()
+        val code = league["code"]!!.jsonPrimitive.content; val leagueId = league["id"]!!.jsonPrimitive.content
+        call(HttpMethod.Post, "/leagues/private/join", b, """{"code":"$code"}""")
+        call(HttpMethod.Post, "/leagues/$leagueId/messages", b, """{"text":"good luck"}""", expect = 201)
+        val lines = call(HttpMethod.Get, "/leagues/$leagueId/messages", a).data.jsonArray
+        assertEquals(listOf("SYSTEM", "USER"), lines.map { it.o()["kind"]!!.jsonPrimitive.content })
+        val challenge = call(HttpMethod.Post, "/challenges", a, expect = 201).data.o()
+        val cc = challenge["code"]!!.jsonPrimitive.content
+        assertEquals("https://mdc.test/c/$cc", challenge["link"]!!.jsonPrimitive.content)
+        val m = call(HttpMethod.Post, "/challenges/$cc/accept", b, expect = 201).data.o()
+        assertEquals("CHALLENGE", m["fixture"]!!.o()["kind"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/challenges/$cc/accept", b, expect = 409)
+        val clubA = call(HttpMethod.Get, "/club", a).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        assertEquals(1, call(HttpMethod.Get, "/clubs/$clubA/h2h", b).data.o()["fixtures"]!!.jsonArray.size)
+        assertTrue(call(HttpMethod.Get, "/clubs/$clubA/grounds", b).data.o()["buildings"]!!.jsonArray.size >= 2)
+        val landing = client.get("/l/$code") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }
+        val html = landing.bodyAsText()
+        assertEquals(200, landing.status.value); assertTrue(html.contains(code) && html.contains("matchdayclub://l/$code") && html.contains("приглашает"))
+        assertTrue(html.contains("Office &lt;b&gt;"), "club and league names are escaped")
+        assertEquals(404, client.get("/l/NOPE99").status.value)
+        assertTrue(client.get("/c/$cc").bodyAsText().contains("Alpha FC"))
+        assertTrue(client.get("/.well-known/assetlinks.json").bodyAsText().contains("\"AA:BB\""))
+        assertTrue(client.get("/.well-known/apple-app-site-association").bodyAsText().contains("TEAM1.com.inowios.matchdayclub"))
+        assertEquals("https://mdc.test", Json.parseToJsonElement(client.get("/api/v1/config").bodyAsText()).data.o()["publicBaseUrl"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun `leagues, friendlies and economy over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }

@@ -30,6 +30,7 @@ class FakeFixtureRepository : FixtureRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int?) = rows.values.filter { it.leagueId == leagueId && it.seasonNumber == season && (round == null || it.round == round) }.sortedBy { it.round }
     override suspend fun listByClub(clubId: UUID, kind: FixtureKind?, limit: Int) = rows.values.filter { it.involves(clubId) && (kind == null || it.kind == kind) }.sortedByDescending { it.scheduledAt }.take(limit)
+    override suspend fun listBetween(a: UUID, b: UUID, limit: Int) = rows.values.filter { (it.homeClubId == a && it.awayClubId == b) || (it.homeClubId == b && it.awayClubId == a) }.sortedByDescending { it.scheduledAt }.take(limit)
     override suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: Instant) = rows.values.filter { f -> f.kind == FixtureKind.LEAGUE && f.status == FixtureStatus.PLAYED && f.playedAt != null && !f.playedAt.isBefore(since) && clubIds.any { f.involves(it) } }
     override suspend fun deleteScheduled(leagueId: UUID, season: Int) { rows.values.filter { it.leagueId == leagueId && it.seasonNumber == season && it.status == FixtureStatus.SCHEDULED }.map { it.id }.forEach { rows.remove(it) } }
     override suspend fun markPlayed(fixture: Fixture): Boolean {
@@ -59,4 +60,43 @@ class FakeSeasonRepository : com.matchdayclub.domain.repository.SeasonRepository
     override suspend fun seasonFor(clubId: UUID, leagueId: UUID) = seasons.firstOrNull { it.clubId == clubId && it.leagueId == leagueId }
     override suspend fun createTrophy(trophy: com.matchdayclub.domain.model.Trophy) = trophy.also { trophies += it }
     override suspend fun trophiesOf(clubId: UUID) = trophies.filter { it.clubId == clubId }
+}
+
+class FakeChatRepository : com.matchdayclub.domain.repository.ChatRepository {
+    val rows = mutableListOf<LeagueMessage>()
+    val reports = mutableSetOf<Pair<UUID, UUID>>()
+    val blocks = mutableSetOf<Pair<UUID, UUID>>()
+    override suspend fun post(message: LeagueMessage) = message.also { rows += it }
+    override suspend fun list(leagueId: UUID, before: Instant?, limit: Int) = rows.filter { it.leagueId == leagueId && !it.deleted && (before == null || it.createdAt.isBefore(before)) }.sortedByDescending { it.createdAt }.take(limit)
+    override suspend fun since(leagueId: UUID, after: Instant, limit: Int) = rows.filter { it.leagueId == leagueId && !it.deleted && it.createdAt.isAfter(after) }.sortedBy { it.createdAt }.take(limit)
+    override suspend fun find(id: UUID) = rows.firstOrNull { it.id == id }
+    override suspend fun markDeleted(id: UUID) { val i = rows.indexOfFirst { it.id == id }; if (i >= 0) rows[i] = rows[i].copy(deleted = true) }
+    override suspend fun countByClubSince(clubId: UUID, since: Instant) = rows.count { it.clubId == clubId && !it.createdAt.isBefore(since) }
+    override suspend fun lastByClub(clubId: UUID) = rows.filter { it.clubId == clubId }.maxByOrNull { it.createdAt }
+    override suspend fun report(messageId: UUID, reporterClubId: UUID, reason: String) = reports.add(messageId to reporterClubId)
+    override suspend fun reportCount(messageId: UUID) = reports.count { it.first == messageId }
+    override suspend fun block(clubId: UUID, blockedClubId: UUID) { blocks += clubId to blockedClubId }
+    override suspend fun unblock(clubId: UUID, blockedClubId: UUID) { blocks -= clubId to blockedClubId }
+    override suspend fun blockedBy(clubId: UUID) = blocks.filter { it.first == clubId }.map { it.second }.toSet()
+}
+
+class FakeSocialRepository : com.matchdayclub.domain.repository.SocialRepository {
+    val seasons = mutableListOf<PrivateLeagueSeason>()
+    val challenges = linkedMapOf<UUID, Challenge>()
+    val invites = mutableListOf<Invite>()
+    override suspend fun savePrivateSeason(s: PrivateLeagueSeason) = s.also { seasons += it }
+    override suspend fun privateSeasons(leagueId: UUID) = seasons.filter { it.leagueId == leagueId }.sortedByDescending { it.seasonNumber }
+    override suspend fun createChallenge(c: Challenge) = c.also { challenges[it.id] = it }
+    override suspend fun challengeByCode(code: String) = challenges.values.firstOrNull { it.code == code }
+    override suspend fun acceptChallenge(id: UUID, clubId: UUID, fixtureId: UUID): Boolean {
+        val c = challenges[id] ?: return false
+        if (c.status != ChallengeStatus.OPEN) return false
+        challenges[id] = c.copy(status = ChallengeStatus.ACCEPTED, acceptedByClubId = clubId, fixtureId = fixtureId); return true
+    }
+    override suspend fun openChallengesOf(clubId: UUID, now: Instant) = challenges.values.filter { it.challengerClubId == clubId && it.status == ChallengeStatus.OPEN && it.expiresAt.isAfter(now) }
+    override suspend fun recordInvite(i: Invite): Boolean {
+        if (invites.any { it.inviteeClubId == i.inviteeClubId && it.kind == i.kind && it.code == i.code }) return false
+        invites += i; return true
+    }
+    override suspend fun invitesBy(clubId: UUID) = invites.filter { it.inviterClubId == clubId }
 }

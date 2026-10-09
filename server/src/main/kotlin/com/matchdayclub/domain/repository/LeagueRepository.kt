@@ -26,6 +26,8 @@ interface FixtureRepository {
     suspend fun findById(id: UUID): Fixture?
     suspend fun listByLeagueSeason(leagueId: UUID, season: Int, round: Int? = null): List<Fixture>
     suspend fun listByClub(clubId: UUID, kind: FixtureKind? = null, limit: Int = 50): List<Fixture>
+    /** Fixtures between two clubs (any kind), newest first. */
+    suspend fun listBetween(a: UUID, b: UUID, limit: Int = 30): List<Fixture>
     suspend fun listPlayedByClubsSince(clubIds: Collection<UUID>, since: java.time.Instant): List<Fixture>
     suspend fun deleteScheduled(leagueId: UUID, season: Int)
     /** Marks a fixture played only if it is still SCHEDULED. Returns false when already played. */

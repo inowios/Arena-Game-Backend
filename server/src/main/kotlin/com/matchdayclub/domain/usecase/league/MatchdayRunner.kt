@@ -120,11 +120,12 @@ class MatchdayRunner(
         val awaySquad = athletes.listByClub(away.id)
         val hSec = sections?.active(home, homeSquad) ?: listOf(Sport.FOOTBALL)
         val aSec = sections?.active(away, awaySquad) ?: listOf(Sport.FOOTBALL)
-        val sports = if (fixture.kind == FixtureKind.FRIENDLY) Sections.ORDER.filter { it in hSec && it in aSec }.ifEmpty { listOf(Sport.FOOTBALL) }
+        // friendlies and challenges play the sections both clubs have; league fixtures play every section either club fields
+        val sports = if (fixture.kind != FixtureKind.LEAGUE) Sections.ORDER.filter { it in hSec && it in aSec }.ifEmpty { listOf(Sport.FOOTBALL) }
                      else Sections.ORDER.filter { it in hSec || it in aSec }
         val plays = sports.map { sport ->
             val profile = Sections.profile(sport)
-            val bothPlay = fixture.kind == FixtureKind.FRIENDLY || (sport in hSec && sport in aSec)
+            val bothPlay = fixture.kind != FixtureKind.LEAGUE || (sport in hSec && sport in aSec)
             if (bothPlay) {
                 val (hl, _) = lineupService.engineLineup(home, now, sport, homeSquad)
                 val (al, _) = lineupService.engineLineup(away, now, sport, awaySquad)
@@ -154,6 +155,13 @@ class MatchdayRunner(
                     applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now)
                     if (!home.isBot) recordProgress(home.id, plays, true, result.homePoints > result.awayPoints)
                     if (!away.isBot) recordProgress(away.id, plays, false, result.awayPoints > result.homePoints)
+                } else if (fixture.kind == FixtureKind.CHALLENGE) {
+                    // both clubs agreed to a challenge: both get the friendly reward and fatigue
+                    val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
+                    applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now)
+                    applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now)
+                    if (!home.isBot) progress.record(home.id, ProgressEvent.FRIENDLY_PLAYED)
+                    if (!away.isBot) progress.record(away.id, ProgressEvent.FRIENDLY_PLAYED)
                 } else {
                     // a friendly only affects the club that asked for it; the opponent's squad is borrowed, not tired
                     applyEffects(clubs.lockById(home.id) ?: home, homeSquad, plays, true, fixture.kind, now)
@@ -195,7 +203,7 @@ class MatchdayRunner(
                 updates[a.id] = n
             }
         }
-        if (kind == FixtureKind.FRIENDLY) coins = Standings.FRIENDLY_COINS
+        if (kind != FixtureKind.LEAGUE) coins = Standings.FRIENDLY_COINS
         val newRep = club.reputation + rep
         clubs.update(club.copy(coins = club.coins + coins, reputation = newRep, level = maxOf(club.level, ClubLevels.levelFor(newRep)), updatedAt = now))
         updates.values.forEach { athletes.update(it) }

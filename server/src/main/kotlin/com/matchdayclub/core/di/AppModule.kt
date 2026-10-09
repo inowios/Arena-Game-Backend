@@ -104,8 +104,16 @@ val appModule = module {
     single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { LeagueQueries(get(), get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
-    single { JoinPrivateLeagueUseCase(get(), get(), tx = get()) }
-    single { LeavePrivateLeagueUseCase(get(), get()) }
+    single { JoinPrivateLeagueUseCase(get(), get(), tx = get(), invites = get(), chat = get()) }
+    single { LeavePrivateLeagueUseCase(get(), get(), tx = get(), chat = get()) }
+    single<ChatRepository> { ChatRepositoryImpl() }
+    single<SocialRepository> { SocialRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.social.GetGroundsUseCase(get(), get(), get()) }
+    single { com.matchdayclub.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get()) }
+    single { com.matchdayclub.domain.usecase.social.InviteTracker(get(), get(), get(), get()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { GetPublicClubUseCase(get(), get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }

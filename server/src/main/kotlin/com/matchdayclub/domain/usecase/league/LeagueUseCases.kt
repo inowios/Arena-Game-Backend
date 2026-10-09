@@ -80,7 +80,10 @@ class CreatePrivateLeagueUseCase(private val service: ClubService, private val l
     }
 }
 
-class JoinPrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository, private val tx: Tx = NoTx) {
+class JoinPrivateLeagueUseCase(
+    private val service: ClubService, private val leagues: LeagueRepository, private val tx: Tx = NoTx,
+    private val invites: com.matchdayclub.domain.usecase.social.InviteTracker? = null, private val chat: com.matchdayclub.domain.usecase.social.ChatService? = null,
+) {
     suspend operator fun invoke(userId: UUID, code: String): League = tx {
         val club = service.clubOf(userId)
         val found = leagues.findByCode(code.trim().uppercase())?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League code not found")
@@ -89,15 +92,20 @@ class JoinPrivateLeagueUseCase(private val service: ClubService, private val lea
         if (club.id in members) throw ConflictException("Already a member")
         if (members.size >= LeagueRules.PRIVATE_MAX) throw ConflictException("League is full")
         leagues.addMember(league.id, club.id)
+        chat?.system(league.id, "join", club.name)
+        runCatching { invites?.leagueJoined(league, club) }
         league
     }
 }
 
-class LeavePrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository) {
-    suspend operator fun invoke(userId: UUID, leagueId: UUID) {
+class LeavePrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository, private val tx: Tx = NoTx, private val chat: com.matchdayclub.domain.usecase.social.ChatService? = null) {
+    suspend operator fun invoke(userId: UUID, leagueId: UUID) = tx {
         val club = service.clubOf(userId)
-        val league = leagues.findById(leagueId)?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League not found")
+        val league = leagues.lockById(leagueId)?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League not found")
         leagues.removeMember(league.id, club.id)
+        // the creator leaving hands the league to the longest-standing member
+        if (league.createdBy == club.id) leagues.members(league.id).firstOrNull()?.let { heir -> leagues.update(league.copy(createdBy = heir, updatedAt = java.time.Instant.now())) }
+        chat?.system(league.id, "leave", club.name)
     }
 }
 

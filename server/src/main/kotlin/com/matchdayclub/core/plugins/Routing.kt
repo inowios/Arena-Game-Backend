@@ -16,7 +16,9 @@ fun Application.configureRouting() {
             val ok = runCatching { dbQuery { TransactionManager.current().exec("SELECT 1") }; true }.getOrDefault(false)
             if (ok) call.respond("ok".toSuccessResponse()) else call.respond(HttpStatusCode.ServiceUnavailable, "db down".toSuccessResponse(503))
         }
+        linkRoutes()
         route("/api/v1") {
+            configRoutes()
             rateLimit(AUTH_RATE_LIMIT) { authRoutes() }
             rateLimit(API_RATE_LIMIT) { apiRoutes() }
             if (developmentMode) devRoutes()
@@ -35,4 +37,5 @@ fun Route.apiRoutes() {
     athleteRoutes()
     leagueRoutes()
     economyRoutes()
+    socialRoutes()
 }
