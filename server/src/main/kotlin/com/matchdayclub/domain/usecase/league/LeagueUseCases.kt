@@ -1,6 +1,8 @@
 package com.matchdayclub.domain.usecase.league
 
 import com.matchdayclub.common.time.Clock
+import com.matchdayclub.common.tx.NoTx
+import com.matchdayclub.common.tx.Tx
 import com.matchdayclub.domain.exception.ConflictException
 import com.matchdayclub.domain.exception.NotFoundException
 import com.matchdayclub.domain.exception.ValidationException
@@ -78,15 +80,16 @@ class CreatePrivateLeagueUseCase(private val service: ClubService, private val l
     }
 }
 
-class JoinPrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository) {
-    suspend operator fun invoke(userId: UUID, code: String): League {
+class JoinPrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, code: String): League = tx {
         val club = service.clubOf(userId)
-        val league = leagues.findByCode(code.trim().uppercase())?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League code not found")
+        val found = leagues.findByCode(code.trim().uppercase())?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League code not found")
+        val league = leagues.lockById(found.id) ?: throw NotFoundException("League code not found")
         val members = leagues.members(league.id)
         if (club.id in members) throw ConflictException("Already a member")
         if (members.size >= LeagueRules.PRIVATE_MAX) throw ConflictException("League is full")
         leagues.addMember(league.id, club.id)
-        return league
+        league
     }
 }
 
@@ -98,9 +101,9 @@ class LeavePrivateLeagueUseCase(private val service: ClubService, private val le
     }
 }
 
-class PlayFriendlyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val runner: MatchdayRunner, private val queries: LeagueQueries, private val clock: Clock) {
-    suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): MatchView {
-        val club = service.clubOf(userId)
+class PlayFriendlyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val runner: MatchdayRunner, private val queries: LeagueQueries, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): MatchView = tx {
+        val club = service.lockedClubOf(userId)
         val now = clock.now()
         val today = now.atZone(ZoneId.of(club.timezone)).toLocalDate()
         val playedToday = if (club.friendliesDate == today) club.friendliesPlayed else 0
@@ -114,7 +117,7 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
         val fixture = Fixture(UUID.randomUUID(), null, FixtureKind.FRIENDLY, 0, 0, now, club.id, opponent.id, FixtureStatus.SCHEDULED, null, null, now.toEpochMilli() xor club.id.leastSignificantBits, null, null, now)
         fixtures.createAll(listOf(fixture))
         val (played, result) = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
-        return MatchView(played, result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(played))
+        MatchView(played, result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(played))
     }
 }
 

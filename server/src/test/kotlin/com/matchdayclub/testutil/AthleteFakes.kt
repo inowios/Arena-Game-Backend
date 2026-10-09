@@ -17,7 +17,7 @@ class FakeTrainingRepository : TrainingRepository {
     override suspend fun listByClub(clubId: UUID) = rows.values.filter { it.clubId == clubId }
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun create(training: Training): Training { rows[training.id] = training; return training }
-    override suspend fun delete(id: UUID) { rows.remove(id) }
+    override suspend fun delete(id: UUID): Boolean = rows.remove(id) != null
 }
 
 class FakeLineupRepository : LineupRepository {

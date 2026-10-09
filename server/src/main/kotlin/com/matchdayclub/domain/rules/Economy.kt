@@ -25,6 +25,8 @@ object Economy {
     const val TASKS_PER_DAY = 3
     const val DOUBLE_INCOME_COOLDOWN_SECONDS = 4 * 3600L
     const val FREE_SPEEDUP_MAX_SECONDS = 30 * 60L
+    const val MAX_BUILDERS = 2
+    const val SECOND_BUILDER_GOLD = 250
 
     val PRODUCTS = listOf(
         Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200),

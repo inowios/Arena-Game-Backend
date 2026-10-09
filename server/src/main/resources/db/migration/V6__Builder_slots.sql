@@ -1,0 +1,1 @@
+ALTER TABLE clubs ADD COLUMN builder_slots INT NOT NULL DEFAULT 1;

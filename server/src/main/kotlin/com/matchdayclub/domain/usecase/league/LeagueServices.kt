@@ -34,9 +34,9 @@ class LeagueService(private val leagues: LeagueRepository, private val fixtures:
     suspend fun ensurePublicMembership(club: Club): League {
         leagues.listForClub(club.id).firstOrNull { it.kind == LeagueKind.PUBLIC }?.let { return it }
         val now = clock.now()
-        val open = leagues.findOpenPublic(club.tzBucket, club.division, Int.MAX_VALUE)
+        val open = leagues.findOpenPublic(club.tzBucket, club.division, Int.MAX_VALUE)?.let { leagues.lockById(it.id) }?.takeIf { it.currentRound == 0 }
         if (open != null) {
-            val members = leagues.members(open.id)
+            val members = leagues.members(open.id)   // read under the league lock: two joiners never take the same bot slot
             val bot = clubs.findByIds(members).firstOrNull { it.isBot }
             if (bot != null) {
                 leagues.removeMember(open.id, bot.id)

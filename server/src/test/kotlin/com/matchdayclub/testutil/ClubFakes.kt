@@ -12,6 +12,8 @@ class FakeClubRepository : ClubRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun findByIds(ids: Collection<UUID>) = ids.mapNotNull { rows[it] }
     override suspend fun listBots(tzBucket: Int) = rows.values.filter { it.isBot && it.tzBucket == tzBucket }
+    override suspend fun lockByUserId(userId: UUID) = findByUserId(userId)
+    override suspend fun lockById(id: UUID) = findById(id)
     override suspend fun create(club: Club): Club { rows[club.id] = club; return club }
     override suspend fun update(club: Club): Club { rows[club.id] = club; return club }
 }
@@ -22,5 +24,6 @@ class FakeBuildingRepository : BuildingRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun create(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun update(building: Building): Building { rows[building.id] = building; return building }
+    override suspend fun move(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun delete(id: UUID) { rows.remove(id) }
 }

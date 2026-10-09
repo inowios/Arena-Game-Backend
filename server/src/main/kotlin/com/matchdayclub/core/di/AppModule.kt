@@ -25,6 +25,7 @@ import org.koin.dsl.module
 
 val appModule = module {
     single<Clock> { SystemClock }
+    single<com.matchdayclub.common.tx.Tx> { com.matchdayclub.common.tx.DbTx }
     single {
         val c = get<Application>().environment.config
         JwtUtil(
@@ -54,14 +55,16 @@ val appModule = module {
     single<BuildingRepository> { BuildingRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it) != null } }
     single { ClubService(get(), get(), get()) }
-    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>()) }
+    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
-    single { PlaceBuildingUseCase(get(), get(), get()) }
-    single { UpgradeBuildingUseCase(get(), get(), get()) }
-    single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>()) }
-    single { SpeedUpUseCase(get(), get(), get()) }
-    single { RemoveBuildingUseCase(get(), get()) }
-    single { UpdateClubUseCase(get(), get(), get()) }
+    single { PlaceBuildingUseCase(get(), get(), get(), tx = get()) }
+    single { UpgradeBuildingUseCase(get(), get(), get(), tx = get()) }
+    single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
+    single { SpeedUpUseCase(get(), get(), get(), tx = get()) }
+    single { RemoveBuildingUseCase(get(), get(), tx = get()) }
+    single { MoveBuildingUseCase(get(), get(), get(), tx = get()) }
+    single { BuyBuilderUseCase(get(), get(), get(), tx = get()) }
+    single { UpdateClubUseCase(get(), get(), get(), tx = get()) }
 
     single<AthleteRepository> { AthleteRepositoryImpl() }
     single<TrainingRepository> { TrainingRepositoryImpl() }
@@ -81,28 +84,28 @@ val appModule = module {
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString())
     }
     single { MatchdayNotifier(get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get()) }
-    single { ClaimDailyRewardUseCase(get(), get(), get(), get()) }
-    single { SeasonPassUseCases(get(), get(), get(), get(), get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get()) }
+    single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
+    single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single<Map<Store, ReceiptVerifier>> {
         val c = get<Application>().environment.config
         val dev = c.propertyOrNull("iap.devMode")?.getString()?.toBoolean() ?: false
         if (dev) mapOf(Store.DEV to DevReceiptVerifier(), Store.GOOGLE to DevReceiptVerifier(), Store.APPLE to DevReceiptVerifier()) else emptyMap()
     }
-    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get()) }
-    single { AdRewardUseCase(get(), get(), get(), get(), get()) }
+    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { LeagueQueries(get(), get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
-    single { JoinPrivateLeagueUseCase(get(), get()) }
+    single { JoinPrivateLeagueUseCase(get(), get(), tx = get()) }
     single { LeavePrivateLeagueUseCase(get(), get()) }
-    single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get()) }
+    single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { GetPublicClubUseCase(get(), get(), get()) }
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
-    single { ClaimAcademyUseCase(get(), get(), get(), get()) }
-    single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>()) }
-    single { CompleteTrainingUseCase(get(), get(), get(), get()) }
-    single { HealAthleteUseCase(get(), get(), get(), get(), get()) }
+    single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get()) }
+    single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
+    single { CompleteTrainingUseCase(get(), get(), get(), get(), tx = get()) }
+    single { HealAthleteUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { GetLineupUseCase(get(), get(), get(), get()) }
     single { SetLineupUseCase(get(), get(), get(), get(), get<EconomyService>()) }
 

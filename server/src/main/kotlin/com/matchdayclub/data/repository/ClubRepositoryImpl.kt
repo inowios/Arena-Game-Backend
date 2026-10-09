@@ -19,6 +19,8 @@ class ClubRepositoryImpl : ClubRepository {
     override suspend fun findById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.singleOrNull()?.toClub() }
     override suspend fun findByIds(ids: Collection<UUID>) = if (ids.isEmpty()) emptyList() else dbQuery { ClubTable.selectAll().where { ClubTable.id inList ids }.map { it.toClub() } }
     override suspend fun listBots(tzBucket: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.isBot eq true) and (ClubTable.tzBucket eq tzBucket) }.map { it.toClub() } }
+    override suspend fun lockByUserId(userId: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.userId eq userId }.forUpdate().singleOrNull()?.toClub() }
+    override suspend fun lockById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.forUpdate().singleOrNull()?.toClub() }
     override suspend fun create(club: Club) = dbQuery { ClubTable.insert { it.fill(club); it[id] = club.id; it[userId] = club.userId; it[createdAt] = club.createdAt }; club }
     override suspend fun update(club: Club) = dbQuery { ClubTable.update({ ClubTable.id eq club.id }) { it.fill(club) }; club }
 
@@ -31,6 +33,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.friendliesDate] = c.friendliesDate; this[ClubTable.friendliesPlayed] = c.friendliesPlayed
         this[ClubTable.loginDay] = c.loginDay; this[ClubTable.loginLast] = c.loginLast; this[ClubTable.streak] = c.streak
         this[ClubTable.doubleIncomeUntil] = c.doubleIncomeUntil; this[ClubTable.doubleIncomeAdAt] = c.doubleIncomeAdAt; this[ClubTable.freeSpeedupDate] = c.freeSpeedupDate
+        this[ClubTable.builderSlots] = c.builderSlots
     }
 
     private fun ResultRow.toClub() = Club(
@@ -39,6 +42,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
         this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
         this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak], this[ClubTable.doubleIncomeUntil], this[ClubTable.doubleIncomeAdAt], this[ClubTable.freeSpeedupDate],
+        this[ClubTable.builderSlots],
     )
 }
 
@@ -50,6 +54,10 @@ class BuildingRepositoryImpl : BuildingRepository {
         building
     }
     override suspend fun update(building: Building) = dbQuery { BuildingTable.update({ BuildingTable.id eq building.id }) { it.fill(building) }; building }
+    override suspend fun move(building: Building) = dbQuery {
+        BuildingTable.update({ BuildingTable.id eq building.id }) { it[gridX] = building.gridX; it[gridY] = building.gridY; it[rotation] = building.rotation; it[updatedAt] = building.updatedAt }
+        building
+    }
     override suspend fun delete(id: UUID) { dbQuery { BuildingTable.deleteWhere { BuildingTable.id eq id } } }
 
     private fun UpdateBuilder<*>.fill(b: Building) {

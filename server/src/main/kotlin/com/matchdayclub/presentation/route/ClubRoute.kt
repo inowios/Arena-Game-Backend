@@ -24,6 +24,8 @@ fun Route.clubRoutes() {
     val speedUp: SpeedUpUseCase by inject()
     val remove: RemoveBuildingUseCase by inject()
     val updateClub: UpdateClubUseCase by inject()
+    val move: MoveBuildingUseCase by inject()
+    val buyBuilder: BuyBuilderUseCase by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -42,6 +44,7 @@ fun Route.clubRoutes() {
                 val st = getClub(call.userId())
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString()).toSuccessResponse())
             }
+            post("/builders") { call.respond(buyBuilder(call.userId()).toDto().toSuccessResponse()) }
             route("/buildings") {
                 post {
                     val r = call.receive<PlaceBuildingRequest>()
@@ -57,6 +60,12 @@ fun Route.clubRoutes() {
                     post("/collect") {
                         val r = collect(call.userId(), call.buildingId())
                         call.respond(CollectResponse(r.building.toDto(r.building.updatedAt, r.club.level), r.coins, r.club.toDto()).toSuccessResponse())
+                    }
+                    post("/move") {
+                        val r = call.receive<MoveBuildingRequest>()
+                        val b = move(call.userId(), call.buildingId(), r.x, r.y, r.rotation)
+                        val st = getClub(call.userId())
+                        call.respond(b.toDto(st.now, st.club.level).toSuccessResponse())
                     }
                     delete { remove(call.userId(), call.buildingId()); call.respond(mapOf("ok" to true).toSuccessResponse()) }
                 }

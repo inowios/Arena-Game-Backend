@@ -46,7 +46,7 @@ class TrainingRepositoryImpl : TrainingRepository {
         TrainingTable.insert { it[id] = training.id; it[clubId] = training.clubId; it[athleteId] = training.athleteId; it[attribute] = training.attribute.name; it[delta] = training.delta; it[endsAt] = training.endsAt; it[createdAt] = training.createdAt }
         training
     }
-    override suspend fun delete(id: UUID) { dbQuery { TrainingTable.deleteWhere { TrainingTable.id eq id } } }
+    override suspend fun delete(id: UUID): Boolean = dbQuery { TrainingTable.deleteWhere { TrainingTable.id eq id } > 0 }
     private fun ResultRow.toTraining() = Training(this[TrainingTable.id], this[TrainingTable.clubId], this[TrainingTable.athleteId], AttributeKind.valueOf(this[TrainingTable.attribute]), this[TrainingTable.delta], this[TrainingTable.endsAt], this[TrainingTable.createdAt])
 }
 

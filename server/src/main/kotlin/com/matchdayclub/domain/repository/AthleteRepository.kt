@@ -14,7 +14,8 @@ interface TrainingRepository {
     suspend fun listByClub(clubId: UUID): List<Training>
     suspend fun findById(id: UUID): Training?
     suspend fun create(training: Training): Training
-    suspend fun delete(id: UUID)
+    /** @return true when this call removed the row (used to finalise a training exactly once). */
+    suspend fun delete(id: UUID): Boolean
 }
 
 interface LineupRepository {

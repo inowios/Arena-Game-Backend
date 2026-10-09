@@ -1,6 +1,8 @@
 package com.matchdayclub.domain.usecase.athlete
 
 import com.matchdayclub.common.time.Clock
+import com.matchdayclub.common.tx.NoTx
+import com.matchdayclub.common.tx.Tx
 import com.matchdayclub.domain.exception.ConflictException
 import com.matchdayclub.domain.exception.NotFoundException
 import com.matchdayclub.domain.exception.ValidationException
@@ -28,8 +30,9 @@ class SquadService(private val service: ClubService, private val athletes: Athle
         val now = clock.now()
         val active = trainings.listByClub(st.club.id).filter { t ->
             if (!t.isDone(now)) true else {
-                athletes.findById(t.athleteId)?.let { a -> athletes.update(a.withAttribute(t.attribute, (a.attribute(t.attribute) + t.delta).coerceAtMost(99)).copy(updatedAt = now)) }
-                trainings.delete(t.id); false
+                // delete first: only the request that actually removed the row applies the gain (no double finalisation)
+                if (trainings.delete(t.id)) athletes.findById(t.athleteId)?.let { a -> athletes.update(a.withAttribute(t.attribute, (a.attribute(t.attribute) + t.delta).coerceAtMost(99)).copy(updatedAt = now)) }
+                false
             }
         }
         val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE }
@@ -43,9 +46,9 @@ class ListAthletesUseCase(private val squads: SquadService) {
     suspend operator fun invoke(userId: UUID) = squads.squad(userId)
 }
 
-class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
-    suspend operator fun invoke(userId: UUID): Athlete {
-        val st = service.state(userId)
+class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID): Athlete = tx {
+        val st = service.state(userId, lock = true)
         val academy = st.buildings.firstOrNull { it.type == BuildingType.ACADEMY && it.state == BuildingState.IDLE } ?: throw ValidationException("Build an academy first")
         val now = clock.now()
         val next = st.club.academyNextAt
@@ -54,13 +57,13 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
         val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, Sport.FOOTBALL, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
         clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.ACADEMY_INTERVAL_SECONDS), updatedAt = now))
-        return athlete
+        athlete
     }
 }
 
-class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }) {
-    suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind): Training {
-        val st = service.state(userId)
+class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind): Training = tx {
+        val st = service.state(userId, lock = true)
         val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a training centre first")
         val squad = squads.squad(userId)
         if (squad.trainings.size >= TrainingRules.slots(tc.level)) throw ConflictException("All training slots are busy")
@@ -73,23 +76,23 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (a.attribute(attribute) >= TrainingRules.attributeCap(pitch.level)) throw ValidationException("Attribute capped by pitch level; upgrade the pitch")
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
-        return trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
+        trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
     }
 }
 
-class CompleteTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val trainings: TrainingRepository, private val clock: Clock) {
-    suspend operator fun invoke(userId: UUID, trainingId: UUID): Athlete {
-        val club = service.clubOf(userId)
+class CompleteTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val trainings: TrainingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, trainingId: UUID): Athlete = tx {
+        val club = service.lockedClubOf(userId)
         val t = trainings.findById(trainingId)?.takeIf { it.clubId == club.id } ?: throw NotFoundException("Training not found")
         if (!t.isDone(clock.now())) throw ConflictException("Training still in progress")
         squads.squad(userId)   // finalises
-        return squads.athleteOf(club.id, t.athleteId)
+        squads.athleteOf(club.id, t.athleteId)
     }
 }
 
-class HealAthleteUseCase(private val service: ClubService, private val squads: SquadService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
-    suspend operator fun invoke(userId: UUID, athleteId: UUID): Athlete {
-        val st = service.state(userId)
+class HealAthleteUseCase(private val service: ClubService, private val squads: SquadService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, athleteId: UUID): Athlete = tx {
+        val st = service.state(userId, lock = true)
         val med = st.buildings.firstOrNull { it.type == BuildingType.MEDICAL_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a medical centre first")
         val now = clock.now()
         val next = st.club.medicalNextAt
@@ -97,6 +100,6 @@ class HealAthleteUseCase(private val service: ClubService, private val squads: S
         val a = squads.athleteOf(st.club.id, athleteId)
         if (!a.isInjured(now) && a.currentFatigue(now) == 0) throw ValidationException("Athlete is already fit")
         clubs.update(st.club.copy(medicalNextAt = now.plusSeconds(TrainingRules.medicalCooldownSeconds(med.level)), updatedAt = now))
-        return athletes.update(a.copy(injuredUntil = null, fatigue = 0, fatigueAt = now, updatedAt = now))
+        athletes.update(a.copy(injuredUntil = null, fatigue = 0, fatigueAt = now, updatedAt = now))
     }
 }

@@ -58,7 +58,7 @@ object BuildingCatalog {
         BuildingSpec(BuildingType.PARKING, 3, 2, 1, true, listOf(
             LevelSpec(1_500, 45 * M, 3, incomePerHour = 250, capHours = 8), LevelSpec(7_000, 8 * H, 5, incomePerHour = 600, capHours = 10), LevelSpec(25_000, 24 * H, 8, incomePerHour = 1_300, capHours = 14),
         )),
-        BuildingSpec(BuildingType.DECOR, 1, 1, Int.MAX_VALUE, true, listOf(LevelSpec(200, M, 1))),
+        BuildingSpec(BuildingType.DECOR, 1, 1, Int.MAX_VALUE, true, listOf(LevelSpec(200, 0, 1))),
     ).associateBy { it.type }
 
     fun spec(type: BuildingType): BuildingSpec = specs.getValue(type)

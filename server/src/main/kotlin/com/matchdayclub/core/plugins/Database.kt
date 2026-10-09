@@ -17,7 +17,7 @@ fun Application.configureDatabase() {
         password = cfg.property("database.password").getString()
         maximumPoolSize = 10
         isAutoCommit = false
-        transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        transactionIsolation = "TRANSACTION_READ_COMMITTED"   // row locks (FOR UPDATE) serialise club mutations
         validate()
     }
     val dataSource = HikariDataSource(hikari)

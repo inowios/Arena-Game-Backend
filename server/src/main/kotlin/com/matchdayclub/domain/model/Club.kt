@@ -31,6 +31,7 @@ data class Club(
     val doubleIncomeUntil: Instant? = null,
     val doubleIncomeAdAt: Instant? = null,
     val freeSpeedupDate: java.time.LocalDate? = null,
+    val builderSlots: Int = 1,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

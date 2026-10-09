@@ -5,6 +5,8 @@ import java.util.UUID
 
 interface LeagueRepository {
     suspend fun findById(id: UUID): League?
+    /** SELECT … FOR UPDATE on the league row (membership changes). */
+    suspend fun lockById(id: UUID): League?
     suspend fun findByCode(code: String): League?
     suspend fun listAll(kind: LeagueKind): List<League>
     suspend fun listForClub(clubId: UUID): List<League>

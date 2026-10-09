@@ -15,6 +15,7 @@ import java.util.UUID
 
 class LeagueRepositoryImpl : LeagueRepository {
     override suspend fun findById(id: UUID) = dbQuery { LeagueTable.selectAll().where { LeagueTable.id eq id }.singleOrNull()?.toLeague() }
+    override suspend fun lockById(id: UUID) = dbQuery { LeagueTable.selectAll().where { LeagueTable.id eq id }.forUpdate().singleOrNull()?.toLeague() }
     override suspend fun findByCode(code: String) = dbQuery { LeagueTable.selectAll().where { LeagueTable.code eq code }.singleOrNull()?.toLeague() }
     override suspend fun listAll(kind: LeagueKind) = dbQuery { LeagueTable.selectAll().where { LeagueTable.kind eq kind.name }.map { it.toLeague() } }
     override suspend fun listForClub(clubId: UUID) = dbQuery {

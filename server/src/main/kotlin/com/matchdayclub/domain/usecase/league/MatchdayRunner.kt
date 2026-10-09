@@ -1,6 +1,8 @@
 package com.matchdayclub.domain.usecase.league
 
 import com.matchdayclub.common.time.Clock
+import com.matchdayclub.common.tx.NoTx
+import com.matchdayclub.common.tx.Tx
 import com.matchdayclub.domain.model.*
 import com.matchdayclub.domain.repository.*
 import com.matchdayclub.domain.rules.ClubLevels
@@ -34,6 +36,7 @@ class MatchdayRunner(
     private val clock: Clock,
     private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> },
     private val notifier: MatchdayNotifier? = null,
+    private val tx: Tx = NoTx,
 ) {
     private val log = LoggerFactory.getLogger("MatchdayRunner")
     private val mutex = Mutex()
@@ -79,16 +82,25 @@ class MatchdayRunner(
         val (al, `as`) = lineupService.engineLineup(away, now)
         val result = MatchSimulator.simulate(hl, al, FOOTBALL, fixture.seed)
         val played = fixture.copy(status = FixtureStatus.PLAYED, homeScore = result.score.home, awayScore = result.score.away, resultJson = json.encodeToString(result), playedAt = now)
-        if (!fixtures.markPlayed(played)) return null
-        applyEffects(home, hs, hl.starters.map { it.id }, result.score.home, result.score.away, result, fixture.kind, now)
-        applyEffects(away, `as`, al.starters.map { it.id }, result.score.away, result.score.home, result, fixture.kind, now)
-        if (fixture.kind == FixtureKind.LEAGUE) {
-            if (result.score.home > result.score.away && !home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
-            if (result.score.away > result.score.home && !away.isBot) progress.record(away.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
-            notifier?.let { runCatching { it.notify(played, home, away) }.onFailure { e -> log.warn("notify failed", e) } }
-        } else {
-            if (!home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.FRIENDLY_PLAYED)
+        val stored = tx {
+            if (!fixtures.markPlayed(played)) false else {
+                if (fixture.kind == FixtureKind.LEAGUE) {
+                    // stable lock order (by id) so two fixtures touching the same clubs never deadlock
+                    val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
+                    applyEffects(fresh.getValue(home.id), hs, hl.starters.map { it.id }, result.score.home, result.score.away, result, fixture.kind, now)
+                    applyEffects(fresh.getValue(away.id), `as`, al.starters.map { it.id }, result.score.away, result.score.home, result, fixture.kind, now)
+                    if (result.score.home > result.score.away && !home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
+                    if (result.score.away > result.score.home && !away.isBot) progress.record(away.id, com.matchdayclub.domain.rules.ProgressEvent.MATCH_WON)
+                } else {
+                    // a friendly only affects the club that asked for it; the opponent's squad is borrowed, not tired
+                    applyEffects(clubs.lockById(home.id) ?: home, hs, hl.starters.map { it.id }, result.score.home, result.score.away, result, fixture.kind, now)
+                    if (!home.isBot) progress.record(home.id, com.matchdayclub.domain.rules.ProgressEvent.FRIENDLY_PLAYED)
+                }
+                true
+            }
         }
+        if (!stored) return null
+        if (fixture.kind == FixtureKind.LEAGUE) notifier?.let { runCatching { it.notify(played, home, away) }.onFailure { e -> log.warn("notify failed", e) } }
         return played to result
     }
 

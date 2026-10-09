@@ -35,7 +35,8 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level) |
 | POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, grid) |
 | POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` |
-| POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`; DELETE | building actions |
+| POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`, `/move` `{x,y,rotation}`; DELETE | building actions (one builder; constructions queue on it) |
+| POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |
 | GET | `/api/v1/club/athletes` | squad, active trainings, slots |
 | POST | `/api/v1/club/academy/claim` | new graduate every 8 h |
 | POST | `/api/v1/club/trainings`, `/trainings/{id}/complete` | train one attribute for 1 h |
@@ -62,6 +63,12 @@ is due; empty slots are filled with bot clubs when the season starts; results ar
 draw 150 / +5, loss 60 / +1; starters gain fatigue, injuries from the engine last 2 days. Single-instance scheduler (in-process lock).
 
 Server rules: all timers are absolute server instants; finished timers are finalised on read; clients send commands, never state.
+Every mutating use case runs in one transaction (`Tx`) and locks the club row (`SELECT … FOR UPDATE`) before touching currencies,
+so parallel requests can neither double-grant nor overspend (`ConcurrencyIT`).
+
+Integration tests (real PostgreSQL, skipped when the variable is unset):
+
+    TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/matchdayclub_test TEST_DATABASE_USER=$USER ./gradlew :server:test
 
 ## match-engine rules
 

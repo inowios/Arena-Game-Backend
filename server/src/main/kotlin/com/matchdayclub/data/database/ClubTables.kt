@@ -27,6 +27,7 @@ object ClubTable : BaseTable("clubs") {
     val doubleIncomeUntil = timestamp("double_income_until").nullable()
     val doubleIncomeAdAt = timestamp("double_income_ad_at").nullable()
     val freeSpeedupDate = date("free_speedup_date").nullable()
+    val builderSlots = integer("builder_slots")
 }
 
 object BuildingTable : BaseTable("buildings") {

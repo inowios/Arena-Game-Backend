@@ -10,6 +10,7 @@ class FakeLeagueRepository : LeagueRepository {
     val rows = linkedMapOf<UUID, League>()
     val members = linkedMapOf<UUID, MutableList<UUID>>()
     override suspend fun findById(id: UUID) = rows[id]
+    override suspend fun lockById(id: UUID) = rows[id]
     override suspend fun findByCode(code: String) = rows.values.firstOrNull { it.code == code }
     override suspend fun listAll(kind: LeagueKind) = rows.values.filter { it.kind == kind }
     override suspend fun listForClub(clubId: UUID) = rows.values.filter { members[it.id]?.contains(clubId) == true }
