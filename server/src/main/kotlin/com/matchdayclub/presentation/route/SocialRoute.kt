@@ -40,6 +40,7 @@ fun Route.socialRoutes() {
     val challenges: ChallengeUseCases by inject()
     val clubs: ClubRepository by inject()
     val clubService: ClubService by inject()
+    val leagues: com.matchdayclub.domain.repository.LeagueRepository by inject()
 
     authenticate(AUTH_JWT) {
         route("/leagues/{id}/messages") {
@@ -58,6 +59,13 @@ fun Route.socialRoutes() {
         delete("/clubs/{id}/block") { chat.unblock(call.userId(), call.id("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
         get("/club/blocks") { call.respond(chat.blocked(call.userId()).map { it.toString() }.toSuccessResponse()) }
 
+        get("/leagues/private/code/{code}") {
+            val code = call.parameters["code"]!!.trim().uppercase()
+            val l = leagues.findByCode(code)?.takeIf { it.kind == com.matchdayclub.domain.model.LeagueKind.PRIVATE } ?: throw com.matchdayclub.domain.exception.NotFoundException("League code not found")
+            val members = leagues.members(l.id)
+            val me = clubService.clubOf(call.userId())
+            call.respond(LeagueInviteDto(l.toDto(members.size), l.createdBy?.let { clubs.findById(it) }?.toRef(), me.id in members).toSuccessResponse())
+        }
         route("/leagues/private/{id}") {
             post("/restart") { call.respond(admin.restart(call.userId(), call.id("id")).toDto(0).toSuccessResponse()) }
             delete("/members/{clubId}") { admin.kick(call.userId(), call.id("id"), call.id("clubId")); call.respond(mapOf("ok" to true).toSuccessResponse()) }

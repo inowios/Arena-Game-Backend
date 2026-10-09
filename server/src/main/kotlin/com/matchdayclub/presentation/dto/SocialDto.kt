@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 @Serializable data class GroundBuildingDto(val id: String, val type: String, val level: Int, val x: Int, val y: Int, val rotation: Int, val state: String)
 @Serializable data class GroundsDto(val club: ClubRefDto, val reputation: Int, val division: Int, val gridSize: Int, val sections: List<String>, val buildings: List<GroundBuildingDto>)
 @Serializable data class ChallengeDto(val code: String, val status: String, val expiresAt: String, val challenger: ClubRefDto?, val acceptedBy: ClubRefDto? = null, val fixtureId: String? = null, val link: String, val appLink: String)
+@Serializable data class LeagueInviteDto(val league: LeagueDto, val owner: ClubRefDto?, val alreadyMember: Boolean)
 @Serializable data class ClientConfigDto(val publicBaseUrl: String, val scheme: String, val minVersion: String, val playStoreUrl: String, val appStoreUrl: String, val leagueLink: String, val challengeLink: String)
 
 fun ChatLine.toDto() = ChatMessageDto(message.id.toString(), message.kind.name, message.text, message.createdAt.toString(), club?.toRef())

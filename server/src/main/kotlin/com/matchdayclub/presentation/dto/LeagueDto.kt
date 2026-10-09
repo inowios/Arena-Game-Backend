@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable data class ClubRefDto(val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val level: Int, val isBot: Boolean, val emblemJson: String? = null)
-@Serializable data class LeagueDto(val id: String, val kind: String, val name: String, val code: String?, val division: Int, val seasonNumber: Int, val seasonStart: String, val currentRound: Int, val totalRounds: Int, val matchdayHour: Int, val timezone: String, val nextRoundAt: String?, val memberCount: Int)
+@Serializable data class LeagueDto(val id: String, val kind: String, val name: String, val code: String?, val division: Int, val seasonNumber: Int, val seasonStart: String, val currentRound: Int, val totalRounds: Int, val matchdayHour: Int, val timezone: String, val nextRoundAt: String?, val memberCount: Int, val createdBy: String? = null, val status: String = "ACTIVE")
 @Serializable data class StandingRowDto(val position: Int, val club: ClubRefDto, val played: Int, val won: Int, val drawn: Int, val lost: Int, val gf: Int, val ga: Int, val gd: Int, val points: Int)
 @Serializable data class LeagueTableResponse(val league: LeagueDto, val table: List<StandingRowDto>)
 @Serializable data class MyLeaguesResponse(val public: LeagueTableResponse?, val private: List<LeagueTableResponse>)
@@ -41,10 +41,10 @@ fun Club.toRef() = ClubRefDto(id.toString(), name, primaryColor, secondaryColor,
 fun Map<UUID, Club>.ref(id: UUID) = this[id]?.toRef() ?: unknown(id)
 
 fun LeagueView.toDto() = LeagueTableResponse(
-    LeagueDto(league.id.toString(), league.kind.name, league.name, league.code, league.division, league.seasonNumber, league.seasonStart.toString(), league.currentRound, 28, league.matchdayHour, league.timezone, nextRoundAt?.toString(), memberCount),
+    LeagueDto(league.id.toString(), league.kind.name, league.name, league.code, league.division, league.seasonNumber, league.seasonStart.toString(), league.currentRound, 28, league.matchdayHour, league.timezone, nextRoundAt?.toString(), memberCount, league.createdBy?.toString(), league.status.name),
     table.mapIndexed { i, r -> StandingRowDto(i + 1, clubs.ref(r.clubId), r.played, r.won, r.drawn, r.lost, r.gf, r.ga, r.gd, r.points) },
 )
-fun League.toDto(memberCount: Int) = LeagueDto(id.toString(), kind.name, name, code, division, seasonNumber, seasonStart.toString(), currentRound, 28, matchdayHour, timezone, null, memberCount)
+fun League.toDto(memberCount: Int) = LeagueDto(id.toString(), kind.name, name, code, division, seasonNumber, seasonStart.toString(), currentRound, 28, matchdayHour, timezone, null, memberCount, createdBy?.toString(), status.name)
 fun Fixture.toDto(clubs: Map<UUID, Club>) = FixtureDto(
     id.toString(), leagueId?.toString(), kind.name, seasonNumber, round, scheduledAt.toString(), status.name, clubs.ref(homeClubId), clubs.ref(awayClubId), homeScore, awayScore, playedAt?.toString(),
     homePoints, awayPoints, resultJson?.let { runCatching { MatchdayResult.parse(it).sections.map { s -> SectionScoreDto(s.sport, s.homeScore, s.awayScore, s.walkover) } }.getOrNull() } ?: emptyList(),
