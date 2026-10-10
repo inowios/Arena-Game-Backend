@@ -136,15 +136,22 @@ val appModule = module {
             else if (dev) put(Store.GOOGLE, DevReceiptVerifier())
             val issuer = prop("iap.apple.issuerId"); val keyId = prop("iap.apple.keyId"); val pk = prop("iap.apple.privateKey")
             if (issuer.isNotEmpty() && keyId.isNotEmpty() && pk.isNotEmpty()) {
-                val roots = prop("iap.apple.rootCertPath").takeIf { it.isNotEmpty() }?.let { path ->
-                    java.io.File(path).inputStream().use { listOf(java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(it) as java.security.cert.X509Certificate) }
-                } ?: emptyList()
-                put(Store.APPLE, com.matchdayclub.core.store.AppStoreVerifier(get(), issuer, keyId, pk, prop("iap.apple.bundleId"), roots))
+                put(Store.APPLE, com.matchdayclub.core.store.AppStoreVerifier(get(), issuer, keyId, pk, prop("iap.apple.bundleId"), appleRoots(c)))
             } else if (dev) put(Store.APPLE, DevReceiptVerifier())
             log.info("Receipt verifiers: ${keys.joinToString()}${if (dev) " (dev receipts accepted)" else ""}")
         }
     }
     single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get(), cosmetics = get()) }
+    single { com.matchdayclub.domain.usecase.economy.RefundUseCase(get(), get(), get(), get(), tx = get(), inbox = get(), events = get()) }
+    single {
+        val c = get<Application>().environment.config
+        fun prop(k: String) = c.propertyOrNull(k)?.getString()?.trim().orEmpty()
+        val dev = prop("iap.devMode").toBoolean(); val roots = appleRoots(c); val token = prop("iap.google.rtdnToken")
+        val log = org.slf4j.LoggerFactory.getLogger("Store")
+        if (roots.isEmpty() && dev) log.warn("App Store notifications are accepted WITHOUT signature checks (dev mode, no APPSTORE_ROOT_CERT_PATH)")
+        log.info("Store notifications: apple ${if (roots.isNotEmpty() || dev) "on" else "off (set APPSTORE_ROOT_CERT_PATH)"}, google ${if (token.isNotEmpty()) "on" else "off (set GOOGLE_PLAY_RTDN_TOKEN)"}")
+        com.matchdayclub.core.store.StoreNotificationsConfig(appleEnabled = roots.isNotEmpty() || dev, appleRoots = roots, appleBundleId = prop("iap.apple.bundleId"), googleToken = token, googlePackageName = prop("iap.google.packageName"))
+    }
     single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get(), repo = get()) }
     single { com.matchdayclub.core.store.AdMobSsvVerifier(get()) }
     single {
@@ -228,3 +235,9 @@ val appModule = module {
     single { RefreshTokenUseCase(get(), get(), get(), get()) }
     single { LogoutUseCase(get()) }
 }
+
+/** Apple Root CA - G3 from `iap.apple.rootCertPath` (verifies signed transactions and server notifications); empty when not configured. */
+private fun appleRoots(c: io.ktor.server.config.ApplicationConfig): List<java.security.cert.X509Certificate> =
+    c.propertyOrNull("iap.apple.rootCertPath")?.getString()?.trim()?.takeIf { it.isNotEmpty() }?.let { path ->
+        java.io.File(path).inputStream().use { listOf(java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(it) as java.security.cert.X509Certificate) }
+    } ?: emptyList()

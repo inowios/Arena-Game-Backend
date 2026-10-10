@@ -22,6 +22,7 @@ import java.util.Base64
 
 private fun b64url(b: ByteArray) = Base64.getUrlEncoder().withoutPadding().encodeToString(b)
 private fun enc(s: String) = URLEncoder.encode(s, Charsets.UTF_8).replace("+", "%20")
+internal fun sha256Hex(s: String): String = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 private fun pemBody(pem: String) = pem.replace(Regex("-----(BEGIN|END) [A-Z ]+-----"), "").replace("\\n", "").replace(Regex("\\s"), "")
 
 /** OAuth2 access tokens for a Google service account (JWT bearer grant), cached until shortly before expiry. */
@@ -70,10 +71,8 @@ class GooglePlayVerifier(private val http: HttpGateway, private val account: Goo
             else -> throw ValidationException("Purchase was cancelled")
         }
         val orderId = o["orderId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-        return "google:" + (orderId ?: sha256(token))
+        return "google:" + (orderId ?: sha256Hex(token))
     }
-
-    private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 }
 
 /**

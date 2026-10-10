@@ -54,6 +54,16 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/daily/claim" -H 
 curl -sf "$B/club/pass" -H "$A" | j "assert len(d['data']['tasks'])==3 and len(d['data']['levels'])==30"
 curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","productId":"gold_small","token":"dev:smoke-'$DEV'"}' | j "assert d['data']['status']=='GRANTED' and d['data']['gold']==100"
 curl -sf -X POST "$B/purchases/verify" -H "$H" -H "$A" -d '{"store":"DEV","productId":"gold_small","token":"dev:smoke-'$DEV'"}' | j "assert d['data']['status']=='DUPLICATE'"
+if [ "${SMOKE_MATCHDAY:-1}" = "1" ]; then
+  step "store refund and its reversal (dev route)"
+  G1=$(curl -sf "$B/club" -H "$A" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['club']['gold'])")
+  curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"REFUND"}' | j "assert d['data']['outcome']=='APPLIED'"
+  curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"REFUND"}' | j "assert d['data']['outcome']=='ALREADY'"
+  curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['gold']==$G1-100"
+  curl -sf "$B/inbox" -H "$A" | j "assert any(i['kind']=='REFUND' for i in d['data']['items'])"
+  curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"RESTORE"}' | j "assert d['data']['outcome']=='APPLIED'"
+  curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['gold']==$G1"
+fi
 curl -sf -X POST "$B/ads/reward" -H "$H" -H "$A" -d '{"placement":"DOUBLE_INCOME"}' | j "assert d['data']['id']"
 curl -sf -X POST "$B/push-tokens" -H "$H" -H "$A" -d '{"token":"fcm-smoke-'$DEV'","platform":"android"}' | j "assert d['data']['ok']"
 step "weekly cup tab, analytics batch, legal pages"

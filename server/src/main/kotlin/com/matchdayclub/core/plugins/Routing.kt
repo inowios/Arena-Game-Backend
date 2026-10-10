@@ -41,6 +41,7 @@ fun Route.apiRoutes() {
     athleteRoutes()
     leagueRoutes()
     economyRoutes()
+    storeNotificationRoutes()
     socialRoutes()
     allianceRoutes()
     liveOpsRoutes()

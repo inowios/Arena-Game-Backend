@@ -69,7 +69,15 @@ fun Route.leagueRoutes() {
 /** Development-only helpers (enabled by ktor.development=true). */
 fun Route.devRoutes() {
     val runner: MatchdayRunner by inject()
+    val refunds: com.matchdayclub.domain.usecase.economy.RefundUseCase by inject()
     route("/dev") {
         post("/matchday/run") { call.respond(mapOf("played" to runner.runDueRounds()).toSuccessResponse()) }
+        // what a store refund would do, without a store: {"externalId": "dev:gold_small:<order>", "action": "REFUND" | "RESTORE"}
+        post("/store/refund") {
+            val r = call.receive<Map<String, String>>()
+            val action = if (r["action"]?.uppercase() == "RESTORE") com.matchdayclub.domain.usecase.economy.RefundAction.RESTORE else com.matchdayclub.domain.usecase.economy.RefundAction.REFUND
+            val id = r["externalId"]?.takeIf { it.isNotBlank() } ?: throw com.matchdayclub.domain.exception.ValidationException("externalId required")
+            call.respond(mapOf("outcome" to refunds(action, listOf(id)).name).toSuccessResponse())
+        }
     }
 }

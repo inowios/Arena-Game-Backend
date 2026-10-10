@@ -1,14 +1,16 @@
 package com.matchdayclub.domain.usecase.economy
 
 import com.matchdayclub.common.time.Clock
+import com.matchdayclub.common.tx.NoTx
+import com.matchdayclub.common.tx.Tx
+import com.matchdayclub.domain.model.ClubItem
+import com.matchdayclub.domain.model.SeasonPass
 import com.matchdayclub.domain.repository.ClubRepository
 import com.matchdayclub.domain.repository.EconomyRepository
 import com.matchdayclub.domain.repository.InventoryRepository
 import com.matchdayclub.domain.rules.Economy
 import com.matchdayclub.domain.usecase.account.InboxService
 import com.matchdayclub.domain.usecase.analytics.EventLog
-import com.matchdayclub.domain.usecase.common.NoTx
-import com.matchdayclub.domain.usecase.common.Tx
 import org.slf4j.LoggerFactory
 
 /** What a store notification asks for. */
@@ -20,7 +22,7 @@ enum class RefundOutcome { APPLIED, ALREADY, UNKNOWN }
  * and Google Play voided purchases. A refund takes back what the purchase gave — gold and coins as far as the club
  * still has them (never below zero; what was already spent stays spent), the premium pass and the product's item —
  * marks the purchase REFUNDED and tells the player in the inbox. A reversed refund gives it all back. Idempotent:
- * stores resend notifications.
+ * stores resend notifications. A refunded one-time product (the starter pack) can be bought again.
  */
 class RefundUseCase(
     private val clubs: ClubRepository,
@@ -52,9 +54,8 @@ class RefundUseCase(
                 g to c
             } else {
                 clubs.update(club.copy(gold = club.gold + purchase.grantedGold, coins = club.coins + purchase.grantedCoins, updatedAt = now))
-                if (product?.premiumPass == true) (repo.pass(club.id, club.seasonNo) ?: com.matchdayclub.domain.model.SeasonPass(club.id, club.seasonNo, 0, false, 0, 0))
-                    .let { repo.upsertPass(it.copy(premium = true)) }
-                product?.item?.let { inventory.add(com.matchdayclub.domain.model.ClubItem(club.id, it, "SHOP", now)) }
+                if (product?.premiumPass == true) (repo.pass(club.id, club.seasonNo) ?: SeasonPass(club.id, club.seasonNo, 0, false, 0, 0)).let { repo.upsertPass(it.copy(premium = true)) }
+                product?.item?.let { inventory.add(ClubItem(club.id, it, "SHOP", now)) }
                 purchase.grantedGold to purchase.grantedCoins
             }
             repo.setPurchaseStatus(purchase.id, wanted)

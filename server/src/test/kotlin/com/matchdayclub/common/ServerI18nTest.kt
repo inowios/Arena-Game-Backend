@@ -67,6 +67,9 @@ class ServerI18nTest {
             "App Store authentication failed", "App Store reply without transaction", "Invalid Apple token", "Unknown Apple key",
             "Invalid Google token", "Google token expired", "Google token audience mismatch", "Invalid refresh token", "Refresh token already used",
             "Refresh token expired or revoked", "User not found", "Bad slot",
+            // store webhooks (the stores read these, not players) and the dev refund route
+            "Malformed notification", "Notification is for another app", "data missing", "externalId required", "message missing", "message.data missing",
+            "notificationType missing", "signedPayload missing", "signedTransactionInfo missing", "transactionId missing", "voided purchase without an order id or token",
             // app/admin-only
             "Too many events in one batch", "days must be 1..365", "Bad date", "Admin token required", "Grant must be positive", "Grant too large", "Reason required",
         )
