@@ -33,7 +33,7 @@ class LiveMatchRepositoryImpl : LiveMatchRepository {
             .orderBy(ClubTable.updatedAt, SortOrder.DESC).limit(limit).map { it.toClub() }
     }
     override suspend fun recent(clubId: UUID, limit: Int) = dbQuery {
-        LiveMatchTable.selectAll().where { (LiveMatchTable.clubId eq clubId) and (LiveMatchTable.status neq LiveStatus.OPEN.name) }.orderBy(LiveMatchTable.createdAt, SortOrder.DESC).limit(limit).map { it.toModel() }
+        LiveMatchTable.selectAll().where { (LiveMatchTable.clubId eq clubId) and (LiveMatchTable.status neq LiveStatus.OPEN.name) and (LiveMatchTable.status neq LiveStatus.CANCELLED.name) }.orderBy(LiveMatchTable.createdAt, SortOrder.DESC).limit(limit).map { it.toModel() }
     }
 
     private fun UpdateBuilder<*>.fill(m: LiveMatch) {

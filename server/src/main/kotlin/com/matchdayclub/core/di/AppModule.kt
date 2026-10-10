@@ -154,6 +154,7 @@ val appModule = module {
     single<com.matchdayclub.domain.repository.LiveMatchRepository> { com.matchdayclub.data.repository.LiveMatchRepositoryImpl() }
     single { com.matchdayclub.domain.usecase.live.FinishLiveMatchUseCase(get(), get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get(), tx = get(), buildings = get()) }
     single { com.matchdayclub.domain.usecase.live.StartLiveMatchUseCase(get(), get(), get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase(get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.live.LiveReadinessUseCase(get(), get(), get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.live.ArenaChestUseCase(get(), get(), get(), tx = get()) }
     single<com.matchdayclub.domain.repository.MarketRepository> { com.matchdayclub.data.repository.MarketRepositoryImpl() }

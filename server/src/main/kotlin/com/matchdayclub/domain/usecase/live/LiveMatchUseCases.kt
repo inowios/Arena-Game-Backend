@@ -51,6 +51,8 @@ object LiveRules {
     const val MIN_DURATION_SECONDS = 180.0
     const val MAX_GOALS = 9
     const val OPPONENT_BAND = 150
+    /** How long after the hand-out a match may still be given back for another opponent. */
+    const val CANCEL_SECONDS = 120L
 
     fun tempoCost(t: Tactics) = (if (t.tempo == Tempo.HIGH) 1.5 else 1.0) * (if (t.plan == Plan.PRESSING) 1.2 else 1.0)
 
@@ -119,6 +121,18 @@ class StartLiveMatchUseCase(
         if (humans.isNotEmpty() && rnd.nextInt(100) < 50) return humans[rnd.nextInt(humans.size)]
         val pool = clubs.listBots(club.tzBucket).filter { it.division == arena.botDivision }
         return if (pool.isNotEmpty()) pool[rnd.nextInt(pool.size)] else bots.createBot(club.tzBucket, arena.botDivision, club.timezone, rnd.nextInt(24))
+    }
+}
+
+/** "Another opponent": a match handed out but not kicked off yet (within [LiveRules.CANCEL_SECONDS]) is given back without a result. */
+class CancelLiveMatchUseCase(private val service: ClubService, private val live: LiveMatchRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, matchId: UUID): LiveMatch = tx {
+        val club = service.lockedClubOf(userId)
+        val m = live.find(matchId)?.takeIf { it.clubId == club.id } ?: throw NotFoundException("Match not found")
+        if (m.status != LiveStatus.OPEN) throw ConflictException("Match already finished")
+        val now = clock.now()
+        if (now.epochSecond - m.createdAt.epochSecond > LiveRules.CANCEL_SECONDS) throw ConflictException("Too late to look for another opponent")
+        live.update(m.copy(status = LiveStatus.CANCELLED))
     }
 }
 

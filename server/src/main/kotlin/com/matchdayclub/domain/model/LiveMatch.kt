@@ -3,7 +3,8 @@ package com.matchdayclub.domain.model
 import java.time.Instant
 import java.util.UUID
 
-enum class LiveStatus { OPEN, FINISHED, ABANDONED }
+/** CANCELLED: given back before the kick-off ("another opponent") — no result, no penalty. */
+enum class LiveStatus { OPEN, FINISHED, ABANDONED, CANCELLED }
 
 /** A live match handed to a device: who plays whom with which starters; the result once reported. */
 data class LiveMatch(

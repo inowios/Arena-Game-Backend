@@ -130,5 +130,5 @@ class FakeLiveMatchRepository(private val clubs: FakeClubRepository) : com.match
     override suspend fun findOpen(clubId: UUID) = rows.values.filter { it.clubId == clubId && it.status == LiveStatus.OPEN }
     override suspend fun update(m: LiveMatch): LiveMatch { rows[m.id] = m; return m }
     override suspend fun opponents(clubId: UUID, minTrophies: Int, maxTrophies: Int, limit: Int) = clubs.rows.values.filter { !it.isBot && it.id != clubId && it.trophies in minTrophies..maxTrophies }.take(limit)
-    override suspend fun recent(clubId: UUID, limit: Int) = rows.values.filter { it.clubId == clubId && it.status != LiveStatus.OPEN }.sortedByDescending { it.createdAt }.take(limit)
+    override suspend fun recent(clubId: UUID, limit: Int) = rows.values.filter { it.clubId == clubId && it.status != LiveStatus.OPEN && it.status != LiveStatus.CANCELLED }.sortedByDescending { it.createdAt }.take(limit)
 }

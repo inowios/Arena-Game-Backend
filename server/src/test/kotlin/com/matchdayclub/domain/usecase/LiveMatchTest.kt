@@ -80,6 +80,22 @@ class LiveMatchTest {
     }
 
     @Test
+    fun `a match given back before kick-off costs nothing`() = runBlocking<Unit> {
+        create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val cancel = com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase(clubService, live, clock)
+        val first = start(u1, null)
+        clubs.rows.values.first { it.userId == u1 }.let { clubs.rows[it.id] = it.copy(trophies = 100) }
+        cancel(u1, first.match.id)
+        assertEquals(LiveStatus.CANCELLED, live.rows.getValue(first.match.id).status)
+        assertFailsWith<ConflictException> { cancel(u1, first.match.id) }
+        val second = start(u1, null)
+        assertEquals(100, second.home.club.trophies)
+        clock.advanceSeconds(200)
+        assertFailsWith<ConflictException> { cancel(u1, second.match.id) }
+        assertFailsWith<ConflictException> { finish(u1, first.match.id, win()) }
+    }
+
+    @Test
     fun `a match left open counts as a defeat when the next one starts`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val first = start(u1, null)

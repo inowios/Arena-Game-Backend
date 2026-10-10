@@ -23,6 +23,7 @@ private fun RoutingCall.uuid(name: String) = runCatching { UUID.fromString(param
 fun Route.liveRoutes() {
     val start: StartLiveMatchUseCase by inject()
     val finish: FinishLiveMatchUseCase by inject()
+    val cancel: com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase by inject()
     val clock: Clock by inject()
     val chest: com.matchdayclub.domain.usecase.live.ArenaChestUseCase by inject()
     authenticate(AUTH_JWT) { route("/live") {
@@ -33,6 +34,7 @@ fun Route.liveRoutes() {
             val opp = r.opponentClubId?.let { runCatching { UUID.fromString(it) }.getOrElse { throw ValidationException("Bad opponentClubId") } }
             call.respond(HttpStatusCode.Created, start(call.userId(), opp).toDto(clock.now()).toSuccessResponse(201))
         }
+        post("/{id}/cancel") { cancel(call.userId(), call.uuid("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
         post("/{id}/finish") {
             val report = call.receive<LiveReport>()
             call.respond(finish(call.userId(), call.uuid("id"), report).toDto(clock.now()).toSuccessResponse())
