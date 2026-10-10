@@ -42,6 +42,7 @@ fun Route.apiRoutes() {
     leagueRoutes()
     economyRoutes()
     socialRoutes()
+    allianceRoutes()
     analyticsRoutes()
     cupRoutes()
     liveRoutes()

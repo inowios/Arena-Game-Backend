@@ -97,6 +97,28 @@ class ApiIT {
     }
 
     @Test
+    fun `alliances over HTTP - create, join, chat, help, tournament, likes`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val a = guestWithClub("it-device-al-a", "Ally One")
+        val b = guestWithClub("it-device-al-b", "Ally Two")
+        call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 400)   // stadium 1
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE buildings SET level = 2 WHERE type = 'PITCH'") }
+        val id = call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 201).data.o()["alliance"]!!.o()["id"]!!.jsonPrimitive.content
+        call(HttpMethod.Post, "/alliances/$id/join", b)
+        assertEquals(2, call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray.size)
+        call(HttpMethod.Post, "/club/alliance/messages", b, """{"text":"hello allies"}""", expect = 201)
+        assertEquals("hello allies", call(HttpMethod.Get, "/club/alliance/messages", a).data.jsonArray.last().o()["text"]!!.jsonPrimitive.content)
+        call(HttpMethod.Get, "/alliances/tournament", a)
+        val bId = call(HttpMethod.Get, "/club", b).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        assertEquals(1, call(HttpMethod.Post, "/clubs/$bId/like", a).data.o()["likes"]!!.jsonPrimitive.int)
+        assertEquals(1, call(HttpMethod.Get, "/clubs/top-liked", a).data.jsonArray.size)
+        call(HttpMethod.Post, "/club/alliance/leave", b)
+        call(HttpMethod.Post, "/club/alliance/leave", a)
+        call(HttpMethod.Get, "/alliances/$id", a, expect = 404)
+    }
+
+    @Test
     fun `chat, challenges, invite landing pages and app links over HTTP`() = testApplication {
         environment { config = TestDb.appConfig(mapOf("links.baseUrl" to "https://mdc.test", "links.androidCertSha256" to "AA:BB", "links.iosTeamId" to "TEAM1")) }
         application { module() }

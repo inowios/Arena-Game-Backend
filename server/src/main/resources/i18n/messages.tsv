@@ -183,3 +183,22 @@ This layout no longer fits: move the new buildings first	This layout no longer f
 # --- roads
 Unknown reward	Unknown reward	Recompensa desconocida	Recompensa desconhecida	Неизвестная награда	Невідома нагорода
 Not reached yet	Not reached yet	Todavía no alcanzado	Ainda não alcançado	Ещё не достигнуто	Ще не досягнуто
+# --- alliances
+Alliance name must be 3..24 characters	Alliance name must be 3..24 characters	El nombre de la alianza debe tener 3..24 caracteres	O nome da aliança deve ter 3..24 caracteres	Название союза — от 3 до 24 символов	Назва союзу — від 3 до 24 символів
+Alliance not found	Alliance not found	Alianza no encontrada	Aliança não encontrada	Союз не найден	Союз не знайдено
+Already helped	You already helped here	Ya ayudaste aquí	Você já ajudou aqui	Вы уже помогли здесь	Ви вже допомогли тут
+Already liked this week	You already liked this club this week	Ya te gustó este club esta semana	Você já curtiu este clube esta semana	Вы уже лайкнули этот клуб на этой неделе	Ви вже вподобали цей клуб цього тижня
+Enough helping for today	Enough helping for today — come back tomorrow	Suficiente ayuda por hoy, vuelve mañana	Já ajudou bastante hoje — volte amanhã	На сегодня помощи достаточно — возвращайтесь завтра	На сьогодні досить допомоги — повертайтеся завтра
+Help already asked	Help is already asked for this building	Ya se pidió ayuda para este edificio	Já foi pedida ajuda para esta construção	Помощь для этого здания уже запрошена	Допомогу для цієї будівлі вже попрошено
+Leave your alliance first	Leave your alliance first	Primero abandona tu alianza	Saia da sua aliança primeiro	Сначала выйдите из своего союза	Спершу вийдіть зі свого союзу
+Member not found	Member not found	Miembro no encontrado	Membro não encontrado	Участник не найден	Учасника не знайдено
+Not allowed for your role	Your role does not allow this	Tu rol no lo permite	Seu cargo não permite isso	Ваша роль этого не позволяет	Ваша роль цього не дозволяє
+Request not found	Request not found	Solicitud no encontrada	Pedido não encontrado	Заявка не найдена	Заявку не знайдено
+Tag must be 2..5 letters or digits	The tag must be 2..5 letters or digits	La etiqueta debe tener 2..5 letras o dígitos	A sigla deve ter 2..5 letras ou dígitos	Тег — от 2 до 5 латинских букв или цифр	Тег — від 2 до 5 латинських літер або цифр
+That club is already in an alliance	That club is already in an alliance	Ese club ya está en una alianza	Esse clube já está em uma aliança	Этот клуб уже в союзе	Цей клуб уже в союзі
+That name is taken	That name is taken	Ese nombre está ocupado	Esse nome já existe	Это название занято	Ця назва зайнята
+The alliance is full	The alliance is full	La alianza está llena	A aliança está cheia	Союз заполнен	Союз заповнений
+Unknown action	Unknown action	Acción desconocida	Ação desconhecida	Неизвестное действие	Невідома дія
+You are not in an alliance	You are not in an alliance	No estás en una alianza	Você não está em uma aliança	Вы не в союзе	Ви не в союзі
+You cannot help yourself	You cannot help yourself	No puedes ayudarte a ti mismo	Você não pode ajudar a si mesmo	Себе помогать нельзя	Собі допомагати не можна
+You cannot like your own club	You cannot like your own club	No puedes dar me gusta a tu propio club	Você não pode curtir o próprio clube	Свой клуб лайкать нельзя	Свій клуб вподобати не можна

@@ -23,6 +23,8 @@ class EconomyService(
     private val sectionCount: (suspend (UUID) -> Int)? = null,
     private val achievements: com.matchdayclub.domain.repository.AchievementRepository? = null,
 ) : ProgressTracker {
+    /** Other listeners of the same events (the alliance weekend tournament counts arena wins). */
+    var also: List<ProgressTracker> = emptyList()
     fun today(timezone: String): LocalDate = clock.now().atZone(ZoneId.of(timezone)).toLocalDate()
 
     suspend fun publicLeague(clubId: UUID): League? = leagues.listForClub(clubId).firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == com.matchdayclub.domain.model.LeagueStatus.ACTIVE }
@@ -39,6 +41,7 @@ class EconomyService(
     }
 
     override suspend fun record(clubId: UUID, event: ProgressEvent) {
+        also.forEach { runCatching { it.record(clubId, event) } }
         event.metric?.let { m -> achievements?.let { a -> runCatching { a.increment(clubId, m) }.onFailure { org.slf4j.LoggerFactory.getLogger("EconomyService").warn("counter failed", it) } } }
         val kind = event.task ?: return
         try {

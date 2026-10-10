@@ -103,7 +103,10 @@ val appModule = module {
     single {
         val sections = get<SectionService>(); val clubs = get<ClubRepository>()
         EconomyService(get(), get(), get(), { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }, achievements = get())
+            .also { e -> val koin = getKoin(); e.also = listOf(com.matchdayclub.domain.usecase.alliance.AllianceProgress { koin.get() }) }
     }
+    single<com.matchdayclub.domain.usecase.alliance.AllianceRepository> { com.matchdayclub.data.repository.AllianceRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.alliance.AllianceUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single {
         val c = get<Application>().environment.config
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
@@ -157,7 +160,7 @@ val appModule = module {
     single { LeavePrivateLeagueUseCase(get(), get(), tx = get(), chat = get()) }
     single<ChatRepository> { ChatRepositoryImpl() }
     single<SocialRepository> { SocialRepositoryImpl() }
-    single { com.matchdayclub.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get()) }
+    single { val koin = getKoin(); com.matchdayclub.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get(), channels = { club, ch -> koin.get<com.matchdayclub.domain.usecase.alliance.AllianceUseCases>().isMember(club, ch) }) }
     single { com.matchdayclub.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
     single { com.matchdayclub.domain.usecase.social.GetGroundsUseCase(get(), get(), get()) }

@@ -49,6 +49,7 @@ object ProfanityFilter {
 data class ChatLine(val message: LeagueMessage, val club: Club?)
 
 /** Private-league chat: members only, rate limited, masked, reportable (3 reports hide a line), blockable. */
+/** [channels]: other chat channels a club may use besides its private leagues (the alliance chat): (clubId, channelId) -> member. */
 class ChatService(
     private val service: ClubService,
     private val leagues: LeagueRepository,
@@ -56,6 +57,7 @@ class ChatService(
     private val chat: ChatRepository,
     private val clock: Clock,
     private val tx: Tx = NoTx,
+    private val channels: (suspend (UUID, UUID) -> Boolean)? = null,
 ) {
     companion object {
         const val MAX_LENGTH = 300
@@ -65,10 +67,10 @@ class ChatService(
         const val HIDE_AFTER_REPORTS = 3
     }
 
-    private suspend fun memberLeague(club: Club, leagueId: UUID): League {
+    private suspend fun memberLeague(club: Club, leagueId: UUID) {
+        if (channels?.invoke(club.id, leagueId) == true) return
         val league = leagues.findById(leagueId)?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League not found")
         if (club.id !in leagues.members(league.id)) throw AuthorizationException("Not a member of this league")
-        return league
     }
 
     private suspend fun withClubs(list: List<LeagueMessage>, me: Club): List<ChatLine> {
@@ -117,8 +119,9 @@ class ChatService(
     suspend fun delete(userId: UUID, messageId: UUID) {
         val me = service.clubOf(userId)
         val m = chat.find(messageId) ?: throw NotFoundException("Message not found")
-        val league = memberLeague(me, m.leagueId)
-        if (m.clubId != me.id && league.createdBy != me.id) throw AuthorizationException("Only the author or the league creator can delete")
+        memberLeague(me, m.leagueId)
+        val league = leagues.findById(m.leagueId)   // null for an alliance channel: only the author deletes there
+        if (m.clubId != me.id && league?.createdBy != me.id) throw AuthorizationException("Only the author or the league creator can delete")
         chat.markDeleted(m.id)
     }
 
