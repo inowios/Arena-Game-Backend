@@ -10,9 +10,13 @@ data class Arena(val index: Int, val key: String, val trophies: Int, val rewardK
  * rewards and who you meet. Separate from the league divisions.
  */
 object Arenas {
+    /** Bot "division" of the legends arena: live-match only, never a league division. */
+    const val LEGEND_DIVISION = 8
     val ALL = listOf(
         Arena(0, "YARD", 0, 1.0, 1), Arena(1, "DISTRICT", 300, 1.3, 2), Arena(2, "CITY", 700, 1.6, 3), Arena(3, "REGION", 1300, 2.0, 4),
         Arena(4, "COUNTRY", 2200, 2.5, 5), Arena(5, "CONTINENT", 3500, 3.1, 6), Arena(6, "WORLD", 5500, 3.8, 7),
+        // above the world: legends — bots up to 99, for squads a stadium 9–10 lets grow that far
+        Arena(7, "LEGENDS", 8000, 4.5, LEGEND_DIVISION),
     )
     fun of(trophies: Int): Arena = ALL.last { trophies >= it.trophies }
     fun byKey(key: String) = ALL.firstOrNull { it.key == key } ?: ALL[0]

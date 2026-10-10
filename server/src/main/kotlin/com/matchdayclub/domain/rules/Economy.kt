@@ -44,8 +44,11 @@ object Economy {
     const val TASKS_PER_DAY = 3
     const val DOUBLE_INCOME_COOLDOWN_SECONDS = 4 * 3600L
     const val FREE_SPEEDUP_MAX_SECONDS = 30 * 60L
-    const val MAX_BUILDERS = 2
+    const val MAX_BUILDERS = 3
     const val SECOND_BUILDER_GOLD = 250
+    /** Gold for the next builder when the club has [slots]: the 2nd 250, the 3rd 750 (and a stadium 5). */
+    fun builderGold(slots: Int): Int = if (slots <= 1) SECOND_BUILDER_GOLD else 750
+    const val THIRD_BUILDER_STADIUM = 5
 
     val PRODUCTS = listOf(
         Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200), Product("gold_huge", gold = 2600),

@@ -244,12 +244,13 @@ class MoveBuildingUseCase(private val service: ClubService, private val building
     }
 }
 
-/** Buys the second builder (parallel construction) for gold. */
+/** Hires another builder for gold: the 2nd any time, the 3rd once the stadium is level 5 (long constructions). */
 class BuyBuilderUseCase(private val service: ClubService, private val clubs: ClubRepository, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID): Club = tx {
-        val club = service.lockedClubOf(userId)
+        val st = service.state(userId, lock = true); val club = st.club
         if (club.builderSlots >= Economy.MAX_BUILDERS) throw ConflictException("All builders already hired")
-        val charged = service.charge(club, gold = Economy.SECOND_BUILDER_GOLD)
+        if (club.builderSlots >= 2 && st.stadium < Economy.THIRD_BUILDER_STADIUM) throw ValidationException("Requires stadium level {0}", Economy.THIRD_BUILDER_STADIUM)
+        val charged = service.charge(club, gold = Economy.builderGold(club.builderSlots))
         clubs.update(charged.copy(builderSlots = charged.builderSlots + 1, updatedAt = clock.now()))
     }
 }

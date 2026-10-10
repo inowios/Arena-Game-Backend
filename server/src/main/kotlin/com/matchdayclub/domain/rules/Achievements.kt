@@ -30,7 +30,7 @@ object Achievements {
         Achievement("winner", Metric.MATCHES_WON, listOf(1, 10, 50, 150, 400), listOf(5, 10, 25, 40, 80)),
         Achievement("striker", Metric.GOALS, listOf(10, 50, 200, 500, 1500), listOf(5, 15, 30, 60, 120)),
         Achievement("showman", Metric.SIGNATURES, listOf(1, 10, 50, 200), listOf(5, 15, 40, 80)),
-        Achievement("arena", Metric.ARENA, listOf(2, 3, 4, 5, 6, 7), listOf(10, 20, 35, 50, 80, 150)),
+        Achievement("arena", Metric.ARENA, listOf(2, 3, 4, 5, 6, 7, 8), listOf(10, 20, 35, 50, 80, 150, 250)),
         Achievement("all_rounder", Metric.SECTIONS_WON, listOf(5, 25, 100, 300), listOf(5, 15, 30, 60)),
         Achievement("climber", Metric.DIVISION, listOf(2, 3, 4, 5, 6, 7), listOf(15, 25, 40, 60, 90, 150)),
         Achievement("champion", Metric.TITLES, listOf(1, 3, 10), listOf(50, 100, 250)),

@@ -144,7 +144,7 @@ class ApiIT {
         assertEquals("GRANTED", bought["status"]!!.jsonPrimitive.content)
         assertEquals("DUPLICATE", call(HttpMethod.Post, "/purchases/verify", a, """{"store":"DEV","productId":"gold_medium","token":"dev:it-1"}""").data.o()["status"]!!.jsonPrimitive.content)
         assertEquals(2, call(HttpMethod.Post, "/club/builders", a).data.o()["builderSlots"]!!.jsonPrimitive.int)
-        call(HttpMethod.Post, "/club/builders", a, expect = 409)
+        call(HttpMethod.Post, "/club/builders", a, expect = 400)   // the 3rd builder needs a stadium 5
     }
 
     @Test
