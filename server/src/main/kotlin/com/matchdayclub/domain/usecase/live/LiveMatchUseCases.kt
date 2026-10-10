@@ -244,13 +244,13 @@ class LiveReadinessUseCase(private val service: ClubService, private val athlete
         val tired = eleven.count { it.currentFatigue(now) >= Arenas.MAX_FATIGUE_TO_PLAY || it.isInjured(now) }
         val ready = LiveRules.restedEleven(lineup, squad, now) != null
         val medical = buildings.listByClub(club.id).firstOrNull { it.type == BuildingType.MEDICAL_CENTER }?.level ?: 0
-        val worstMinutes = (eleven.maxOfOrNull { it.currentFatigue(now) } ?: 0) * FATIGUE_RECOVERY_SECONDS / 60
-        return LiveReadiness(energy, ready, if (ready) 0 else LiveRules.minutesToRest(squad, now), tired, LiveRules.restGold(worstMinutes.toInt(), medical))
+        val minutes = if (ready) 0 else LiveRules.minutesToRest(squad, now)
+        return LiveReadiness(energy, ready, minutes, tired, LiveRules.restGold(minutes, medical))
     }
 }
 
-/** Gold for a full recovery of the eleven: a gold per five minutes the most tired man still needs, cheaper with a medical centre, never free. */
-fun LiveRules.restGold(minutesToFull: Int, medicalLevel: Int): Int = (Math.ceil(minutesToFull / 5.0) * (1.0 - 0.15 * medicalLevel)).roundToInt().coerceAtLeast(2)
+/** Gold for a full recovery of the eleven: two plus a gold per three minutes until the squad could play again, cheaper with a medical centre. */
+fun LiveRules.restGold(minutesToReady: Int, medicalLevel: Int): Int = ((2 + Math.ceil(minutesToReady / 3.0)) * (1.0 - 0.15 * medicalLevel)).roundToInt().coerceAtLeast(2)
 
 /** Pays gold to rest the whole squad at once (the "army" is back): every athlete's fatigue goes to zero. */
 class RestSquadUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val readiness: LiveReadinessUseCase, private val clock: Clock, private val tx: Tx = NoTx) {
