@@ -7,7 +7,11 @@ package com.matchdayclub.domain.rules
 enum class Metric(val counted: Boolean) {
     MATCHES_WON(true), SECTIONS_WON(true), TRAININGS(true), INCOME_COLLECTIONS(true), ACADEMY_GRADUATES(true),
     FRIENDLIES(true), INVITES(true), BEST_STREAK(true),
+    /** Arena (live) matches: goals scored by the club and signature moves pulled off. */
+    GOALS(true), SIGNATURES(true),
     CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), BUILDINGS_MAXED(false), SECTIONS_OPEN(false), CUPS(false),
+    /** The rung of the arena ladder the club stands on (1 = yard … 7 = world). */
+    ARENA(false),
 }
 
 /** Tiered achievement: reaching tiers[i] pays gold[i] (+ an achievement cosmetic for some tiers, see [Cosmetics]). */
@@ -20,6 +24,9 @@ data class Achievement(val id: String, val metric: Metric, val tiers: List<Int>,
 object Achievements {
     val ALL: List<Achievement> = listOf(
         Achievement("winner", Metric.MATCHES_WON, listOf(1, 10, 50, 150, 400), listOf(5, 10, 25, 40, 80)),
+        Achievement("striker", Metric.GOALS, listOf(10, 50, 200, 500, 1500), listOf(5, 15, 30, 60, 120)),
+        Achievement("showman", Metric.SIGNATURES, listOf(1, 10, 50, 200), listOf(5, 15, 40, 80)),
+        Achievement("arena", Metric.ARENA, listOf(2, 3, 4, 5, 6, 7), listOf(10, 20, 35, 50, 80, 150)),
         Achievement("all_rounder", Metric.SECTIONS_WON, listOf(5, 25, 100, 300), listOf(5, 15, 30, 60)),
         Achievement("climber", Metric.DIVISION, listOf(2, 3, 4, 5, 6, 7), listOf(15, 25, 40, 60, 90, 150)),
         Achievement("champion", Metric.TITLES, listOf(1, 3, 10), listOf(50, 100, 250)),

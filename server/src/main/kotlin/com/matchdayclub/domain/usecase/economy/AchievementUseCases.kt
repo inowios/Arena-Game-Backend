@@ -39,6 +39,7 @@ class AchievementService(
             when (m) {
                 Metric.CLUB_LEVEL -> club.level.toLong()
                 Metric.DIVISION -> club.division.toLong()
+                Metric.ARENA -> (Arenas.of(club.trophies).index + 1).toLong()
                 Metric.TITLES -> trophies.count { it.kind == TrophyKind.LEAGUE_TITLE }.toLong()
                 Metric.PROMOTIONS -> trophies.count { it.kind == TrophyKind.PROMOTION }.toLong()
                 Metric.CUPS -> trophies.count { it.kind == TrophyKind.CUP }.toLong()

@@ -12,11 +12,13 @@ import com.matchdayclub.domain.usecase.league.BotService
 import com.matchdayclub.domain.usecase.league.LineupService
 import com.matchdayclub.domain.usecase.live.FinishLiveMatchUseCase
 import com.matchdayclub.domain.usecase.live.LiveReport
+import com.matchdayclub.domain.usecase.live.LiveReportEvent
 import com.matchdayclub.domain.usecase.live.StartLiveMatchUseCase
 import com.matchdayclub.testutil.*
 import kotlinx.coroutines.runBlocking
 import java.time.Instant
 import java.util.UUID
+import com.matchdayclub.domain.rules.ProgressEvent
 import kotlin.test.*
 
 class LiveMatchTest {
@@ -26,7 +28,8 @@ class LiveMatchTest {
     private val bots = BotService(users, clubs, athletes, clock)
     private val clubService = ClubService(clubs, buildings, clock)
     private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
-    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock)
+    private val events = mutableListOf<ProgressEvent>()
+    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock, progress = { _, e -> events += e })
     private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
     private val u1 = UUID.randomUUID()
 
@@ -49,6 +52,12 @@ class LiveMatchTest {
         assertTrue(tired.all { it.currentFatigue(clock.now()) == Arenas.MATCH_FATIGUE }, "fatigue ${tired.map { it.fatigue }}")
         assertEquals(LiveStatus.FINISHED, live.rows.getValue(s.match.id).status)
         assertFailsWith<ConflictException> { finish(u1, s.match.id, win()) }
+        // the daily tasks and the counters hear about it: a match, a win, two goals (and no signature move this time)
+        assertEquals(listOf(ProgressEvent.MATCH_PLAYED, ProgressEvent.MATCH_WON, ProgressEvent.LIVE_PLAYED, ProgressEvent.LIVE_WON, ProgressEvent.GOAL_SCORED, ProgressEvent.GOAL_SCORED), events)
+        events.clear()
+        val s2 = start(u1, null)
+        finish(u1, s2.match.id, LiveReport(1, 1, duration = 250.0, events = listOf(LiveReportEvent(3, "SIGNATURE", "HOME", "x"), LiveReportEvent(9, "SIGNATURE", "AWAY", "y"))))
+        assertEquals(listOf(ProgressEvent.MATCH_PLAYED, ProgressEvent.LIVE_PLAYED, ProgressEvent.GOAL_SCORED, ProgressEvent.SIGNATURE_USED), events)
     }
 
     @Test

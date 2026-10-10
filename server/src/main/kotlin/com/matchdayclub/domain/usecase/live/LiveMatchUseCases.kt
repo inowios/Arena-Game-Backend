@@ -51,6 +51,8 @@ object LiveRules {
     /** The shortest a genuinely played match can be (two halves) — anything shorter is a made-up report. */
     const val MIN_DURATION_SECONDS = 180.0
     const val MAX_GOALS = 9
+    /** Signature moves a report may claim for a match (one every ~25 s per player is the client's own cap). */
+    const val MAX_SIGNATURES = 12
     const val OPPONENT_BAND = 150
     /** How long after the hand-out a match may still be given back for another opponent. */
     const val CANCEL_SECONDS = 120L
@@ -238,6 +240,12 @@ class FinishLiveMatchUseCase(
         val finished = live.update(m.copy(status = status, homeScore = report.homeScore, awayScore = report.awayScore, resultJson = json.encodeToString(report), trophiesDelta = delta, finishedAt = now))
         progress.record(club.id, ProgressEvent.MATCH_PLAYED)
         if (outcome == Outcome.WIN) progress.record(club.id, ProgressEvent.MATCH_WON)
+        if (status == LiveStatus.FINISHED) {
+            progress.record(club.id, ProgressEvent.LIVE_PLAYED)
+            if (outcome == Outcome.WIN) progress.record(club.id, ProgressEvent.LIVE_WON)
+            repeat(report.homeScore) { progress.record(club.id, ProgressEvent.GOAL_SCORED) }
+            repeat(report.events.count { it.type == "SIGNATURE" && it.side == "HOME" }.coerceAtMost(LiveRules.MAX_SIGNATURES)) { progress.record(club.id, ProgressEvent.SIGNATURE_USED) }
+        }
         // the club whose line-up defended: a smaller swing the other way, and a note in its inbox
         val opp = clubs.findById(m.opponentId)
         if (opp != null && !opp.isBot) {

@@ -10,6 +10,13 @@ enum class TaskKind(val target: Int, val xp: Int, val title: String) {
     WIN_MATCH(1, 60, "Win your matchday match"),
     WIN_SECTIONS(2, 70, "Win 2 sections on matchday"),
     SET_LINEUP(1, 20, "Save your lineup"),
+    // the arena (live matches): one of these is on the list every day
+    PLAY_LIVE_3(3, 50, "Play 3 arena matches"),
+    WIN_LIVE_2(2, 70, "Win 2 arena matches"),
+    SCORE_5(5, 60, "Score 5 goals in the arena"),
+    SIGNATURE_1(1, 50, "Pull off a signature move");
+
+    val arena get() = this == PLAY_LIVE_3 || this == WIN_LIVE_2 || this == SCORE_5 || this == SIGNATURE_1
 }
 
 /** Gameplay events reported by other modules: they advance daily tasks and achievement counters. */
@@ -18,6 +25,7 @@ enum class ProgressEvent(val task: TaskKind?, val metric: Metric? = null) {
     FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY, Metric.FRIENDLIES), MATCH_WON(TaskKind.WIN_MATCH, Metric.MATCHES_WON),
     SECTION_WON(TaskKind.WIN_SECTIONS, Metric.SECTIONS_WON), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null),
     ACADEMY_GRADUATE(null, Metric.ACADEMY_GRADUATES), INVITE_JOINED(null, Metric.INVITES),
+    LIVE_PLAYED(TaskKind.PLAY_LIVE_3), LIVE_WON(TaskKind.WIN_LIVE_2), GOAL_SCORED(TaskKind.SCORE_5, Metric.GOALS), SIGNATURE_USED(TaskKind.SIGNATURE_1, Metric.SIGNATURES),
 }
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
@@ -64,9 +72,11 @@ object Economy {
 
     /** Deterministic 3 tasks per club per day. WIN_MATCH only on days a league match is scheduled (caller filters). */
     fun tasksFor(clubId: UUID, day: LocalDate, includeMatch: Boolean, multiSection: Boolean = false): List<TaskKind> {
-        val pool = TaskKind.values().filter { (includeMatch || (it != TaskKind.WIN_MATCH && it != TaskKind.WIN_SECTIONS)) && (multiSection || it != TaskKind.WIN_SECTIONS) }
-        val seed = Math.floorMod(clubId.hashCode() + day.toEpochDay().toInt() * 31, pool.size)
-        return (0 until TASKS_PER_DAY).map { pool[(seed + it * 2) % pool.size] }.distinct().let { if (it.size < TASKS_PER_DAY) (it + pool).distinct().take(TASKS_PER_DAY) else it }
+        val arena = TaskKind.values().filter { it.arena }
+        val pool = TaskKind.values().filter { !it.arena && (includeMatch || (it != TaskKind.WIN_MATCH && it != TaskKind.WIN_SECTIONS)) && (multiSection || it != TaskKind.WIN_SECTIONS) }
+        val seed = Math.floorMod(clubId.hashCode() + day.toEpochDay().toInt() * 31, pool.size * arena.size)
+        val rest = (0 until TASKS_PER_DAY - 1).map { pool[(seed + it * 2) % pool.size] }.distinct().let { if (it.size < TASKS_PER_DAY - 1) (it + pool).distinct().take(TASKS_PER_DAY - 1) else it }
+        return listOf(arena[seed % arena.size]) + rest
     }
 
     fun passLevel(xp: Int) = (xp / XP_PER_LEVEL).coerceIn(0, PASS_LEVELS)
