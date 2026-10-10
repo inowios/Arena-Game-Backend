@@ -7,6 +7,7 @@ import com.matchdayclub.domain.rules.BuildingCatalog
 import com.matchdayclub.domain.rules.BuildingSpec
 import com.matchdayclub.domain.rules.ClubLevels
 import com.matchdayclub.domain.rules.LevelSpec
+import com.matchdayclub.domain.rules.Stadium
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
@@ -29,8 +30,11 @@ import java.time.Instant
 /** Rewarded-ad state for the club screen: double income window/cooldown and today's free speed-up. */
 @Serializable data class AdsStateDto(val doubleIncomeUntil: String?, val doubleIncomeReadyAt: String?, val freeSpeedupAvailable: Boolean)
 
-@Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredClubLevel: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
-@Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>)
+/** [requiredStadium]: stadium level this level needs; [requiredTrophies]: for the stadium — the trophies a bigger stadium needs. */
+@Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredStadium: Int, val requiredTrophies: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
+/** [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first stadium level with a copy. */
+@Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>,
+                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1)
 
 @Serializable data class BuildingDto(
     val id: String, val type: String, val level: Int, val x: Int, val y: Int, val rotation: Int, val state: String,
@@ -39,7 +43,8 @@ import java.time.Instant
     val variant: String? = null,
 )
 
-@Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null)
+@Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
+                                          /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1)
 /** Readiness for a live match: energy of the eleven (0–100), whether they can start, minutes until they can, gold for an instant rest. */
 @Serializable data class LiveReadyDto(val energy: Int, val ready: Boolean, val restMinutes: Int, val tired: Int, val restGold: Int)
 fun com.matchdayclub.domain.usecase.live.LiveReadiness.toDto() = LiveReadyDto(energy, ready, restMinutes, tired, restGold)
@@ -53,8 +58,8 @@ fun Club.adsState(now: Instant): AdsStateDto {
     return AdsStateDto(doubleIncomeUntil?.takeIf { it.isAfter(now) }?.toString(), doubleIncomeAdAt?.plusSeconds(cooldown)?.takeIf { it.isAfter(now) }?.toString(), freeSpeedupDate != today)
 }
 
-fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredClubLevel, incomePerHour, capHours, effect, effect2)
-fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, if (maxPerClub == Int.MAX_VALUE) -1 else maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) })
+fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
+fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium)
 
 fun Building.toDto(now: Instant, clubLevel: Int): BuildingDto {
     val spec = BuildingCatalog.level(type, level)

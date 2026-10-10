@@ -48,7 +48,7 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto()).toSuccessResponse())
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             get("/inbox") {

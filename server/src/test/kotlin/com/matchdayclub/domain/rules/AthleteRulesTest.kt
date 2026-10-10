@@ -40,8 +40,8 @@ class AthleteRulesTest {
 
     @Test
     fun `training rules read the catalog`() {
-        assertEquals(1, TrainingRules.slots(1)); assertEquals(3, TrainingRules.slots(3)); assertEquals(2, TrainingRules.delta(2))
-        assertEquals(60, TrainingRules.attributeCap(1)); assertEquals(40..55, TrainingRules.academyQuality(1)); assertEquals(4 * 3600L, TrainingRules.medicalCooldownSeconds(1))
+        assertEquals(1, TrainingRules.slots(1)); assertEquals(2, TrainingRules.slots(3)); assertEquals(4, TrainingRules.slots(8)); assertEquals(2, TrainingRules.delta(2))
+        assertEquals(60, TrainingRules.attributeCap(1)); assertEquals(40..55, TrainingRules.academyQuality(1)); assertEquals(5 * 3600L, TrainingRules.medicalCooldownSeconds(1)); assertEquals(99, TrainingRules.attributeCap(10))
     }
 
     @Test

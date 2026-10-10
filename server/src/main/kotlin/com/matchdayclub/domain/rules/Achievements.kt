@@ -12,6 +12,8 @@ enum class Metric(val counted: Boolean) {
     CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), BUILDINGS_MAXED(false), SECTIONS_OPEN(false), CUPS(false),
     /** The rung of the arena ladder the club stands on (1 = yard … 7 = world). */
     ARENA(false),
+    /** The stadium level (the club's town hall). */
+    STADIUM(false),
 }
 
 /** Tiered achievement: reaching tiers[i] pays gold[i] (+ an achievement cosmetic for some tiers, see [Cosmetics]). */
@@ -33,6 +35,7 @@ object Achievements {
         Achievement("promoted", Metric.PROMOTIONS, listOf(1, 3, 6), listOf(20, 40, 80)),
         Achievement("cup_winner", Metric.CUPS, listOf(1, 3, 10), listOf(30, 80, 200)),
         Achievement("growing_club", Metric.CLUB_LEVEL, listOf(3, 5, 7, 10), listOf(10, 25, 50, 100)),
+        Achievement("stadium", Metric.STADIUM, listOf(2, 4, 6, 8, 10), listOf(10, 25, 50, 90, 150)),
         Achievement("master_builder", Metric.BUILDINGS_MAXED, listOf(1, 3, 6, 10), listOf(10, 20, 40, 80)),
         Achievement("multisport", Metric.SECTIONS_OPEN, listOf(2, 3), listOf(20, 40)),
         Achievement("coach", Metric.TRAININGS, listOf(5, 50, 250, 1000), listOf(5, 15, 30, 60)),

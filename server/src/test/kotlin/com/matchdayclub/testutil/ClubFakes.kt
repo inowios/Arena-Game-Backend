@@ -31,6 +31,11 @@ class FakeBuildingRepository : BuildingRepository {
     }
     override suspend fun move(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun delete(id: UUID) { rows.remove(id) }
+    /** Tests that need buildings a bigger stadium opens: puts the club's stadium on [level] at once. */
+    fun setStadium(clubId: UUID, level: Int) {
+        val p = rows.values.first { it.clubId == clubId && it.type == com.matchdayclub.domain.rules.BuildingType.PITCH }
+        rows[p.id] = p.copy(level = level, state = com.matchdayclub.domain.model.BuildingState.IDLE, upgradeEndsAt = null)
+    }
 }
 
 class FakeMarketRepository : com.matchdayclub.domain.repository.MarketRepository {

@@ -21,6 +21,8 @@ fun interface ClubInitializer { suspend fun onClubCreated(club: Club) }
 fun interface BuildingListener { suspend fun onCompleted(building: Building) }
 
 data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant) {
+    /** The stadium level whose limits apply now (the previous one while the stadium itself is being upgraded). */
+    val stadium get() = Stadium.level(buildings)
     /** Constructions (first build or upgrade) occupying a builder. Decor is placed instantly and never occupies one. */
     val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type != BuildingType.DECOR }
 }
@@ -37,7 +39,7 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         val club = if (lock) lockedClubOf(userId) else clubOf(userId)
         val now = clock.now()
         val list = buildings.listByClub(club.id).map { finalise(it, now) }
-        return ClubState(club, list, ClubLevels.gridSize(club.level), now)
+        return ClubState(club, list, maxOf(ClubLevels.gridSize(club.level), Stadium.gridSize(Stadium.level(list))), now)
     }
 
     suspend fun building(club: Club, id: UUID): Building {
@@ -100,8 +102,13 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         val spec = BuildingCatalog.spec(type)
         if (!spec.enabled) throw ValidationException("This building is not available yet")
         val lvl = spec.levels[0]
-        if (st.club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level {0}", lvl.requiredClubLevel)
-        if (st.buildings.count { it.type == type } >= spec.maxPerClub) throw ConflictException("You already have the maximum number of these buildings")
+        val have = st.buildings.count { it.type == type }
+        if (have >= spec.countAt(st.stadium)) {
+            // the next copy needs a bigger stadium — or there is none at all
+            val next = (st.stadium + 1..Stadium.MAX_LEVEL).firstOrNull { spec.countAt(it) > have }
+            if (next != null) throw ValidationException("Requires stadium level {0}", next)
+            throw ConflictException("You already have the maximum number of these buildings")
+        }
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(type, x, y, rotation)
         if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
@@ -124,7 +131,9 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
         val next = b.level + 1
         if (!BuildingCatalog.hasLevel(b.type, next)) throw ValidationException("Already at max level")
         val lvl = BuildingCatalog.level(b.type, next)
-        if (club.level < lvl.requiredClubLevel) throw ValidationException("Requires club level {0}", lvl.requiredClubLevel)
+        if (b.type == BuildingType.PITCH) {
+            if (club.trophies < lvl.requiredTrophies) throw ValidationException("Requires {0} trophies", lvl.requiredTrophies)
+        } else if (next > BuildingCatalog.spec(b.type).capAt(st.stadium)) throw ValidationException("Requires stadium level {0}", lvl.requiredStadium)
         service.requireFreeBuilder(st)
         service.charge(club, coins = lvl.cost)
         val now = clock.now()

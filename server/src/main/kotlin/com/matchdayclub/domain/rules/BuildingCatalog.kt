@@ -1,5 +1,6 @@
 package com.matchdayclub.domain.rules
 
+import com.matchdayclub.domain.rules.BuildingType.*
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -7,63 +8,195 @@ enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINI
 
 /**
  * One level of a building. [effect] meaning depends on type:
- * PITCH = athlete attribute cap, ACADEMY = min quality (max = effect + 15), TRAINING_CENTER = slots,
- * MEDICAL_CENTER = heals per cooldown; [effect2]: PITCH = seats, TRAINING_CENTER = attribute delta per training,
- * MEDICAL_CENTER = cooldown hours.
+ * PITCH = athlete attribute cap, courts = section attribute cap, ACADEMY = min quality (max = effect + 15),
+ * TRAINING_CENTER = slots, MEDICAL_CENTER = heals per cooldown; [effect2]: PITCH = seats, TRAINING_CENTER = attribute
+ * delta per training, MEDICAL_CENTER = cooldown hours.
+ * [requiredStadium]: the stadium level this level needs (the stadium is the club's town hall, see [Stadium]);
+ * [requiredTrophies]: for the stadium itself — the arena standing a bigger stadium needs.
  */
 data class LevelSpec(
     val cost: Long,
     val buildSeconds: Long,
-    val requiredClubLevel: Int,
+    val requiredStadium: Int = 1,
+    val requiredTrophies: Int = 0,
     val incomePerHour: Long = 0,
     val capHours: Int = 0,
     val effect: Int = 0,
     val effect2: Int = 0,
 )
 
-data class BuildingSpec(val type: BuildingType, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpec>) {
+/**
+ * [counts]/[caps]: how many of the building a club may have and the highest level it may reach, by stadium level
+ * (index 0 = stadium 1). The stadium itself has neither (count 1, its own levels).
+ */
+data class BuildingSpec(val type: BuildingType, val width: Int, val height: Int, val enabled: Boolean, val levels: List<LevelSpec>,
+                        val counts: List<Int> = List(Stadium.MAX_LEVEL) { 1 }, val caps: List<Int> = List(Stadium.MAX_LEVEL) { levels.size }) {
     val maxLevel get() = levels.size
+    /** Most copies at the top stadium (Int.MAX_VALUE stays "unlimited" for nothing but the old API field). */
+    val maxPerClub get() = counts.last()
+    fun countAt(stadium: Int) = counts[stadium.coerceIn(1, Stadium.MAX_LEVEL) - 1]
+    fun capAt(stadium: Int) = minOf(caps[stadium.coerceIn(1, Stadium.MAX_LEVEL) - 1], maxLevel)
+    /** The first stadium level that allows a copy (0 = never). */
+    val unlockStadium get() = counts.indexOfFirst { it > 0 } + 1
+}
+
+/**
+ * The stadium (the PITCH building) is the club's town hall, like in Clash of Clans: its level caps how far every other
+ * building goes and how many of each a club may have, and a bigger stadium needs a higher arena (trophies). While the
+ * stadium itself is being upgraded the club keeps the previous level's limits.
+ * Tuned with tools/claude/simtest/progression.py (an active player: stadium 5 in ~3 weeks, 8 in ~2 months, 10 in ~3–4).
+ */
+object Stadium {
+    const val MAX_LEVEL = 10
+    fun level(buildings: List<com.matchdayclub.domain.model.Building>): Int =
+        buildings.firstOrNull { it.type == BuildingType.PITCH }?.let { if (it.state == com.matchdayclub.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level }?.coerceAtLeast(1) ?: 1
+    /** The club plot grows with the stadium (and never shrinks below what the club level already gave). */
+    fun gridSize(stadium: Int): Int = min(12 + (stadium - 1) * 2, 30)
+    fun decorCount(stadium: Int): Int = 8 + 4 * stadium
 }
 
 object BuildingCatalog {
+    private const val D = 86_400L
     private const val H = 3600L
     private const val M = 60L
+    private fun L(cost: Int, seconds: Long, stadium: Int = 1, trophies: Int = 0, incomePerHour: Long = 0, capHours: Int = 0, effect: Int = 0, effect2: Int = 0) =
+        LevelSpec(cost.toLong(), seconds, stadium, trophies, incomePerHour, capHours, effect, effect2)
+
+    private val CAP10 = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    private val CAP8 = listOf(1, 2, 3, 4, 4, 5, 6, 6, 7, 8)
+    private fun countsFrom(vararg c: Int) = c.toList()
+
+    private val levelTable: Map<BuildingType, List<LevelSpec>> = mapOf(
+        PITCH to listOf(
+            L(0, 0, effect = 60, effect2 = 500),
+            L(2_300, 2 * H, effect = 64, effect2 = 1_200),
+            L(7_700, 6 * H, trophies = 300, effect = 68, effect2 = 2_500),
+            L(22_000, 12 * H, trophies = 700, effect = 72, effect2 = 4_000),
+            L(52_000, 20 * H, trophies = 700, effect = 76, effect2 = 6_000),
+            L(110_000, 30 * H, trophies = 1_300, effect = 80, effect2 = 8_500),
+            L(210_000, 42 * H, trophies = 2_200, effect = 84, effect2 = 11_500),
+            L(380_000, 2 * D, trophies = 2_200, effect = 88, effect2 = 15_000),
+            L(640_000, 3 * D, trophies = 3_500, effect = 93, effect2 = 20_000),
+            L(1_000_000, 4 * D, trophies = 5_500, effect = 99, effect2 = 26_000),
+        ),
+        TICKET_OFFICE to listOf(
+            L(900, 5 * M, stadium = 1, incomePerHour = 120, capHours = 6),
+            L(1_900, 10 * M, stadium = 2, incomePerHour = 150, capHours = 7),
+            L(3_800, 20 * M, stadium = 3, incomePerHour = 200, capHours = 8),
+            L(7_900, 45 * M, stadium = 4, incomePerHour = 260, capHours = 9),
+            L(16_000, 90 * M, stadium = 5, incomePerHour = 330, capHours = 10),
+            L(33_000, 3 * H, stadium = 6, incomePerHour = 430, capHours = 11),
+            L(69_000, 7 * H, stadium = 7, incomePerHour = 560, capHours = 12),
+            L(140_000, 14 * H, stadium = 8, incomePerHour = 720, capHours = 13),
+            L(290_000, 29 * H, stadium = 9, incomePerHour = 930, capHours = 14),
+            L(600_000, 60 * H, stadium = 10, incomePerHour = 1_200, capHours = 16),
+        ),
+        CLUB_SHOP to listOf(
+            L(3_000, 30 * M, stadium = 2, incomePerHour = 200, capHours = 6),
+            L(5_500, 50 * M, stadium = 2, incomePerHour = 250, capHours = 7),
+            L(10_000, 90 * M, stadium = 3, incomePerHour = 310, capHours = 8),
+            L(19_000, 150 * M, stadium = 4, incomePerHour = 390, capHours = 9),
+            L(34_000, 270 * M, stadium = 5, incomePerHour = 490, capHours = 10),
+            L(63_000, 8 * H, stadium = 6, incomePerHour = 620, capHours = 11),
+            L(120_000, 13 * H, stadium = 7, incomePerHour = 770, capHours = 12),
+            L(210_000, 22 * H, stadium = 8, incomePerHour = 970, capHours = 13),
+            L(390_000, 38 * H, stadium = 9, incomePerHour = 1_200, capHours = 14),
+            L(720_000, 66 * H, stadium = 10, incomePerHour = 1_500, capHours = 16),
+        ),
+        CAFE to listOf(
+            L(2_100, 20 * M, stadium = 2, incomePerHour = 150, capHours = 6),
+            L(4_000, 35 * M, stadium = 2, incomePerHour = 190, capHours = 7),
+            L(7_500, 1 * H, stadium = 3, incomePerHour = 240, capHours = 8),
+            L(14_000, 2 * H, stadium = 4, incomePerHour = 310, capHours = 9),
+            L(27_000, 210 * M, stadium = 5, incomePerHour = 400, capHours = 10),
+            L(51_000, 6 * H, stadium = 6, incomePerHour = 510, capHours = 11),
+            L(97_000, 11 * H, stadium = 7, incomePerHour = 650, capHours = 12),
+            L(180_000, 19 * H, stadium = 8, incomePerHour = 830, capHours = 13),
+            L(350_000, 34 * H, stadium = 9, incomePerHour = 1_100, capHours = 14),
+            L(660_000, 60 * H, stadium = 10, incomePerHour = 1_400, capHours = 16),
+        ),
+        PARKING to listOf(
+            L(4_500, 45 * M, stadium = 3, incomePerHour = 250, capHours = 6),
+            L(8_000, 1 * H, stadium = 3, incomePerHour = 310, capHours = 7),
+            L(14_000, 2 * H, stadium = 3, incomePerHour = 390, capHours = 8),
+            L(25_000, 210 * M, stadium = 4, incomePerHour = 480, capHours = 9),
+            L(44_000, 330 * M, stadium = 5, incomePerHour = 600, capHours = 10),
+            L(79_000, 9 * H, stadium = 6, incomePerHour = 740, capHours = 11),
+            L(140_000, 16 * H, stadium = 7, incomePerHour = 920, capHours = 12),
+            L(250_000, 26 * H, stadium = 8, incomePerHour = 1_100, capHours = 13),
+            L(440_000, 43 * H, stadium = 9, incomePerHour = 1_400, capHours = 14),
+            L(780_000, 3 * D, stadium = 10, incomePerHour = 1_800, capHours = 16),
+        ),
+        ACADEMY to listOf(
+            L(1_500, 10 * M, stadium = 1, effect = 40),
+            L(3_400, 25 * M, stadium = 2, effect = 44),
+            L(7_700, 55 * M, stadium = 3, effect = 48),
+            L(17_000, 2 * H, stadium = 4, effect = 52),
+            L(39_000, 5 * H, stadium = 6, effect = 57),
+            L(88_000, 11 * H, stadium = 7, effect = 62),
+            L(200_000, 26 * H, stadium = 9, effect = 67),
+            L(450_000, 60 * H, stadium = 10, effect = 72),
+        ),
+        TRAINING_CENTER to listOf(
+            L(2_400, 20 * M, stadium = 1, effect = 1, effect2 = 1),
+            L(5_100, 40 * M, stadium = 2, effect = 1, effect2 = 2),
+            L(11_000, 90 * M, stadium = 3, effect = 2, effect2 = 2),
+            L(23_000, 3 * H, stadium = 4, effect = 2, effect2 = 2),
+            L(50_000, 6 * H, stadium = 6, effect = 3, effect2 = 3),
+            L(110_000, 14 * H, stadium = 7, effect = 3, effect2 = 3),
+            L(230_000, 29 * H, stadium = 9, effect = 4, effect2 = 3),
+            L(480_000, 60 * H, stadium = 10, effect = 4, effect2 = 4),
+        ),
+        MEDICAL_CENTER to listOf(
+            L(1_800, 15 * M, stadium = 2, effect = 1, effect2 = 5),
+            L(3_900, 35 * M, stadium = 2, effect = 1, effect2 = 4),
+            L(8_500, 1 * H, stadium = 3, effect = 2, effect2 = 4),
+            L(19_000, 150 * M, stadium = 4, effect = 2, effect2 = 3),
+            L(41_000, 330 * M, stadium = 6, effect = 2, effect2 = 3),
+            L(88_000, 13 * H, stadium = 7, effect = 3, effect2 = 3),
+            L(190_000, 27 * H, stadium = 9, effect = 3, effect2 = 2),
+            L(420_000, 60 * H, stadium = 10, effect = 4, effect2 = 2),
+        ),
+        BASKETBALL_COURT to listOf(
+            L(7_500, 2 * H, stadium = 3, effect = 60),
+            L(14_000, 210 * M, stadium = 4, effect = 65),
+            L(25_000, 330 * M, stadium = 5, effect = 70),
+            L(47_000, 9 * H, stadium = 6, effect = 75),
+            L(86_000, 14 * H, stadium = 7, effect = 80),
+            L(160_000, 23 * H, stadium = 8, effect = 85),
+            L(290_000, 37 * H, stadium = 9, effect = 90),
+            L(540_000, 60 * H, stadium = 10, effect = 95),
+        ),
+        TENNIS_COURT to listOf(
+            L(12_000, 3 * H, stadium = 4, effect = 60),
+            L(21_000, 270 * M, stadium = 4, effect = 65),
+            L(37_000, 7 * H, stadium = 5, effect = 70),
+            L(64_000, 11 * H, stadium = 6, effect = 75),
+            L(110_000, 18 * H, stadium = 7, effect = 80),
+            L(200_000, 27 * H, stadium = 8, effect = 85),
+            L(340_000, 42 * H, stadium = 9, effect = 90),
+            L(600_000, 66 * H, stadium = 10, effect = 95),
+        ),
+        DECOR to listOf(L(200, 0)),
+    )
 
     val specs: Map<BuildingType, BuildingSpec> = listOf(
-        BuildingSpec(BuildingType.PITCH, 8, 6, 1, true, listOf(
-            LevelSpec(0, 0, 1, effect = 60, effect2 = 500),
-            LevelSpec(2_000, 2 * H, 3, effect = 75, effect2 = 2_000),
-            LevelSpec(12_000, 12 * H, 6, effect = 90, effect2 = 8_000),
-        )),
+        BuildingSpec(PITCH, 8, 6, true, levelTable.getValue(PITCH)),
         // courts open a sport section (starter squad on completion); level = attribute cap of that section, like the pitch
-        BuildingSpec(BuildingType.BASKETBALL_COURT, 3, 2, 1, true, listOf(LevelSpec(2_500, 2 * H, 3, effect = 60), LevelSpec(8_000, 8 * H, 6, effect = 75), LevelSpec(25_000, 18 * H, 8, effect = 90))),
-        BuildingSpec(BuildingType.TENNIS_COURT, 3, 2, 1, true, listOf(LevelSpec(4_000, 3 * H, 5, effect = 60), LevelSpec(10_000, 10 * H, 7, effect = 75), LevelSpec(30_000, 20 * H, 9, effect = 90))),
-        BuildingSpec(BuildingType.ACADEMY, 2, 2, 1, true, listOf(
-            LevelSpec(500, 10 * M, 1, effect = 40), LevelSpec(3_000, 4 * H, 3, effect = 50), LevelSpec(15_000, 16 * H, 6, effect = 60),
-        )),
-        BuildingSpec(BuildingType.TRAINING_CENTER, 2, 2, 1, true, listOf(
-            LevelSpec(800, 20 * M, 1, effect = 1, effect2 = 1), LevelSpec(4_000, 6 * H, 3, effect = 2, effect2 = 2), LevelSpec(18_000, 20 * H, 6, effect = 3, effect2 = 3),
-        )),
-        BuildingSpec(BuildingType.MEDICAL_CENTER, 2, 2, 1, true, listOf(
-            LevelSpec(600, 15 * M, 2, effect = 1, effect2 = 4), LevelSpec(3_500, 5 * H, 4, effect = 2, effect2 = 3), LevelSpec(16_000, 18 * H, 7, effect = 3, effect2 = 2),
-        )),
-        BuildingSpec(BuildingType.TICKET_OFFICE, 2, 1, 1, true, listOf(
-            LevelSpec(300, 5 * M, 1, incomePerHour = 120, capHours = 6), LevelSpec(2_000, 3 * H, 2, incomePerHour = 300, capHours = 8), LevelSpec(9_000, 10 * H, 5, incomePerHour = 700, capHours = 12),
-        )),
-        BuildingSpec(BuildingType.CLUB_SHOP, 2, 2, 1, true, listOf(
-            LevelSpec(1_000, 30 * M, 2, incomePerHour = 200, capHours = 6), LevelSpec(5_000, 6 * H, 4, incomePerHour = 500, capHours = 8), LevelSpec(20_000, 20 * H, 7, incomePerHour = 1_100, capHours = 12),
-        )),
-        BuildingSpec(BuildingType.CAFE, 2, 2, 1, true, listOf(
-            LevelSpec(700, 20 * M, 2, incomePerHour = 150, capHours = 6), LevelSpec(3_500, 5 * H, 3, incomePerHour = 380, capHours = 8), LevelSpec(14_000, 16 * H, 6, incomePerHour = 850, capHours = 12),
-        )),
-        BuildingSpec(BuildingType.PARKING, 3, 2, 1, true, listOf(
-            LevelSpec(1_500, 45 * M, 3, incomePerHour = 250, capHours = 8), LevelSpec(7_000, 8 * H, 5, incomePerHour = 600, capHours = 10), LevelSpec(25_000, 24 * H, 8, incomePerHour = 1_300, capHours = 14),
-        )),
-        BuildingSpec(BuildingType.DECOR, 1, 1, Int.MAX_VALUE, true, listOf(LevelSpec(200, 0, 1))),
+        BuildingSpec(BASKETBALL_COURT, 3, 2, true, levelTable.getValue(BASKETBALL_COURT), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 8)),
+        BuildingSpec(TENNIS_COURT, 3, 2, true, levelTable.getValue(TENNIS_COURT), countsFrom(0, 0, 0, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 8)),
+        BuildingSpec(ACADEMY, 2, 2, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
+        BuildingSpec(TRAINING_CENTER, 2, 2, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
+        BuildingSpec(MEDICAL_CENTER, 2, 2, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
+        BuildingSpec(TICKET_OFFICE, 2, 1, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), CAP10),
+        BuildingSpec(CLUB_SHOP, 2, 2, true, levelTable.getValue(CLUB_SHOP), countsFrom(0, 1, 1, 1, 1, 2, 2, 2, 3, 3), CAP10),
+        BuildingSpec(CAFE, 2, 2, true, levelTable.getValue(CAFE), countsFrom(0, 1, 1, 1, 2, 2, 2, 3, 3, 3), CAP10),
+        BuildingSpec(PARKING, 3, 2, true, levelTable.getValue(PARKING), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), CAP10),
+        BuildingSpec(DECOR, 1, 1, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
     ).associateBy { it.type }
 
     fun spec(type: BuildingType): BuildingSpec = specs.getValue(type)
-    fun level(type: BuildingType, level: Int): LevelSpec = spec(type).levels[level - 1]
+    fun level(type: BuildingType, level: Int): LevelSpec = spec(type).levels[level.coerceIn(1, spec(type).maxLevel) - 1]
     fun hasLevel(type: BuildingType, level: Int) = level in 1..spec(type).maxLevel
 
     /** Coins earned since the last collection, capped by the building's storage. */

@@ -199,7 +199,7 @@ class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
         val list = buildings.listByClub(club.id)
-        return Grounds(club, list, com.matchdayclub.domain.rules.ClubLevels.gridSize(club.level), sections.active(club, clubBuildings = list))
+        return Grounds(club, list, maxOf(com.matchdayclub.domain.rules.ClubLevels.gridSize(club.level), com.matchdayclub.domain.rules.Stadium.gridSize(com.matchdayclub.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list))
     }
 }
 

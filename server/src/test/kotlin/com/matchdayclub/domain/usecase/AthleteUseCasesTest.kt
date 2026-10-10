@@ -33,7 +33,7 @@ class AthleteUseCasesTest {
 
     private fun setup(vararg types: BuildingType) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3))
+        clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3)); buildings.setStadium(clubs.rows.values.first().id, 3)
         types.forEachIndexed { i, t -> val b = place(user, t, 2 + i * 2, 0, 0); speed(user, b.id) }
     }
 
@@ -92,8 +92,8 @@ class AthleteUseCasesTest {
         val tc = place(user, BuildingType.TRAINING_CENTER, 2, 0, 0); speed(user, tc.id)
         athletes.update(a.copy(fatigue = 90, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { start(user, a.id, AttributeKind.MENTAL) }
-        athletes.update(a.copy(fatigue = 0, mental = 60))
-        assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.MENTAL) }   // pitch L1 cap 60
+        athletes.update(a.copy(fatigue = 0, mental = 68))
+        assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.MENTAL) }   // stadium 3 caps attributes at 68
         Unit
     }
 
@@ -107,7 +107,7 @@ class AthleteUseCasesTest {
         val b = athletes.rows.values.drop(1).first()
         athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { heal(user, b.id) }
-        clock.advanceSeconds(4 * 3600)
+        clock.advanceSeconds(5 * 3600)                                     // medical centre L1: 5 h cooldown
         athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))   // tired again once the cooldown has passed
         heal(user, b.id)
         Unit

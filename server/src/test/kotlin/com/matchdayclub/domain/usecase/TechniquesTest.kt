@@ -47,7 +47,7 @@ class TechniquesTest {
     @Test
     fun `experience brings skill points and the tree is climbed step by step`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        val fwd = athletes.listByClub(club.id).first { it.position == Position.FWD }.copy(techniques = emptyMap(), skillPoints = 0, xpTotal = 0)
+        val fwd = athletes.listByClub(club.id).first { it.position == Position.FWD }.copy(techniques = emptyMap(), skillPoints = 0, xpTotal = 0, talent = null)   // no talent: full step costs
         // 130 xp over a career = one point (every 120)
         val g = Growth.apply(fwd, 130, 99, Random(1))
         assertEquals(1, g.skillPoints); assertEquals(1, g.athlete.skillPoints); assertEquals(130, g.athlete.xpTotal)

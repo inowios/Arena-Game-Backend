@@ -4,13 +4,33 @@ import kotlin.test.*
 
 class BuildingRulesTest {
     @Test
-    fun `catalog has three levels for core buildings and rising costs`() {
-        for (t in listOf(BuildingType.PITCH, BuildingType.ACADEMY, BuildingType.TICKET_OFFICE)) {
+    fun `stadium has ten levels, buildings eight to ten, costs and requirements rise`() {
+        assertEquals(10, BuildingCatalog.spec(BuildingType.PITCH).maxLevel)
+        for (t in BuildingType.values().filter { it != BuildingType.DECOR }) {
             val s = BuildingCatalog.spec(t)
-            assertEquals(3, s.maxLevel)
-            assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.requiredClubLevel >= a.requiredClubLevel })
+            assertTrue(s.maxLevel in 8..10, "$t has ${s.maxLevel} levels")
+            assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.buildSeconds >= a.buildSeconds && b.requiredStadium >= a.requiredStadium && b.requiredTrophies >= a.requiredTrophies }, "$t curves")
+            // every level is reachable: the cap at the top stadium is the max level, and caps never go down
+            assertEquals(s.maxLevel, s.capAt(Stadium.MAX_LEVEL), "$t top cap")
+            assertTrue(s.caps.zipWithNext().all { (a, b) -> b >= a } && s.counts.zipWithNext().all { (a, b) -> b >= a }, "$t caps/counts")
+            // a level's stadium requirement is the first stadium whose cap allows it
+            if (t != BuildingType.PITCH) s.levels.forEachIndexed { i, l -> assertEquals((1..10).first { s.capAt(it) >= i + 1 && s.countAt(it) > 0 }, l.requiredStadium, "$t L${i + 1}") }
         }
-        assertTrue(BuildingCatalog.spec(BuildingType.TENNIS_COURT).enabled)
+        assertEquals(0, BuildingCatalog.spec(BuildingType.PITCH).levels.first().cost)
+        assertEquals(5_500, BuildingCatalog.level(BuildingType.PITCH, 10).requiredTrophies)
+        assertEquals(3, BuildingCatalog.spec(BuildingType.BASKETBALL_COURT).unlockStadium)
+        assertEquals(2, BuildingCatalog.spec(BuildingType.CAFE).unlockStadium)
+    }
+
+    @Test
+    fun `the stadium level ignores a stadium under construction, the plot grows with it`() {
+        val now = java.time.Instant.parse("2026-10-10T00:00:00Z")
+        fun pitch(level: Int, state: com.matchdayclub.domain.model.BuildingState) =
+            com.matchdayclub.domain.model.Building(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), BuildingType.PITCH, level, 0, 0, 0, state, null, now, now, now)
+        assertEquals(4, Stadium.level(listOf(pitch(4, com.matchdayclub.domain.model.BuildingState.IDLE))))
+        assertEquals(3, Stadium.level(listOf(pitch(4, com.matchdayclub.domain.model.BuildingState.UPGRADING))))
+        assertEquals(1, Stadium.level(emptyList()))
+        assertEquals(12, Stadium.gridSize(1)); assertEquals(30, Stadium.gridSize(10))
     }
 
     @Test

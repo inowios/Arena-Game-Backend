@@ -11,6 +11,8 @@ Club already exists	You already have a club	Ya tienes un club	Você já tem um c
 Club name must be 3..24 characters	The club name must be 3–24 characters	El nombre del club debe tener entre 3 y 24 caracteres	O nome do clube deve ter de 3 a 24 caracteres	Название клуба — от 3 до 24 символов	Назва клубу — від 3 до 24 символів
 This building is not available yet	This building is not available yet	Este edificio aún no está disponible	Esta construção ainda não está disponível	Эта постройка пока недоступна	Ця будівля поки недоступна
 Requires club level {0}	Requires club level {0}	Requiere nivel de club {0}	Requer nível de clube {0}	Нужен уровень клуба {0}	Потрібен рівень клубу {0}
+Requires stadium level {0}	Requires stadium level {0}	Requiere estadio de nivel {0}	Requer estádio nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
+Requires {0} trophies	Requires {0} trophies	Requiere {0} trofeos	Requer {0} troféus	Нужно {0} кубков	Потрібно {0} кубків
 You already have the maximum number of these buildings	You already have the maximum number of these buildings	Ya tienes el máximo de estos edificios	Você já tem o máximo dessas construções	У вас уже максимум таких построек	У вас уже максимум таких будівель
 Outside the club grid	That spot is outside your grounds	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами территории	Це місце поза територією
 Overlaps another building	It overlaps another building	Se superpone con otro edificio	Sobrepõe outra construção	Мешает другая постройка	Заважає інша будівля

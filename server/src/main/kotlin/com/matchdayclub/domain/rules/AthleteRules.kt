@@ -80,7 +80,7 @@ object TrainingRules {
     fun delta(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect2
     fun attributeCap(pitchLevel: Int) = BuildingCatalog.level(BuildingType.PITCH, pitchLevel).effect
     /** Cap for a sport's athletes: the level of that section's venue (stadium, basketball court, tennis court). */
-    fun attributeCap(sport: Sport, venueLevel: Int) = BuildingCatalog.level(Sections.venue(sport), venueLevel.coerceIn(1, 3)).effect
+    fun attributeCap(sport: Sport, venueLevel: Int) = BuildingCatalog.level(Sections.venue(sport), venueLevel).effect
     fun academyQuality(academyLevel: Int): IntRange { val lo = BuildingCatalog.level(BuildingType.ACADEMY, academyLevel).effect; return lo..(lo + 15) }
     fun medicalCooldownSeconds(medicalLevel: Int) = BuildingCatalog.level(BuildingType.MEDICAL_CENTER, medicalLevel).effect2 * 3600L
 }

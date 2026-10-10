@@ -36,7 +36,7 @@ class SectionsTest {
 
     private fun clubWithCourt(): Club = runBlocking {
         val c = create(user, "Hoops FC", "#AA0000", "#FFFFFF", "UTC")
-        clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500))
+        clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); buildings.setStadium(c.id, 4)
         val court = place(user, BuildingType.BASKETBALL_COURT, 0, 10, 0)
         assertEquals(listOf(Sport.FOOTBALL), sections.active(clubs.rows.getValue(c.id)), "court under construction is not a section yet")
         speed(user, court.id)

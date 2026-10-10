@@ -52,7 +52,7 @@ class ApiIT {
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":3,"y":10}""", expect = 409)
         call(HttpMethod.Post, "/club/builders", t, expect = 402)   // 250 gold needed, 50 owned
         call(HttpMethod.Post, "/club/buildings/$academy/speedup", t)
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":3,"y":10}""", expect = 201)
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":3,"y":10}""", expect = 402)   // 2 400 coins, 1 000 left
         call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":0,"y":8,"rotation":0}""")
         val graduate = call(HttpMethod.Post, "/club/academy/claim", t, expect = 201).data.o()
         assertTrue(graduate["overall"]!!.jsonPrimitive.int > 0)
