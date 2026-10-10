@@ -29,7 +29,7 @@ import java.time.Instant
 
 fun Athlete.toDto(now: Instant) = AthleteDto(id.toString(), name, sport.name, position.name, overall, attack, defense, physical, technique, mental, age, rarity.name, currentFatigue(now), isInjured(now), injuredUntil?.toString(), morale, potential, xp, com.matchdayclub.domain.rules.Growth.XP_PER_POINT, com.matchdayclub.domain.rules.Market.price(this), techniques, skillPoints)
 @Serializable data class UpgradeTechniqueResponse(val athlete: AthleteDto, val level: Int, val cost: Int)
-fun Training.toDto(now: Instant) = TrainingDto(id.toString(), athleteId.toString(), attribute.name, delta, endsAt.toString(), maxOf(0, endsAt.epochSecond - now.epochSecond))
+fun Training.toDto(now: Instant) = TrainingDto(id.toString(), athleteId.toString(), kindKey, delta, endsAt.toString(), maxOf(0, endsAt.epochSecond - now.epochSecond))
 fun Lineup.toDto() = LineupDto(sport.name, starters.map { it.toString() }, bench.map { it.toString() }, tactics, isDefault)
 
 @Serializable data class ScoutOfferDto(val slot: Int, val kind: String, val athlete: AthleteDto)

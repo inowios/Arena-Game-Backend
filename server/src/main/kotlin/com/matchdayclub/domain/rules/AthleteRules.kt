@@ -68,6 +68,9 @@ object AthleteFactory {
 
 object TrainingRules {
     const val DURATION_SECONDS = 3600L
+    /** Technique drill: two hours for one skill point of the trees. */
+    const val DRILL_SECONDS = 7200L
+    const val DRILL_POINTS = 1
     const val FATIGUE_PER_TRAINING = 15
     const val MAX_FATIGUE_TO_TRAIN = 80
     const val ACADEMY_INTERVAL_SECONDS = 8 * 3600L

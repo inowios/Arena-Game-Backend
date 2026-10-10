@@ -19,7 +19,8 @@ object Techniques {
     fun cost(level: Int): Int = COST[(level - 1).coerceIn(0, MAX_LEVEL - 1)]
 
     /** Outfield footballers learn the moves; keepers (and other sports) do not. */
-    fun allowed(position: Position, key: String): Boolean = key in KEYS && position in setOf(Position.DEF, Position.MID, Position.FWD)
+    fun learns(position: Position): Boolean = position in setOf(Position.DEF, Position.MID, Position.FWD)
+    fun allowed(position: Position, key: String): Boolean = key in KEYS && learns(position)
 
     /** Skill points earned by [xpTotal] experience over a career. */
     fun pointsFor(xpTotal: Int): Int = xpTotal / XP_PER_SKILL_POINT

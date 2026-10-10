@@ -46,7 +46,8 @@ fun Route.athleteRoutes() {
             }
             post("/trainings") {
                 val r = call.receive<StartTrainingRequest>()
-                val t = start(call.userId(), runCatching { UUID.fromString(r.athleteId) }.getOrElse { throw ValidationException("Bad athleteId") }, parseEnum<AttributeKind>(r.attribute, "attribute"))
+                val kind = if (r.attribute.equals("SKILL", ignoreCase = true)) null else parseEnum<AttributeKind>(r.attribute, "attribute")
+                val t = start(call.userId(), runCatching { UUID.fromString(r.athleteId) }.getOrElse { throw ValidationException("Bad athleteId") }, kind)
                 call.respond(HttpStatusCode.Created, t.toDto(clock.now()).toSuccessResponse(201))
             }
             post("/trainings/{id}/complete") { call.respond(complete(call.userId(), call.uuid("id")).toDto(clock.now()).toSuccessResponse()) }

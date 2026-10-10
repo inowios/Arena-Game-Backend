@@ -52,6 +52,9 @@ data class Athlete(
     fun toEngine(now: Instant) = com.matchdayclub.engine.model.Athlete(id.toString(), name, position, attributes, currentFatigue(now), isInjured(now), morale)
 }
 
-data class Training(val id: UUID, val clubId: UUID, val athleteId: UUID, val attribute: AttributeKind, val delta: Int, val endsAt: Instant, val createdAt: Instant) {
+/** A session at the training centre: an attribute exercise (+[delta]) or, with [drill], technique work (+[delta] skill points). */
+data class Training(val id: UUID, val clubId: UUID, val athleteId: UUID, val attribute: AttributeKind, val delta: Int, val endsAt: Instant, val createdAt: Instant, val drill: Boolean = false) {
     fun isDone(now: Instant) = !now.isBefore(endsAt)
+    /** What the client shows: the attribute key, or SKILL for a drill. */
+    val kindKey: String get() = if (drill) "SKILL" else attribute.name
 }

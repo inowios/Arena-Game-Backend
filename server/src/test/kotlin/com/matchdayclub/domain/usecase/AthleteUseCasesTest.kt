@@ -70,6 +70,21 @@ class AthleteUseCasesTest {
     }
 
     @Test
+    fun `a technique drill takes two hours and pays a skill point`() = runBlocking<Unit> {
+        setup(BuildingType.TRAINING_CENTER)
+        val gk = athletes.rows.values.first { it.position == com.matchdayclub.engine.model.Position.GK }
+        assertFailsWith<ValidationException> { start(user, gk.id, null) }
+        val a = athletes.rows.values.first { it.position == com.matchdayclub.engine.model.Position.FWD }
+        val t = start(user, a.id, null)
+        assertTrue(t.drill); assertEquals("SKILL", t.kindKey)
+        clock.advanceSeconds(3600)
+        assertFailsWith<ConflictException> { complete(user, t.id) }
+        clock.advanceSeconds(3600)
+        val done = complete(user, t.id)
+        assertEquals(a.skillPoints + 1, done.skillPoints); assertEquals(a.technique, done.technique)
+    }
+
+    @Test
     fun `training needs a centre and respects fatigue and cap`() = runBlocking<Unit> {
         setup()
         val a = athletes.rows.values.first()

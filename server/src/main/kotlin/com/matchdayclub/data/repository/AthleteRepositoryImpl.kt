@@ -55,11 +55,14 @@ class TrainingRepositoryImpl : TrainingRepository {
     override suspend fun listByClub(clubId: UUID) = dbQuery { TrainingTable.selectAll().where { TrainingTable.clubId eq clubId }.map { it.toTraining() } }
     override suspend fun findById(id: UUID) = dbQuery { TrainingTable.selectAll().where { TrainingTable.id eq id }.singleOrNull()?.toTraining() }
     override suspend fun create(training: Training) = dbQuery {
-        TrainingTable.insert { it[id] = training.id; it[clubId] = training.clubId; it[athleteId] = training.athleteId; it[attribute] = training.attribute.name; it[delta] = training.delta; it[endsAt] = training.endsAt; it[createdAt] = training.createdAt }
+        TrainingTable.insert { it[id] = training.id; it[clubId] = training.clubId; it[athleteId] = training.athleteId; it[attribute] = training.kindKey; it[delta] = training.delta; it[endsAt] = training.endsAt; it[createdAt] = training.createdAt }
         training
     }
     override suspend fun delete(id: UUID): Boolean = dbQuery { TrainingTable.deleteWhere { TrainingTable.id eq id } > 0 }
-    private fun ResultRow.toTraining() = Training(this[TrainingTable.id], this[TrainingTable.clubId], this[TrainingTable.athleteId], AttributeKind.valueOf(this[TrainingTable.attribute]), this[TrainingTable.delta], this[TrainingTable.endsAt], this[TrainingTable.createdAt])
+    private fun ResultRow.toTraining(): Training {
+        val kind = this[TrainingTable.attribute]; val drill = kind == "SKILL"
+        return Training(this[TrainingTable.id], this[TrainingTable.clubId], this[TrainingTable.athleteId], if (drill) AttributeKind.TECHNIQUE else AttributeKind.valueOf(kind), this[TrainingTable.delta], this[TrainingTable.endsAt], this[TrainingTable.createdAt], drill)
+    }
 }
 
 class LineupRepositoryImpl : LineupRepository {

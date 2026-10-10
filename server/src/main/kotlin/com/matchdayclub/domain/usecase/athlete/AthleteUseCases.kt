@@ -61,7 +61,10 @@ class SquadService(private val service: ClubService, private val athletes: Athle
     /** Applies a training's gain. Deletes first: only the caller that actually removed the row applies it (no double gain). */
     suspend fun finish(t: Training, now: java.time.Instant): Boolean {
         if (!trainings.delete(t.id)) return false
-        athletes.findById(t.athleteId)?.let { a -> athletes.update(a.withAttribute(t.attribute, (a.attribute(t.attribute) + t.delta).coerceAtMost(99)).copy(updatedAt = now)) }
+        athletes.findById(t.athleteId)?.let { a ->
+            val grown = if (t.drill) a.copy(skillPoints = a.skillPoints + t.delta) else a.withAttribute(t.attribute, (a.attribute(t.attribute) + t.delta).coerceAtMost(99))
+            athletes.update(grown.copy(updatedAt = now))
+        }
         return true
     }
 }
@@ -89,7 +92,8 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
 }
 
 class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
-    suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind): Training = tx {
+    /** [attribute] null = a technique drill: a skill point for the trees instead of an attribute point. */
+    suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind?): Training = tx {
         val st = service.state(userId, lock = true)
         val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a training centre first")
         val squad = squads.squad(userId)
@@ -99,12 +103,18 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (squad.trainings.any { it.athleteId == a.id }) throw ConflictException("Athlete is already training")
         if (a.isInjured(now)) throw ConflictException("Athlete is injured")
         if (a.currentFatigue(now) > TrainingRules.MAX_FATIGUE_TO_TRAIN) throw ConflictException("Athlete is too tired")
-        val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
-        if (a.attribute(attribute) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
-        if (!com.matchdayclub.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
+        val drill = attribute == null
+        if (drill && !com.matchdayclub.domain.rules.Techniques.learns(a.position)) throw ValidationException("This athlete cannot learn that move")
+        if (!drill)
+        {
+            val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
+            if (a.attribute(attribute!!) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
+            if (!com.matchdayclub.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
+        }
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.matchdayclub.domain.rules.ProgressEvent.TRAINING_STARTED)
-        trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
+        if (drill) trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, AttributeKind.TECHNIQUE, TrainingRules.DRILL_POINTS, now.plusSeconds(TrainingRules.DRILL_SECONDS), now, drill = true))
+        else trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute!!, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
     }
 }
 
