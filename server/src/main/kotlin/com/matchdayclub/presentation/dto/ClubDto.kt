@@ -41,6 +41,8 @@ import java.time.Instant
     val upgradeEndsAt: String?, val remainingSeconds: Long, val speedUpGold: Int, val pendingIncome: Long, val incomePerHour: Long, val capHours: Int,
     val nextLevel: LevelSpecDto?,
     val variant: String? = null,
+    /** Atmosphere bonus to income in % (total and its parts: decor around, next to the stadium, a car park nearby). */
+    val bonusPct: Int = 0, val bonusDecor: Int = 0, val bonusStadium: Int = 0, val bonusParking: Int = 0,
 )
 
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
@@ -66,12 +68,14 @@ fun Club.adsState(now: Instant): AdsStateDto {
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
 fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium)
 
-fun Building.toDto(now: Instant, clubLevel: Int): BuildingDto {
+fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.matchdayclub.domain.rules.Atmosphere.Bonus = com.matchdayclub.domain.rules.Atmosphere.Bonus()): BuildingDto {
     val spec = BuildingCatalog.level(type, level)
     val remaining = if (state == BuildingState.UPGRADING && upgradeEndsAt != null) maxOf(0, upgradeEndsAt.epochSecond - now.epochSecond) else 0
-    val pending = if (state == BuildingState.IDLE) BuildingCatalog.income(spec, now.epochSecond - lastCollectedAt.epochSecond, clubLevel) else 0
+    val pending = if (state == BuildingState.IDLE) BuildingCatalog.income(spec, now.epochSecond - lastCollectedAt.epochSecond, clubLevel, atmosphere.total) else 0
     val next = if (BuildingCatalog.hasLevel(type, level + 1)) BuildingCatalog.level(type, level + 1).toDto(level + 1) else null
-    return BuildingDto(id.toString(), type.name, level, gridX, gridY, rotation, state.name, upgradeEndsAt?.toString(), remaining, BuildingCatalog.speedUpGold(remaining), pending, spec.incomePerHour, spec.capHours, next, variant)
+    val rate = if (atmosphere.total > 0) (spec.incomePerHour * (1.0 + atmosphere.total / 100.0)).toLong() else spec.incomePerHour
+    return BuildingDto(id.toString(), type.name, level, gridX, gridY, rotation, state.name, upgradeEndsAt?.toString(), remaining, BuildingCatalog.speedUpGold(remaining), pending, rate, spec.capHours, next, variant,
+        atmosphere.total, atmosphere.decor, atmosphere.stadium, atmosphere.parking)
 }
 
 fun com.matchdayclub.domain.model.Obstacle.toDto(now: Instant, stadium: Int): ObstacleDto {

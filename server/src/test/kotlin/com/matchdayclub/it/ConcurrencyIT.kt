@@ -51,8 +51,8 @@ class ConcurrencyIT {
         clock.advanceSeconds(2 * 3600)
         val results = parallel(16) { collect(userId, office.id).coins }
         val granted = results.mapNotNull { it.getOrNull() }
-        assertEquals(240L, granted.sum(), "results: $results")
-        assertEquals(2_500L + 240, runBlocking { clubs.findByUserId(userId)!!.coins })
+        assertEquals(264L, granted.sum(), "results: $results")   // 2 h × 120 +10 % atmosphere (next to the stadium)
+        assertEquals(2_500L + 264, runBlocking { clubs.findByUserId(userId)!!.coins })
     }
 
     @Test

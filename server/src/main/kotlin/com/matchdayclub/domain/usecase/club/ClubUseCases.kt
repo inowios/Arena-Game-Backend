@@ -198,7 +198,8 @@ class CollectIncomeUseCase(private val service: ClubService, private val clubs: 
         val spec = BuildingCatalog.level(b.type, b.level)
         if (spec.incomePerHour == 0L) throw ValidationException("This building has no income")
         val now = clock.now()
-        var amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level)
+        val bonus = Atmosphere.of(buildings.listByClub(club.id))[b.id]?.total ?: 0
+        var amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level, bonus)
         val doubled = club.doubleIncomeUntil != null && now.isBefore(club.doubleIncomeUntil) && amount > 0
         if (doubled) amount *= 2
         val updatedClub = clubs.update(club.copy(coins = club.coins + amount, doubleIncomeUntil = if (doubled) null else club.doubleIncomeUntil, updatedAt = now))

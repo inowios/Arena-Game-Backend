@@ -200,10 +200,10 @@ object BuildingCatalog {
     fun hasLevel(type: BuildingType, level: Int) = level in 1..spec(type).maxLevel
 
     /** Coins earned since the last collection, capped by the building's storage. */
-    fun income(spec: LevelSpec, secondsSinceCollect: Long, clubLevel: Int): Long {
+    fun income(spec: LevelSpec, secondsSinceCollect: Long, clubLevel: Int, atmospherePct: Int = 0): Long {
         if (spec.incomePerHour == 0L) return 0
         val hours = min(secondsSinceCollect / 3600.0, spec.capHours.toDouble())
-        val multiplier = 1.0 + (clubLevel - 1) * 0.05
+        val multiplier = (1.0 + (clubLevel - 1) * 0.05) * (1.0 + atmospherePct / 100.0)
         return (spec.incomePerHour * hours * multiplier).toLong()
     }
 

@@ -77,8 +77,8 @@ class EconomyUseCasesTest {
         assertFailsWith<ConflictException> { ads(user, AdPlacement.DOUBLE_INCOME, null) }
         val office = buildings.rows.values.first { it.type == BuildingType.TICKET_OFFICE }
         clock.advanceSeconds(3600)
-        assertEquals(240, collect(user, office.id).coins)
+        assertEquals(264, collect(user, office.id).coins)   // 132 (120 +10 % by the stadium) doubled
         clock.advanceSeconds(3600)
-        assertEquals(120, collect(user, office.id).coins)
+        assertEquals(132, collect(user, office.id).coins)
     }
 }

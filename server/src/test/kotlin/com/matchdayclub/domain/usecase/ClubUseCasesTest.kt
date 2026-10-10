@@ -76,10 +76,10 @@ class ClubUseCasesTest {
         newClub()
         val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }
         clock.advanceSeconds(2 * 3600)
-        assertEquals(240, collect(user, office.id).coins)
+        assertEquals(264, collect(user, office.id).coins)   // 120/h +10 %: the office stands by the stadium
         clock.advanceSeconds(48 * 3600)
-        assertEquals(720, collect(user, office.id).coins)
-        assertEquals(2_500 + 240 + 720, clubs.rows.values.first().coins)
+        assertEquals(792, collect(user, office.id).coins)
+        assertEquals(2_500 + 264 + 792, clubs.rows.values.first().coins)
     }
 
     @Test
