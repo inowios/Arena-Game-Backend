@@ -13,6 +13,8 @@ interface EconomyRepository {
     /** Whether the club ever bought [productId] (one-time products like the starter pack). */
     suspend fun hasPurchase(clubId: UUID, productId: String): Boolean = false
     suspend fun createPurchase(p: Purchase): Purchase
+    /** GRANTED / REFUNDED (store refunds and revocations). */
+    suspend fun setPurchaseStatus(id: UUID, status: String)
     /** Records a verified rewarded-ad transaction; false when it was already granted (AdMob retries callbacks). */
     suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: java.time.Instant): Boolean
 }
@@ -21,6 +23,8 @@ interface InventoryRepository {
     suspend fun items(clubId: UUID): List<ClubItem>
     /** Adds the item; false when the club already owns it. */
     suspend fun add(item: ClubItem): Boolean
+    /** Takes the item away (a refunded purchase); false when the club did not own it. */
+    suspend fun remove(clubId: UUID, itemId: String): Boolean
 }
 
 interface AchievementRepository {

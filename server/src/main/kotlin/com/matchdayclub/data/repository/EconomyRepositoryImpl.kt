@@ -37,6 +37,7 @@ class EconomyRepositoryImpl : EconomyRepository {
     override suspend fun createPurchase(p: Purchase) = dbQuery {
         PurchaseTable.insert { it[id] = p.id; it[clubId] = p.clubId; it[store] = p.store; it[productId] = p.productId; it[externalId] = p.externalId; it[status] = p.status; it[grantedGold] = p.grantedGold; it[grantedCoins] = p.grantedCoins; it[createdAt] = p.createdAt }; p
     }
+    override suspend fun setPurchaseStatus(id: UUID, status: String) { dbQuery { PurchaseTable.update({ PurchaseTable.id eq id }) { it[PurchaseTable.status] = status } } }
     override suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: Instant): Boolean = dbQuery {
         AdRewardTable.insertIgnore { it[AdRewardTable.transactionId] = transactionId; it[AdRewardTable.clubId] = clubId; it[AdRewardTable.placement] = placement; it[createdAt] = at }.insertedCount == 1
     }
@@ -48,6 +49,9 @@ class InventoryRepositoryImpl : InventoryRepository {
     }
     override suspend fun add(item: ClubItem): Boolean = dbQuery {
         ClubItemTable.insertIgnore { it[clubId] = item.clubId; it[itemId] = item.itemId; it[itemSource] = item.source; it[acquiredAt] = item.acquiredAt }.insertedCount == 1
+    }
+    override suspend fun remove(clubId: UUID, itemId: String): Boolean = dbQuery {
+        ClubItemTable.deleteWhere { (ClubItemTable.clubId eq clubId) and (ClubItemTable.itemId eq itemId) } > 0
     }
 }
 

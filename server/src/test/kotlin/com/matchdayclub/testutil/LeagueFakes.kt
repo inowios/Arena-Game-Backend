@@ -51,6 +51,8 @@ class FakeEconomyRepository : com.matchdayclub.domain.repository.EconomyReposito
     override suspend fun upsertTask(task: com.matchdayclub.domain.model.DailyTask) = task.also { tasks[Triple(it.clubId, it.day, it.task)] = it }
     override suspend fun purchaseByExternalId(externalId: String) = purchases[externalId]
     override suspend fun createPurchase(p: com.matchdayclub.domain.model.Purchase) = p.also { purchases[it.externalId] = it }
+    override suspend fun hasPurchase(clubId: UUID, productId: String) = purchases.values.any { it.clubId == clubId && it.productId == productId && it.status == "GRANTED" }
+    override suspend fun setPurchaseStatus(id: UUID, status: String) { purchases.entries.firstOrNull { it.value.id == id }?.let { purchases[it.key] = it.value.copy(status = status) } }
     val adRewards = mutableSetOf<String>()
     override suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: java.time.Instant) = adRewards.add(transactionId)
 }
@@ -62,6 +64,7 @@ class FakeInventoryRepository : com.matchdayclub.domain.repository.InventoryRepo
         if (rows.any { it.clubId == item.clubId && it.itemId == item.itemId }) return false
         rows += item; return true
     }
+    override suspend fun remove(clubId: UUID, itemId: String) = rows.removeIf { it.clubId == clubId && it.itemId == itemId }
 }
 
 class FakeAchievementRepository : com.matchdayclub.domain.repository.AchievementRepository {
