@@ -4,7 +4,7 @@ import com.matchdayclub.domain.exception.ConflictException
 import com.matchdayclub.domain.exception.InsufficientFundsException
 import com.matchdayclub.domain.exception.ValidationException
 import com.matchdayclub.domain.model.BuildingState
-import com.matchdayclub.domain.rules.BuildingType
+import com.matchdayclub.domain.rules.*
 import com.matchdayclub.domain.usecase.club.*
 import com.matchdayclub.testutil.*
 import kotlinx.coroutines.runBlocking
@@ -68,6 +68,24 @@ class ClubUseCasesTest {
         assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 0, 10, 0) }  // a 2nd office needs stadium 4
         place(user, BuildingType.ACADEMY, 0, 10, 0)
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 3, 10, 0) }          // one academy, ever
+        Unit
+    }
+
+    @Test
+    fun `a court may stand on its own plot outside the grid, nowhere else outside it`() = runBlocking<Unit> {
+        newClub()
+        clubs.update(clubs.rows.values.first().copy(coins = 1_000_000, trophies = 100_000))
+        // stadium 3: two upgrades of the pitch
+        repeat(2) { val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }; upgrade(user, pitch.id); clock.advanceSeconds(24 * 3600) }
+        assertEquals(3, get(user).stadium)
+        assertTrue(get(user).gridSize < 20, "the plot lies outside the grid for this test")
+        val plot = ReservedPlots.of(BuildingType.BASKETBALL_COURT)!!
+        assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_COURT, plot.plot.x + plot.plot.w, plot.plot.y, 0) }   // next to the plot
+        val court = place(user, BuildingType.BASKETBALL_COURT, plot.courtX, plot.courtY, 0)
+        assertEquals(plot.courtX, court.gridX); assertEquals(plot.courtY, court.gridY)
+        assertTrue(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(plot.plot.x + plot.plot.w - 3, plot.plot.y + plot.plot.h - 2, 3, 2), 12))
+        assertFalse(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(plot.plot.x + plot.plot.w - 2, plot.plot.y, 3, 2), 12))
+        assertFalse(ReservedPlots.allowed(BuildingType.ACADEMY, Footprint(plot.courtX, plot.courtY, 2, 2), 12))
         Unit
     }
 

@@ -7,6 +7,7 @@ import com.matchdayclub.domain.rules.BuildingCatalog
 import com.matchdayclub.domain.rules.BuildingSpec
 import com.matchdayclub.domain.rules.ClubLevels
 import com.matchdayclub.domain.rules.LevelSpec
+import com.matchdayclub.domain.rules.ReservedPlots
 import com.matchdayclub.domain.rules.Stadium
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -43,7 +44,9 @@ import java.time.Instant
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredStadium: Int, val requiredTrophies: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
 /** [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first stadium level with a copy. */
 @Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>,
-                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1)
+                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1,
+                                         /** The sport's own plot in the reserved land (courts only; plotW = 0 when none) and where its court stands. */
+                                         val plotX: Int = 0, val plotY: Int = 0, val plotW: Int = 0, val plotH: Int = 0, val courtX: Int = 0, val courtY: Int = 0)
 
 @Serializable data class BuildingDto(
     val id: String, val type: String, val level: Int, val x: Int, val y: Int, val rotation: Int, val state: String,
@@ -76,7 +79,11 @@ fun Club.adsState(now: Instant): AdsStateDto {
 }
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
-fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium)
+fun BuildingSpec.toDto(): BuildingSpecDto {
+    val plot = ReservedPlots.of(type)
+    return BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium,
+        plotX = plot?.plot?.x ?: 0, plotY = plot?.plot?.y ?: 0, plotW = plot?.plot?.w ?: 0, plotH = plot?.plot?.h ?: 0, courtX = plot?.courtX ?: 0, courtY = plot?.courtY ?: 0)
+}
 
 fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.matchdayclub.domain.rules.Atmosphere.Bonus = com.matchdayclub.domain.rules.Atmosphere.Bonus()): BuildingDto {
     val spec = BuildingCatalog.level(type, level)

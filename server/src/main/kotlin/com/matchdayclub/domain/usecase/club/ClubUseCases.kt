@@ -166,7 +166,7 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         }
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(type, x, y, rotation)
-        if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
+        if (!ReservedPlots.allowed(type, fp, st.gridSize)) throw ValidationException("Outside the club grid")
         if (st.buildings.any { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         if (lvl.buildSeconds > 0) service.requireFreeBuilder(st)
@@ -251,7 +251,7 @@ class MoveBuildingUseCase(private val service: ClubService, private val building
         val b = st.buildings.firstOrNull { it.id == buildingId } ?: throw NotFoundException("Building not found")
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(b.type, x, y, rotation)
-        if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
+        if (!ReservedPlots.allowed(b.type, fp, st.gridSize)) throw ValidationException("Outside the club grid")
         if (st.buildings.any { it.id != b.id && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         buildings.move(b.copy(gridX = x, gridY = y, rotation = rotation, updatedAt = clock.now()))

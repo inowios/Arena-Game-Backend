@@ -238,6 +238,24 @@ object ClubLevels {
 data class Footprint(val x: Int, val y: Int, val w: Int, val h: Int) {
     fun fits(gridSize: Int) = x >= 0 && y >= 0 && x + w <= gridSize && y + h <= gridSize
     fun overlaps(o: Footprint) = x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h
+    fun contains(o: Footprint) = o.x >= x && o.y >= y && o.x + o.w <= x + w && o.y + o.h <= y + h
+}
+
+/**
+ * Each other sport has a plot of its own in the club's reserved land (cells of the 30x30 reserve, outside the first
+ * grids): a derelict court stands in its middle until the stadium allows the sport, then the club restores it there.
+ * A court may be placed or moved inside its plot even when the plot lies outside the current grid; anywhere else the
+ * grid rules apply as usual.
+ */
+data class ReservedPlot(val type: BuildingType, val plot: Footprint, val courtX: Int, val courtY: Int)
+object ReservedPlots {
+    val ALL = listOf(
+        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(18, 3, 7, 6), 20, 5),
+        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(2, 18, 7, 6), 4, 20),
+    )
+    fun of(type: BuildingType): ReservedPlot? = ALL.firstOrNull { it.type == type }
+    /** Inside the grid, or a court inside its own plot. */
+    fun allowed(type: BuildingType, fp: Footprint, gridSize: Int) = fp.fits(gridSize) || of(type)?.plot?.contains(fp) == true
 }
 
 fun footprint(type: BuildingType, x: Int, y: Int, rotation: Int): Footprint {
