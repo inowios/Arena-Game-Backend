@@ -43,6 +43,8 @@ fun Route.adminRoutes(token: String) {
     val grant: AdminGrantUseCase by inject()
     val tick: SchedulerTick by inject()
     val liveOps: com.matchdayclub.domain.usecase.liveops.LiveOps by inject()
+    val funnel: com.matchdayclub.domain.usecase.analytics.FunnelUseCase by inject()
+    val balance: com.matchdayclub.domain.usecase.analytics.BalanceUseCase by inject()
     val version = AdminRoute::class.java.`package`?.implementationVersion ?: "dev"
 
     get("/metrics") {
@@ -56,6 +58,20 @@ fun Route.adminRoutes(token: String) {
             val to = call.request.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrElse { throw ValidationException("Bad date") } }
             call.respond(report(days, to).toDto().toSuccessResponse())
         }
+        // the first-ten-minutes funnel and the balance dashboard (JSON); /admin/dashboard is a page that reads both
+        get("/funnel") {
+            call.requireAdmin(expected)
+            val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 14
+            val to = call.request.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrElse { throw ValidationException("Bad date") } }
+            call.respond(funnel(days, to).toDto().toSuccessResponse())
+        }
+        get("/balance") {
+            call.requireAdmin(expected)
+            val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
+            val to = call.request.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrElse { throw ValidationException("Bad date") } }
+            call.respond(balance(days, to).toDto().toSuccessResponse())
+        }
+        get("/dashboard") { call.respondText(DashboardPage.HTML, ContentType.Text.Html) }
         get("/stats") {
             call.requireAdmin(expected)
             val s = SchedulerStatus

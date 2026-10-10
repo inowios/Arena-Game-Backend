@@ -1,6 +1,7 @@
 package com.matchdayclub.domain.repository
 
 import com.matchdayclub.domain.model.AnalyticsEvent
+import com.matchdayclub.domain.model.ClubSnapshot
 import com.matchdayclub.domain.model.CohortRow
 import java.time.Instant
 import java.time.LocalDate
@@ -30,4 +31,13 @@ interface AnalyticsRepository {
     suspend fun adRewards(from: Instant, to: Instant): Int
     /** The most frequent event names in [from, to). */
     suspend fun eventCounts(from: Instant, to: Instant, limit: Int = 40): Map<String, Int>
+
+    /** Events named in [names] of the users whose club_created falls in [from, to), up to [horizon] (onboarding funnel). */
+    suspend fun cohortEvents(from: Instant, to: Instant, horizon: Instant, names: Set<String>, limit: Int = 200_000): List<AnalyticsEvent>
+    /** The props of every [name] event in [from, to). */
+    suspend fun eventProps(name: String, from: Instant, to: Instant, limit: Int = 100_000): List<Map<String, String>>
+    /** Buildings of human clubs per type and level. */
+    suspend fun buildingLevels(): Map<String, Map<Int, Int>>
+    /** The clubs of humans active on any day in [from, to]. */
+    suspend fun activeClubs(from: LocalDate, to: LocalDate, limit: Int = 50_000): List<ClubSnapshot>
 }

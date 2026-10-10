@@ -43,3 +43,6 @@ data class MetricsReport(
     val adRewards: Int,
     val events: Map<String, Int>,
 )
+
+/** One human club's economy at report time (balance dashboard). [stadium] is the pitch level. */
+data class ClubSnapshot(val coins: Long, val gold: Int, val trophies: Int, val level: Int, val stadium: Int)

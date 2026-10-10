@@ -286,6 +286,17 @@ class ApiIT {
         assertEquals("NO_DATA", report["kpis"]!!.o()["d1Retention"]!!.o()["status"]!!.jsonPrimitive.content)
         assertEquals(1, report["events"]!!.o()["club_created"]!!.jsonPrimitive.int)
         admin(HttpMethod.Get, "/admin/metrics?days=0", expect = 400)
+        // the first-ten-minutes funnel and the balance dashboard read the real tables
+        val funnel = admin(HttpMethod.Get, "/admin/funnel?days=7").data.o()
+        assertEquals(1, funnel["cohort"]!!.jsonPrimitive.int)
+        assertEquals(1, funnel["steps"]!!.jsonArray.first().o()["users"]!!.jsonPrimitive.int)
+        val bal = admin(HttpMethod.Get, "/admin/balance?days=7").data.o()
+        assertEquals(1, bal["activeClubs"]!!.jsonPrimitive.int)
+        assertTrue(bal["buildings"]!!.o().isNotEmpty())
+        assertEquals(1, bal["stadium"]!!.o()["1"]!!.jsonPrimitive.int)
+        admin(HttpMethod.Get, "/admin/balance?days=0", expect = 400)
+        val page = client.get("/admin/dashboard")
+        assertEquals(200, page.status.value); assertTrue(page.bodyAsText().contains("X-Admin-Token"))
         val found = admin(HttpMethod.Get, "/admin/clubs?q=metric").data.jsonArray
         assertEquals(listOf("Metric FC"), found.map { it.o()["name"]!!.jsonPrimitive.content })
         val clubId = found[0].o()["id"]!!.jsonPrimitive.content

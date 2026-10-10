@@ -211,6 +211,8 @@ val appModule = module {
     single { com.matchdayclub.domain.usecase.analytics.EventLog(get(), get()) }
     single { com.matchdayclub.domain.usecase.analytics.TrackEventsUseCase(get(), get()) }
     single { com.matchdayclub.domain.usecase.analytics.MetricsReportUseCase(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.FunnelUseCase(get(), get()) }
+    single { com.matchdayclub.domain.usecase.analytics.BalanceUseCase(get(), get()) }
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("analytics")) { com.matchdayclub.domain.usecase.analytics.AnalyticsClubInitializer(get()) }
     single<OpsRepository> { OpsRepositoryImpl(get()) }
     single { com.matchdayclub.domain.usecase.admin.SupportQueries(get(), get(), get()) }

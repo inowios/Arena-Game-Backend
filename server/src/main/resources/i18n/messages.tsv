@@ -211,3 +211,6 @@ Mail not found	Mail not found	Correo no encontrado	Correio não encontrado	Пи�
 Offer not found	Offer not found	Oferta no encontrada	Oferta não encontrada	Предложение не найдено	Пропозицію не знайдено
 The event must end after it starts	The event must end after it starts	El evento debe terminar después de empezar	O evento deve terminar depois de começar	Событие должно закончиться позже начала	Подія має закінчитися пізніше початку
 Unknown goal	Unknown goal	Objetivo desconocido	Objetivo desconhecido	Неизвестная цель	Невідома мета
+# --- admin dashboards
+days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
+days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90
