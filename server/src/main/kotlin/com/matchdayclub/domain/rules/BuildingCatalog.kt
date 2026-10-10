@@ -253,16 +253,17 @@ data class Footprint(val x: Int, val y: Int, val w: Int, val h: Int) {
 }
 
 /**
- * Each other sport has a plot of its own at an edge of the club's land (cells of the 30x30 square, outside the first
- * grids): a derelict court stands in its middle until the stadium allows the sport, then the club restores it there.
+ * Each other sport owns a quarter of the club's land (the 30x30 square), from its corner to the middle of the two
+ * roads; a derelict court stands in the corner until the stadium allows the sport, then the club restores it there.
  * A court may be placed or moved inside its plot even when the plot lies outside the current grid; anywhere else the
  * grid rules apply as usual.
  */
 data class ReservedPlot(val type: BuildingType, val plot: Footprint, val courtX: Int, val courtY: Int)
 object ReservedPlots {
     val ALL = listOf(
-        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(23, 12, 7, 6), 25, 14),   // the east edge of the land
-        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(0, 12, 7, 6), 2, 14),          // the west edge
+        // each sport owns a quarter of the land, from its corner to the middle of the two roads; the court stands in the corner
+        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(15, 0, 15, 15), 26, 1),   // north-east quarter
+        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(0, 0, 15, 15), 1, 1),         // north-west quarter
     )
     fun of(type: BuildingType): ReservedPlot? = ALL.firstOrNull { it.type == type }
     /** Inside the grid, or a court inside its own plot. */
