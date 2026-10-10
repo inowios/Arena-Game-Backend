@@ -91,3 +91,19 @@ object MuseumRules {
     fun capacity(level: Int) = listOf(0, 6, 12, 20, 30, 45).getOrElse(level.coerceIn(0, 5)) { 45 }
     fun atmospherePct(level: Int) = 2 * level.coerceIn(0, 5)
 }
+
+/**
+ * Season themes (В5): every pass season wears the look of the time of year — its colours on the pass screen and an
+ * exclusive decoration handed out on the pass at [ITEM_LEVEL] (free track), only while that theme runs.
+ */
+data class SeasonTheme(val id: String, val accent: String, val accent2: String, val item: String)
+
+object SeasonThemes {
+    const val ITEM_LEVEL = 20
+    val AUTUMN = SeasonTheme("autumn", "#E8772E", "#6B3E1F", "decor_pumpkins")
+    val WINTER = SeasonTheme("winter", "#3FA7E0", "#FFFFFF", "decor_snow_tree")
+    val SPRING = SeasonTheme("spring", "#F28DB2", "#7CC46B", "decor_blossom")
+    val SUMMER = SeasonTheme("summer", "#F7C531", "#2EB5C8", "decor_beach")
+    val ALL = listOf(AUTUMN, WINTER, SPRING, SUMMER)
+    fun of(date: java.time.LocalDate): SeasonTheme = when (date.monthValue) { 9, 10, 11 -> AUTUMN; 12, 1, 2 -> WINTER; 3, 4, 5 -> SPRING; else -> SUMMER }
+}

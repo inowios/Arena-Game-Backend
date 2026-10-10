@@ -32,7 +32,7 @@ class ClaimDailyRewardUseCase(private val service: ClubService, private val club
     }
 }
 
-data class PassView(val pass: SeasonPass, val level: Int, val tasks: List<DailyTask>, val seasonNumber: Int)
+data class PassView(val pass: SeasonPass, val level: Int, val tasks: List<DailyTask>, val seasonNumber: Int, val theme: SeasonTheme = SeasonThemes.AUTUMN)
 
 data class PassClaim(val reward: Reward, val items: List<String>, val elite: Athlete?, val view: PassView)
 
@@ -53,10 +53,12 @@ class SeasonPassUseCases(
         return pass to season
     }
 
+    private fun themeOf(club: Club) = SeasonThemes.of(clock.now().atZone(runCatching { java.time.ZoneId.of(club.timezone) }.getOrDefault(java.time.ZoneOffset.UTC)).toLocalDate())
+
     suspend fun view(userId: UUID): PassView {
         val club = service.clubOf(userId)
         val (pass, season) = passOf(club)
-        return PassView(pass, Economy.passLevel(pass.xp), economy.todaysTasks(club.id, club.timezone), season)
+        return PassView(pass, Economy.passLevel(pass.xp), economy.todaysTasks(club.id, club.timezone), season, themeOf(club))
     }
 
     suspend fun claimTask(userId: UUID, task: TaskKind): PassView = tx {
@@ -88,7 +90,10 @@ class SeasonPassUseCases(
             val c = cosmetics ?: return
             if (c.grant(club.id, it, CosmeticSource.PASS)) items += it.id else total += Reward(gold = Cosmetics.DUPLICATE_GOLD)
         }
-        for (l in pass.claimedFree + 1..level) { total += Economy.freeReward(l); item(l, false) }
+        for (l in pass.claimedFree + 1..level) {
+            total += Economy.freeReward(l); item(l, false)
+            if (l == SeasonThemes.ITEM_LEVEL) Cosmetics.find(themeOf(club).item)?.let { t -> val c = cosmetics; if (c != null) { if (c.grant(club.id, t, CosmeticSource.PASS)) items += t.id else total += Reward(gold = Cosmetics.DUPLICATE_GOLD) } }
+        }
         var claimedPremium = pass.claimedPremium
         if (pass.premium) {
             for (l in pass.claimedPremium + 1..level) {

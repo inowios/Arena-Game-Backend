@@ -100,6 +100,19 @@ class ProgressRoadsTest {
     }
 }
 
+class SeasonThemesTest {
+    @Test
+    fun `each time of year has its theme and its own decoration`() {
+        assertEquals("autumn", SeasonThemes.of(java.time.LocalDate.of(2026, 10, 10)).id)
+        assertEquals("winter", SeasonThemes.of(java.time.LocalDate.of(2027, 1, 3)).id)
+        assertEquals("spring", SeasonThemes.of(java.time.LocalDate.of(2027, 4, 1)).id)
+        assertEquals("summer", SeasonThemes.of(java.time.LocalDate.of(2027, 7, 1)).id)
+        for (t in SeasonThemes.ALL) assertEquals("theme:${t.id}", Cosmetics.find(t.item)?.unlock)
+        // road cosmetics exist for every road item
+        for (s in Roads.TROPHY + Roads.LEVEL) s.reward.item?.let { assertNotNull(Cosmetics.find(it), it) }
+    }
+}
+
 class FakeRoadRepository : RoadRepository {
     private val rows = mutableSetOf<Triple<UUID, Road, Int>>()
     override suspend fun claimed(clubId: UUID) = rows.filter { it.first == clubId }.groupBy({ it.second }, { it.third }).mapValues { it.value.toSet() }

@@ -19,7 +19,8 @@ import kotlinx.serialization.Serializable
     val level: Int, val free: RewardDto, val premium: RewardDto, val reached: Boolean, val claimedFree: Boolean, val claimedPremium: Boolean,
     val freeItem: String? = null, val premiumItem: String? = null, val elite: Boolean = false,
 )
-@Serializable data class PassResponse(val season: Int, val xp: Int, val level: Int, val xpPerLevel: Int, val premium: Boolean, val tasks: List<TaskDto>, val levels: List<PassLevelDto>)
+@Serializable data class ThemeDto(val id: String, val accent: String, val accent2: String, val item: String, val itemLevel: Int)
+@Serializable data class PassResponse(val season: Int, val xp: Int, val level: Int, val xpPerLevel: Int, val premium: Boolean, val tasks: List<TaskDto>, val levels: List<PassLevelDto>, val theme: ThemeDto? = null)
 @Serializable data class ClaimLevelsRequest(val eliteSport: String? = null)
 @Serializable data class ClaimLevelsResponse(val reward: RewardDto, val pass: PassResponse, val club: ClubDto, val items: List<String> = emptyList(), val elite: AthleteDto? = null)
 @Serializable data class VerifyPurchaseRequest(val store: String, val productId: String, val token: String)
@@ -46,7 +47,7 @@ fun PassView.toDto() = PassResponse(seasonNumber, pass.xp, level, Economy.XP_PER
     (1..Economy.PASS_LEVELS).map { l ->
         PassLevelDto(l, Economy.freeReward(l).toDto(), Economy.premiumReward(l).toDto(), l <= level, l <= pass.claimedFree, l <= pass.claimedPremium,
             Economy.passItem(l, false)?.id, Economy.passItem(l, true)?.id, l == Economy.ELITE_LEVEL)
-    })
+    }, ThemeDto(theme.id, theme.accent, theme.accent2, theme.item, com.matchdayclub.domain.rules.SeasonThemes.ITEM_LEVEL))
 
 fun Cosmetic.toDto() = CosmeticDto(id, kind.name, source.name, gold, rarity.name, unlock)
 fun Club.equipped() = EquippedDto(kit, emblemFrame, celebration)

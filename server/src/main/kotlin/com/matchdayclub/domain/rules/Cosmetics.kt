@@ -38,6 +38,11 @@ object Cosmetics {
         Cosmetic("decor_banner", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.RARE, unlock = "free:30"),
         Cosmetic("decor_statue", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "premium:15"),
         Cosmetic("decor_trophy", CosmeticKind.DECOR, CosmeticSource.ACHIEVEMENT, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "champion:2"),
+        // season themes: one decoration per time of year, on the pass while that theme runs (see SeasonThemes)
+        Cosmetic("decor_pumpkins", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "theme:autumn"),
+        Cosmetic("decor_snow_tree", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "theme:winter"),
+        Cosmetic("decor_blossom", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "theme:spring"),
+        Cosmetic("decor_beach", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "theme:summer"),
         // the trophy road: the city of the future, one look per arena climbed
         Cosmetic("decor_led_pole", CosmeticKind.DECOR, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.RARE, unlock = "trophy:300"),
         Cosmetic("decor_holo_ball", CosmeticKind.DECOR, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.EPIC, unlock = "trophy:2200"),
