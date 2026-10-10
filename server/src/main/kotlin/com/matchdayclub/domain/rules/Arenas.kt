@@ -11,8 +11,8 @@ data class Arena(val index: Int, val key: String, val trophies: Int, val rewardK
  */
 object Arenas {
     val ALL = listOf(
-        Arena(0, "YARD", 0, 1.0, 1), Arena(1, "DISTRICT", 300, 1.3, 2), Arena(2, "CITY", 700, 1.6, 3), Arena(3, "REGION", 1200, 2.0, 4),
-        Arena(4, "COUNTRY", 1800, 2.5, 5), Arena(5, "CONTINENT", 2600, 3.1, 6), Arena(6, "WORLD", 3500, 3.8, 7),
+        Arena(0, "YARD", 0, 1.0, 1), Arena(1, "DISTRICT", 300, 1.3, 2), Arena(2, "CITY", 700, 1.6, 3), Arena(3, "REGION", 1300, 2.0, 4),
+        Arena(4, "COUNTRY", 2200, 2.5, 5), Arena(5, "CONTINENT", 3500, 3.1, 6), Arena(6, "WORLD", 5500, 3.8, 7),
     )
     fun of(trophies: Int): Arena = ALL.last { trophies >= it.trophies }
     fun byKey(key: String) = ALL.firstOrNull { it.key == key } ?: ALL[0]

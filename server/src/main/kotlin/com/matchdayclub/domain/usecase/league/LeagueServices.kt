@@ -13,7 +13,8 @@ import java.time.Instant
 import java.util.UUID
 
 /** Bot squad quality band by division: the entry division is beatable with a starter squad, the top one is not. */
-fun botQuality(division: Int): Pair<Int, Int> = (40 + (division - 1) * 6).coerceAtMost(80) to (52 + (division - 1) * 6).coerceAtMost(90)
+/** Bot athletes by division (also the arena ladder's opposition): 40..52 at the bottom, 82..94 at the top. */
+fun botQuality(division: Int): Pair<Int, Int> = (40 + (division - 1) * 7).coerceAtMost(82) to (52 + (division - 1) * 7).coerceAtMost(94)
 
 /** Creates AI-controlled clubs that fill public leagues. */
 class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val leagues: LeagueRepository? = null) {
