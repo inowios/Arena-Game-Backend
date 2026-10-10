@@ -26,5 +26,10 @@ fun LiveOutcome.toDto(now: Instant) = LiveFinishDto(outcome.name, arena.key, coi
 @Serializable data class LiveRecentDto(val id: String, val opponent: ClubRefDto?, val homeScore: Int, val awayScore: Int, val trophiesDelta: Int, val status: String, val finishedAt: String?)
 fun com.matchdayclub.domain.usecase.live.RecentLiveMatchesUseCase.Row.toDto() = LiveRecentDto(match.id.toString(), opponent?.toRef(), match.homeScore ?: 0, match.awayScore ?: 0, match.trophiesDelta ?: 0, match.status.name, match.finishedAt?.toString())
 
+@Serializable data class AthleteMatchDto(val id: String, val opponent: ClubRefDto?, val homeScore: Int, val awayScore: Int, val minutes: Int, val goals: Int, val assists: Int, val finishedAt: String?)
+@Serializable data class AthleteHistoryDto(val athleteId: String, val matches: Int, val wins: Int, val goals: Int, val assists: Int, val recent: List<AthleteMatchDto>)
+fun com.matchdayclub.domain.usecase.live.AthleteMatchHistoryUseCase.History.toDto() = AthleteHistoryDto(athlete.id.toString(), matches, wins, goals, assists,
+    rows.map { AthleteMatchDto(it.match.id.toString(), it.opponent?.toRef(), it.match.homeScore ?: 0, it.match.awayScore ?: 0, it.minutes, it.goals, it.assists, it.match.finishedAt?.toString()) })
+
 @Serializable data class ArenaChestDto(val arena: String, val coins: Long, val gold: Int, val available: Boolean, val nextAt: String, val club: ClubDto? = null)
 fun com.matchdayclub.domain.usecase.live.ArenaChest.toDto(club: com.matchdayclub.domain.model.Club? = null) = ArenaChestDto(arena.key, coins, gold, available, nextAt.toString(), club?.toDto())

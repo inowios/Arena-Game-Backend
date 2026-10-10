@@ -91,6 +91,20 @@ class LiveMatchTest {
     }
 
     @Test
+    fun `an athlete's record counts his starts, goals and assists`() = runBlocking<Unit> {
+        create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val history = com.matchdayclub.domain.usecase.live.AthleteMatchHistoryUseCase(clubService, athletes, clubs, live)
+        val s = start(u1, null); val fwd = s.home.starters.first { it.position == com.matchdayclub.engine.model.Position.FWD }
+        finish(u1, s.match.id, LiveReport(2, 0, duration = 250.0, minutes = listOf(com.matchdayclub.domain.usecase.live.LiveMinutes(fwd.id.toString(), 90, 2, 0))))
+        clock.advanceSeconds(60)
+        val s2 = start(u1, null)
+        finish(u1, s2.match.id, LiveReport(1, 1, duration = 250.0, minutes = listOf(com.matchdayclub.domain.usecase.live.LiveMinutes(fwd.id.toString(), 90, 0, 1))))
+        val h = history(u1, fwd.id)
+        assertEquals(2, h.matches); assertEquals(1, h.wins); assertEquals(2, h.goals); assertEquals(1, h.assists)
+        assertEquals(s2.match.id, h.rows[0].match.id); assertEquals(1, h.rows[0].assists); assertNotNull(h.rows[0].opponent)
+    }
+
+    @Test
     fun `a match given back before kick-off costs nothing`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val cancel = com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase(clubService, live, clock)

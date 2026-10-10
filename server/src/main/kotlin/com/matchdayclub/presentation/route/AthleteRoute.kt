@@ -29,6 +29,7 @@ fun Route.athleteRoutes() {
     val speedUpMedical: SpeedUpMedicalUseCase by inject()
     val release: ReleaseAthleteUseCase by inject()
     val upgradeTechnique: UpgradeTechniqueUseCase by inject()
+    val history: com.matchdayclub.domain.usecase.live.AthleteMatchHistoryUseCase by inject()
     val scouting: ScoutingUseCases by inject()
     val getLineup: GetLineupUseCase by inject()
     val setLineup: SetLineupUseCase by inject()
@@ -58,6 +59,7 @@ fun Route.athleteRoutes() {
             post("/athletes/{id}/heal") { call.respond(heal(call.userId(), call.uuid("id")).toDto(clock.now()).toSuccessResponse()) }
             post("/medical/speedup") { call.respond(speedUpMedical(call.userId()).toDto().toSuccessResponse()) }
             delete("/athletes/{id}") { release(call.userId(), call.uuid("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
+            get("/athletes/{id}/matches") { call.respond(history(call.userId(), call.uuid("id")).toDto().toSuccessResponse()) }
             post("/athletes/{id}/techniques/{key}") {
                 val r = upgradeTechnique(call.userId(), call.uuid("id"), call.parameters["key"] ?: throw ValidationException("Unknown technique"))
                 call.respond(UpgradeTechniqueResponse(r.athlete.toDto(clock.now()), r.level, r.cost).toSuccessResponse())

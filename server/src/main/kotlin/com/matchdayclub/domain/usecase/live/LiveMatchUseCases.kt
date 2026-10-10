@@ -140,6 +140,28 @@ class RecentLiveMatchesUseCase(private val service: ClubService, private val clu
     }
 }
 
+/** One athlete's live-match record: the last matches he started (goals, assists, the result) and the totals. */
+class AthleteMatchHistoryUseCase(private val service: ClubService, private val athletes: AthleteRepository, private val clubs: ClubRepository, private val live: LiveMatchRepository) {
+    data class Row(val match: LiveMatch, val opponent: Club?, val minutes: Int, val goals: Int, val assists: Int)
+    data class History(val athlete: Athlete, val rows: List<Row>, val matches: Int, val goals: Int, val assists: Int, val wins: Int)
+    private val json = Json { ignoreUnknownKeys = true }
+
+    suspend operator fun invoke(userId: UUID, athleteId: UUID, limit: Int = 8): History {
+        val club = service.clubOf(userId)
+        val a = athletes.findById(athleteId)?.takeIf { it.clubId == club.id } ?: throw NotFoundException("Athlete not found")
+        val id = a.id.toString()
+        val played = live.recent(club.id, 60).filter { it.status == LiveStatus.FINISHED && a.id in it.starters }
+        val opps = clubs.findByIds(played.map { it.opponentId }.toSet()).associateBy { it.id }
+        var goals = 0; var assists = 0; var wins = 0
+        val rows = played.map { m ->
+            val mine = m.resultJson?.let { runCatching { json.decodeFromString(LiveReport.serializer(), it) }.getOrNull() }?.minutes?.firstOrNull { it.athleteId == id }
+            goals += mine?.goals ?: 0; assists += mine?.assists ?: 0; if ((m.homeScore ?: 0) > (m.awayScore ?: 0)) wins++
+            Row(m, opps[m.opponentId], mine?.minutes ?: 90, mine?.goals ?: 0, mine?.assists ?: 0)
+        }
+        return History(a, rows.take(limit), played.size, goals, assists, wins)
+    }
+}
+
 /** "Another opponent": a match handed out but not kicked off yet (within [LiveRules.CANCEL_SECONDS]) is given back without a result. */
 class CancelLiveMatchUseCase(private val service: ClubService, private val live: LiveMatchRepository, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID, matchId: UUID): LiveMatch = tx {
