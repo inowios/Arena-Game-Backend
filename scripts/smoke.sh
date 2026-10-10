@@ -15,7 +15,13 @@ curl -sf -X POST "$B/club" -H "$H" -H "$A" -d '{"name":"Smoke FC","primaryColor"
 step "club state"
 curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['coins']==2500 and len(d['data']['buildings'])==2"
 step "place academy, speed up, claim graduate"
-BID=$(curl -sf -X POST "$B/club/buildings" -H "$H" -H "$A" -d '{"type":"ACADEMY","x":0,"y":10}' | j "print(d['data']['id'])")
+# obstacles spawn at random cells, so pick a free 2x2 spot (buildings are kept clear with a generous margin)
+SPOT=$(curl -sf "$B/club" -H "$A" | j "g=d['data']['gridSize']; taken=set()
+for b in d['data']['buildings']: taken.update((b['x']+i,b['y']+j) for i in range(6) for j in range(6))
+for o in d['data']['obstacles']: taken.update((o['x']+i,o['y']+j) for i in range(o.get('w') or o.get('width') or 1) for j in range(o.get('h') or o.get('height') or 1))
+free=[(x,y) for y in range(g-1) for x in range(g-1) if all((x+i,y+j) not in taken for i in range(2) for j in range(2))]
+print(json.dumps({'type':'ACADEMY','x':free[0][0],'y':free[0][1]}))")
+BID=$(curl -sf -X POST "$B/club/buildings" -H "$H" -H "$A" -d "$SPOT" | j "print(d['data']['id'])")
 curl -sf -X POST "$B/club/buildings/$BID/speedup" -H "$A" | j "assert d['data']['state']=='IDLE'"
 curl -sf -X POST "$B/club/academy/claim" -H "$A" | j "assert d['data']['overall']>0"
 step "second claim must be 409"
@@ -60,7 +66,7 @@ if [ "${SMOKE_MATCHDAY:-1}" = "1" ]; then
   curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"REFUND"}' | j "assert d['data']['outcome']=='APPLIED'"
   curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"REFUND"}' | j "assert d['data']['outcome']=='ALREADY'"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['gold']==$G1-100"
-  curl -sf "$B/inbox" -H "$A" | j "assert any(i['kind']=='REFUND' for i in d['data']['items'])"
+  curl -sf "$B/club/inbox" -H "$A" | j "assert any(i['kind']=='REFUND' for i in d['data']['items'])"
   curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"RESTORE"}' | j "assert d['data']['outcome']=='APPLIED'"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['gold']==$G1"
 fi
