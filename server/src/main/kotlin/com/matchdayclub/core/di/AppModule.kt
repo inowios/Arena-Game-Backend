@@ -66,6 +66,11 @@ val appModule = module {
     single { SpeedUpUseCase(get(), get(), get(), tx = get()) }
     single { RemoveBuildingUseCase(get(), get(), tx = get()) }
     single { MoveBuildingUseCase(get(), get(), get(), tx = get()) }
+    single { PlaceFencesUseCase(get(), get(), get(), tx = get()) }
+    single { UpgradeFencesUseCase(get(), get(), get(), tx = get()) }
+    single { ApplyLayoutUseCase(get(), get(), get(), tx = get()) }
+    single<com.matchdayclub.domain.repository.LayoutRepository> { com.matchdayclub.data.repository.LayoutRepositoryImpl() }
+    single { LayoutUseCases(get(), get(), get(), get(), tx = get()) }
     single { BuyBuilderUseCase(get(), get(), get(), tx = get()) }
     single { ClearObstacleUseCase(get(), get(), get(), tx = get()) }
     single { SpeedUpObstacleUseCase(get(), get(), get(), tx = get()) }

@@ -67,6 +67,28 @@ class ApiIT {
     }
 
     @Test
+    fun `fences, edit mode and saved layouts over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val t = guestWithClub("it-device-fence", "Fence FC")
+        val (ax, ay) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 1, 1)
+        val a = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$ax,"y":$ay}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
+        val (bx, by) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 1, 1)
+        val b = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$bx,"y":$by}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
+        call(HttpMethod.Post, "/club/fences/upgrade", t, """{"ids":["$a","$b"]}""", expect = 400)   // level 2 needs stadium 2
+        call(HttpMethod.Put, "/club/layouts/1", t, """{"name":"Home"}""")
+        // swap the two cells in one go (the (club, x, y) uniqueness must not trip)
+        call(HttpMethod.Put, "/club/layout", t, """{"moves":[{"id":"$a","x":$bx,"y":$by},{"id":"$b","x":$ax,"y":$ay}]}""")
+        val moved = call(HttpMethod.Get, "/club", t).data.o()["buildings"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == a }
+        assertEquals(bx, moved["x"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/club/layouts/1/apply", t)
+        val back = call(HttpMethod.Get, "/club", t).data.o()["buildings"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == a }
+        assertEquals(ax, back["x"]!!.jsonPrimitive.int)
+        assertEquals("Home", call(HttpMethod.Get, "/club/layouts", t).data.jsonArray.single().o()["name"]!!.jsonPrimitive.content)
+        call(HttpMethod.Delete, "/club/buildings/$b", t)
+    }
+
+    @Test
     fun `chat, challenges, invite landing pages and app links over HTTP`() = testApplication {
         environment { config = TestDb.appConfig(mapOf("links.baseUrl" to "https://mdc.test", "links.androidCertSha256" to "AA:BB", "links.iosTeamId" to "TEAM1")) }
         application { module() }

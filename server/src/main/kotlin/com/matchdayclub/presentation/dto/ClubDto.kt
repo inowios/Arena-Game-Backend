@@ -15,6 +15,15 @@ import java.time.Instant
 @Serializable data class UpdateClubRequest(val name: String? = null, val primaryColor: String? = null, val secondaryColor: String? = null, val emblemJson: String? = null)
 @Serializable data class PlaceBuildingRequest(val type: String, val x: Int, val y: Int, val rotation: Int = 0, val variant: String? = null)
 @Serializable data class MoveBuildingRequest(val x: Int, val y: Int, val rotation: Int = 0)
+@Serializable data class CellDto(val x: Int, val y: Int)
+/** A line of fence cells drawn by a drag. */
+@Serializable data class PlaceFencesRequest(val cells: List<CellDto>)
+@Serializable data class IdsRequest(val ids: List<String>)
+@Serializable data class PlacementDto(val id: String, val x: Int, val y: Int, val rotation: Int = 0)
+/** Edit mode: every moved building at once. */
+@Serializable data class LayoutRequest(val moves: List<PlacementDto>)
+@Serializable data class SaveLayoutRequest(val name: String = "")
+@Serializable data class LayoutSlotDto(val slot: Int, val name: String, val placements: List<PlacementDto>, val updatedAt: String)
 
 @Serializable data class ClubDto(
     val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val emblemJson: String?,
@@ -42,7 +51,7 @@ import java.time.Instant
     val nextLevel: LevelSpecDto?,
     val variant: String? = null,
     /** Atmosphere bonus to income in % (total and its parts: decor around, next to the stadium, a car park nearby). */
-    val bonusPct: Int = 0, val bonusDecor: Int = 0, val bonusStadium: Int = 0, val bonusParking: Int = 0,
+    val bonusPct: Int = 0, val bonusDecor: Int = 0, val bonusStadium: Int = 0, val bonusParking: Int = 0, val bonusFence: Int = 0,
 )
 
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
@@ -75,7 +84,7 @@ fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.matchdayclub.do
     val next = if (BuildingCatalog.hasLevel(type, level + 1)) BuildingCatalog.level(type, level + 1).toDto(level + 1) else null
     val rate = if (atmosphere.total > 0) (spec.incomePerHour * (1.0 + atmosphere.total / 100.0)).toLong() else spec.incomePerHour
     return BuildingDto(id.toString(), type.name, level, gridX, gridY, rotation, state.name, upgradeEndsAt?.toString(), remaining, BuildingCatalog.speedUpGold(remaining), pending, rate, spec.capHours, next, variant,
-        atmosphere.total, atmosphere.decor, atmosphere.stadium, atmosphere.parking)
+        atmosphere.total, atmosphere.decor, atmosphere.stadium, atmosphere.parking, atmosphere.fence)
 }
 
 fun com.matchdayclub.domain.model.Obstacle.toDto(now: Instant, stadium: Int): ObstacleDto {
@@ -83,3 +92,5 @@ fun com.matchdayclub.domain.model.Obstacle.toDto(now: Instant, stadium: Int): Ob
     return ObstacleDto(id.toString(), kind.name, gridX, gridY, kind.width, kind.height, state.name, remaining, com.matchdayclub.domain.rules.Obstacles.cost(kind, stadium), kind.seconds,
         BuildingCatalog.speedUpGold(remaining), if (state == com.matchdayclub.domain.model.ObstacleState.READY) rewardGold else 0)
 }
+
+fun com.matchdayclub.domain.usecase.club.LayoutSlot.toDto() = LayoutSlotDto(slot, name, placements.map { PlacementDto(it.id.toString(), it.x, it.y, it.rotation) }, updatedAt.toString())

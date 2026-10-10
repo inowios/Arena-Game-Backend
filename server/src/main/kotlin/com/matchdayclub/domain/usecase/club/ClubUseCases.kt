@@ -27,7 +27,7 @@ data class ClubState(val club: Club, val buildings: List<Building>, val gridSize
     /** The stadium level whose limits apply now (the previous one while the stadium itself is being upgraded). */
     val stadium get() = Stadium.level(buildings)
     /** Constructions (first build or upgrade) occupying a builder. Decor is placed instantly and never occupies one. */
-    val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type != BuildingType.DECOR } + obstacles.count { it.state == ObstacleState.CLEARING }
+    val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type !in Stadium.COSMETIC } + obstacles.count { it.state == ObstacleState.CLEARING }
     /** A building's footprint is free of other buildings and obstacles ([except] = the building being moved). */
     fun isFree(fp: Footprint, except: UUID? = null) =
         buildings.none { it.id != except && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) } && obstacles.none { it.footprint.overlaps(fp) }
@@ -181,10 +181,12 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
         if (b.type == BuildingType.PITCH) {
             if (club.trophies < lvl.requiredTrophies) throw ValidationException("Requires {0} trophies", lvl.requiredTrophies)
         } else if (next > BuildingCatalog.spec(b.type).capAt(st.stadium)) throw ValidationException("Requires stadium level {0}", lvl.requiredStadium)
-        service.requireFreeBuilder(st)
+        val instant = lvl.buildSeconds == 0L   // fences: no builder, done at once
+        if (!instant) service.requireFreeBuilder(st)
         service.charge(club, coins = lvl.cost)
         val now = clock.now()
-        buildings.update(b.copy(level = next, state = BuildingState.UPGRADING, upgradeEndsAt = now.plusSeconds(lvl.buildSeconds), updatedAt = now))
+        if (instant) buildings.update(b.copy(level = next, updatedAt = now))
+        else buildings.update(b.copy(level = next, state = BuildingState.UPGRADING, upgradeEndsAt = now.plusSeconds(lvl.buildSeconds), updatedAt = now))
     }
 }
 
@@ -225,7 +227,7 @@ class RemoveBuildingUseCase(private val service: ClubService, private val buildi
     suspend operator fun invoke(userId: UUID, buildingId: UUID) = tx {
         val club = service.lockedClubOf(userId)
         val b = service.building(club, buildingId)
-        if (b.type != BuildingType.DECOR) throw ValidationException("Only decor can be removed")
+        if (b.type !in Stadium.COSMETIC) throw ValidationException("Only decor can be removed")
         buildings.delete(b.id)
     }
 }
@@ -314,4 +316,122 @@ class CollectObstacleUseCase(private val service: ClubService, private val clubs
         progress.record(club.id, ProgressEvent.OBSTACLE_CLEARED)
         ObstacleLoot(o.rewardGold, club)
     }
+}
+
+// ---------- fences ----------
+
+/** Draws a line of fence cells in one go (a drag on the plot): every cell is checked like a placement, paid at once. */
+class PlaceFencesUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, cells: List<Pair<Int, Int>>): List<Building> = tx {
+        if (cells.isEmpty()) throw ValidationException("Nothing to build")
+        if (cells.size > MAX_CELLS) throw ValidationException("Too many cells at once")
+        if (cells.toSet().size != cells.size) throw ValidationException("Overlaps another building")
+        val st = service.state(userId, lock = true)
+        val spec = BuildingCatalog.spec(BuildingType.FENCE)
+        val have = st.buildings.count { it.type == BuildingType.FENCE }
+        if (have + cells.size > spec.countAt(st.stadium)) {
+            val next = (st.stadium + 1..Stadium.MAX_LEVEL).firstOrNull { spec.countAt(it) >= have + cells.size }
+            if (next != null) throw ValidationException("Requires stadium level {0}", next)
+            throw ConflictException("You already have the maximum number of these buildings")
+        }
+        val taken = st.buildings.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
+        for ((x, y) in cells) {
+            val fp = Footprint(x, y, 1, 1)
+            if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
+            if (taken.any { it.overlaps(fp) }) throw ConflictException("Overlaps another building")
+            if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
+        }
+        val club = service.charge(st.club, coins = spec.levels[0].cost * cells.size)
+        val now = clock.now()
+        cells.map { (x, y) -> buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.FENCE, 1, x, y, 0, BuildingState.IDLE, null, now, now, now)) }
+    }
+
+    companion object { const val MAX_CELLS = 40 }
+}
+
+/** Upgrades a set of fence cells by one level each (a whole line at once), paid together; instant. */
+class UpgradeFencesUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, ids: List<UUID>): List<Building> = tx {
+        if (ids.isEmpty()) throw ValidationException("Nothing to build")
+        val st = service.state(userId, lock = true)
+        val byId = st.buildings.associateBy { it.id }
+        val fences = ids.distinct().map { byId[it] ?: throw NotFoundException("Building not found") }
+        if (fences.any { it.type != BuildingType.FENCE }) throw ValidationException("Only fences can be upgraded together")
+        val spec = BuildingCatalog.spec(BuildingType.FENCE)
+        var total = 0L
+        for (f in fences) {
+            val next = f.level + 1
+            if (!BuildingCatalog.hasLevel(f.type, next)) throw ValidationException("Already at max level")
+            if (next > spec.capAt(st.stadium)) throw ValidationException("Requires stadium level {0}", BuildingCatalog.level(f.type, next).requiredStadium)
+            total += BuildingCatalog.level(f.type, next).cost
+        }
+        service.charge(st.club, coins = total)
+        val now = clock.now()
+        fences.map { buildings.update(it.copy(level = it.level + 1, updatedAt = now)) }
+    }
+}
+
+// ---------- edit mode & layouts ----------
+
+/** Where one building stands in a layout. */
+data class Placement(val id: UUID, val x: Int, val y: Int, val rotation: Int)
+
+/**
+ * Edit mode: many buildings moved at once (swaps included). The whole arrangement is checked as one — inside the grid,
+ * nothing overlapping, no obstacle underneath — and written in two steps so the (club, x, y) uniqueness never trips
+ * mid-way. Buildings not listed stay where they are.
+ */
+class ApplyLayoutUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, moves: List<Placement>, partial: Boolean = false): List<Building> = tx { apply(service.state(userId, lock = true), moves, partial) }
+
+    /** [partial]: skip listed ids that no longer exist (a saved layout older than some building changes). */
+    suspend fun apply(st: ClubState, moves: List<Placement>, partial: Boolean = false): List<Building> {
+        val byId = st.buildings.associateBy { it.id }
+        val wanted = moves.filter { m -> byId.containsKey(m.id) || (if (partial) false else throw NotFoundException("Building not found")) }.associateBy { it.id }
+        if (wanted.size != moves.count { byId.containsKey(it.id) }) throw ValidationException("A building is listed twice")
+        val final = st.buildings.map { b ->
+            val m = wanted[b.id]
+            if (m == null) b else {
+                if (m.rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
+                b.copy(gridX = m.x, gridY = m.y, rotation = m.rotation)
+            }
+        }
+        val fps = final.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
+        fps.forEach { if (!it.fits(st.gridSize)) throw ValidationException("Outside the club grid") }
+        for (i in fps.indices) for (j in i + 1 until fps.size) if (fps[i].overlaps(fps[j])) throw ConflictException("Overlaps another building")
+        if (fps.any { fp -> st.obstacles.any { it.footprint.overlaps(fp) } }) throw ConflictException("Clear the obstacle first")
+        val changed = final.filter { f -> byId.getValue(f.id).let { it.gridX != f.gridX || it.gridY != f.gridY || it.rotation != f.rotation } }
+        if (changed.isEmpty()) return emptyList()
+        val now = clock.now()
+        // step 1: park the movers off the grid (unique negative cells), step 2: put them down
+        changed.forEachIndexed { i, b -> buildings.move(byId.getValue(b.id).copy(gridX = -1 - i, gridY = -1, updatedAt = now)) }
+        return changed.map { buildings.move(it.copy(updatedAt = now)) }
+    }
+}
+
+/** A saved arrangement of the club (up to [MAX_SLOTS]): the player keeps a matchday layout and a tidy one and switches. */
+data class LayoutSlot(val slot: Int, val name: String, val placements: List<Placement>, val updatedAt: java.time.Instant)
+
+class LayoutUseCases(private val service: ClubService, private val layouts: com.matchdayclub.domain.repository.LayoutRepository, private val apply: ApplyLayoutUseCase,
+                     private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend fun list(userId: UUID): List<LayoutSlot> = layouts.list(service.state(userId).club.id)
+
+    /** Saves the club as it stands now into [slot]. */
+    suspend fun save(userId: UUID, slot: Int, name: String): LayoutSlot = tx {
+        if (slot !in 1..MAX_SLOTS) throw ValidationException("Unknown layout")
+        val clean = name.trim().take(24).ifEmpty { "Layout $slot" }
+        val st = service.state(userId, lock = true)
+        val l = LayoutSlot(slot, clean, st.buildings.map { Placement(it.id, it.gridX, it.gridY, it.rotation) }, clock.now())
+        layouts.save(st.club.id, l); l
+    }
+
+    /** Puts the club back the way [slot] has it; buildings built since stay where they are (if that still fits). */
+    suspend fun applySlot(userId: UUID, slot: Int): List<Building> = tx {
+        val st = service.state(userId, lock = true)
+        val l = layouts.list(st.club.id).firstOrNull { it.slot == slot } ?: throw NotFoundException("Unknown layout")
+        try { apply.apply(st, l.placements, partial = true) }
+        catch (e: ConflictException) { throw ConflictException("This layout no longer fits: move the new buildings first") }
+    }
+
+    companion object { const val MAX_SLOTS = 3 }
 }

@@ -26,6 +26,10 @@ fun Route.clubRoutes() {
     val updateClub: UpdateClubUseCase by inject()
     val move: MoveBuildingUseCase by inject()
     val buyBuilder: BuyBuilderUseCase by inject()
+    val placeFences: PlaceFencesUseCase by inject()
+    val upgradeFences: UpgradeFencesUseCase by inject()
+    val applyLayout: ApplyLayoutUseCase by inject()
+    val layouts: LayoutUseCases by inject()
     val clearObstacle: ClearObstacleUseCase by inject()
     val speedObstacle: SpeedUpObstacleUseCase by inject()
     val collectObstacle: CollectObstacleUseCase by inject()
@@ -67,6 +71,32 @@ fun Route.clubRoutes() {
                 post("/clear") { val o = clearObstacle(call.userId(), call.obstacleId()); val st = getClub(call.userId()); call.respond(o.toDto(st.now, st.stadium).toSuccessResponse()) }
                 post("/speedup") { val o = speedObstacle(call.userId(), call.obstacleId()); val st = getClub(call.userId()); call.respond(o.toDto(st.now, st.stadium).toSuccessResponse()) }
                 post("/collect") { val r = collectObstacle(call.userId(), call.obstacleId()); call.respond(ObstacleLootResponse(r.gold, r.club.toDto()).toSuccessResponse()) }
+            }
+            fun uuid(s: String) = runCatching { UUID.fromString(s) }.getOrElse { throw ValidationException("Bad building id") }
+            post("/fences") {
+                val r = call.receive<PlaceFencesRequest>()
+                val placed = placeFences(call.userId(), r.cells.map { it.x to it.y })
+                val st = getClub(call.userId())
+                call.respond(HttpStatusCode.Created, placed.map { it.toDto(st.now, st.club.level) }.toSuccessResponse(201))
+            }
+            post("/fences/upgrade") {
+                val r = call.receive<IdsRequest>()
+                val done = upgradeFences(call.userId(), r.ids.map(::uuid))
+                val st = getClub(call.userId())
+                call.respond(done.map { it.toDto(st.now, st.club.level) }.toSuccessResponse())
+            }
+            put("/layout") {
+                val r = call.receive<LayoutRequest>()
+                val moved = applyLayout(call.userId(), r.moves.map { Placement(uuid(it.id), it.x, it.y, it.rotation) })
+                call.respond(mapOf("moved" to moved.size).toSuccessResponse())
+            }
+            route("/layouts") {
+                get { call.respond(layouts.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
+                route("/{slot}") {
+                    fun RoutingCall.slot() = parameters["slot"]?.toIntOrNull() ?: throw ValidationException("Unknown layout")
+                    put { val r = call.receive<SaveLayoutRequest>(); call.respond(layouts.save(call.userId(), call.slot(), r.name).toDto().toSuccessResponse()) }
+                    post("/apply") { val moved = layouts.applySlot(call.userId(), call.slot()); call.respond(mapOf("moved" to moved.size).toSuccessResponse()) }
+                }
             }
             route("/buildings") {
                 post {

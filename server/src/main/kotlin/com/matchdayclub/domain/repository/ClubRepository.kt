@@ -41,3 +41,9 @@ interface ObstacleRepository {
     /** Moves the spawn clock from [expected] to [next]; false if another request already did (it spawns, we don't). */
     suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean
 }
+
+/** Saved club layouts (edit mode), up to a few slots per club. */
+interface LayoutRepository {
+    suspend fun list(clubId: UUID): List<com.matchdayclub.domain.usecase.club.LayoutSlot>
+    suspend fun save(clubId: UUID, layout: com.matchdayclub.domain.usecase.club.LayoutSlot)
+}

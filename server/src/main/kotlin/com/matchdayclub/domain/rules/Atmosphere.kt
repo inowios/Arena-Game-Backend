@@ -6,13 +6,14 @@ import java.util.UUID
 /**
  * Atmosphere (like land value in SimCity): where things stand matters. An income building earns more with decor
  * around it, next to the stadium (the café, the club shop and the ticket office live off the crowd) and with a car
- * park nearby. Distances are gaps between footprints in cells (0 = touching). Total bonus capped at [CAP] %.
+ * park nearby; a tidy fence line around it adds a little more. Distances are gaps between footprints in cells (0 = touching). Total bonus capped at [CAP] %.
  */
 object Atmosphere {
-    const val CAP = 40
+    const val CAP = 48
     const val DECOR_PCT = 3; const val DECOR_RANGE = 2; const val DECOR_CAP = 24
     const val STADIUM_PCT = 10; const val STADIUM_RANGE = 3
     const val PARKING_PCT = 5; const val PARKING_RANGE = 3
+    const val FENCE_PCT = 1; const val FENCE_RANGE = 1; const val FENCE_CAP = 8
     private val incomeTypes = setOf(BuildingType.TICKET_OFFICE, BuildingType.CLUB_SHOP, BuildingType.CAFE, BuildingType.PARKING)
     private val crowdTypes = setOf(BuildingType.TICKET_OFFICE, BuildingType.CLUB_SHOP, BuildingType.CAFE)
 
@@ -23,7 +24,7 @@ object Atmosphere {
         return maxOf(dx, dy)
     }
 
-    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0) { val total get() = minOf(CAP, decor + stadium + parking) }
+    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0, val fence: Int = 0) { val total get() = minOf(CAP, decor + stadium + parking + fence) }
 
     /** The bonus a [type] building at [fp] would get among [others] (its own row excluded by the caller). */
     fun bonusAt(type: BuildingType, fp: Footprint, others: List<Pair<BuildingType, Footprint>>): Bonus {
@@ -31,7 +32,8 @@ object Atmosphere {
         val decor = minOf(DECOR_CAP, others.count { it.first == BuildingType.DECOR && gap(fp, it.second) <= DECOR_RANGE } * DECOR_PCT)
         val stadium = if (type in crowdTypes && others.any { it.first == BuildingType.PITCH && gap(fp, it.second) <= STADIUM_RANGE }) STADIUM_PCT else 0
         val parking = if (type in crowdTypes && others.any { it.first == BuildingType.PARKING && gap(fp, it.second) <= PARKING_RANGE }) PARKING_PCT else 0
-        return Bonus(decor, stadium, parking)
+        val fence = minOf(FENCE_CAP, others.count { it.first == BuildingType.FENCE && gap(fp, it.second) <= FENCE_RANGE } * FENCE_PCT)
+        return Bonus(decor, stadium, parking, fence)
     }
 
     /** Bonus of every building of a club (only income buildings get one). */

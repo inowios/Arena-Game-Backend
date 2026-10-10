@@ -6,6 +6,7 @@ import com.matchdayclub.data.database.ClubTable
 import com.matchdayclub.data.database.MarketPurchaseTable
 import com.matchdayclub.data.database.ObstacleTable
 import com.matchdayclub.data.database.ClubObstacleClock
+import com.matchdayclub.data.database.ClubLayoutTable
 import com.matchdayclub.domain.model.Obstacle
 import com.matchdayclub.domain.model.ObstacleState
 import com.matchdayclub.domain.rules.ObstacleKind
@@ -123,5 +124,26 @@ class MarketRepositoryImpl : com.matchdayclub.domain.repository.MarketRepository
     }
     override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant): Boolean = dbQuery {
         runCatching { MarketPurchaseTable.insert { it[this.clubId] = clubId; it[this.period] = period; it[this.salt] = salt; it[this.idx] = idx; it[this.athleteId] = athleteId; it[createdAt] = at } }.isSuccess
+    }
+}
+
+class LayoutRepositoryImpl : com.matchdayclub.domain.repository.LayoutRepository {
+    override suspend fun list(clubId: UUID) = dbQuery {
+        ClubLayoutTable.selectAll().where { ClubLayoutTable.clubId eq clubId }.orderBy(ClubLayoutTable.slot).map {
+            com.matchdayclub.domain.usecase.club.LayoutSlot(it[ClubLayoutTable.slot], it[ClubLayoutTable.name], decode(it[ClubLayoutTable.data]), it[ClubLayoutTable.updatedAt])
+        }
+    }
+    override suspend fun save(clubId: UUID, layout: com.matchdayclub.domain.usecase.club.LayoutSlot) {
+        dbQuery {
+            ClubLayoutTable.deleteWhere { (ClubLayoutTable.clubId eq clubId) and (ClubLayoutTable.slot eq layout.slot) }
+            ClubLayoutTable.insert { it[this.clubId] = clubId; it[slot] = layout.slot; it[name] = layout.name; it[data] = encode(layout.placements); it[updatedAt] = layout.updatedAt }
+        }
+    }
+
+    companion object {
+        fun encode(p: List<com.matchdayclub.domain.usecase.club.Placement>) = p.joinToString(";") { "${it.id},${it.x},${it.y},${it.rotation}" }
+        fun decode(s: String) = s.split(";").filter { it.isNotBlank() }.mapNotNull { e ->
+            val f = e.split(","); runCatching { com.matchdayclub.domain.usecase.club.Placement(UUID.fromString(f[0]), f[1].toInt(), f[2].toInt(), f[3].toInt()) }.getOrNull()
+        }
     }
 }

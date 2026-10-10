@@ -6,7 +6,7 @@ class BuildingRulesTest {
     @Test
     fun `stadium has ten levels, buildings eight to ten, costs and requirements rise`() {
         assertEquals(10, BuildingCatalog.spec(BuildingType.PITCH).maxLevel)
-        for (t in BuildingType.values().filter { it != BuildingType.DECOR }) {
+        for (t in BuildingType.values().filter { it !in Stadium.COSMETIC }) {
             val s = BuildingCatalog.spec(t)
             assertTrue(s.maxLevel in 8..10, "$t has ${s.maxLevel} levels")
             assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.buildSeconds >= a.buildSeconds && b.requiredStadium >= a.requiredStadium && b.requiredTrophies >= a.requiredTrophies }, "$t curves")

@@ -173,3 +173,10 @@ Obstacle not found	Obstacle not found	Obstáculo no encontrado	Obstáculo não e
 Already being cleared	Already being cleared	Ya se está despejando	Já está sendo removido	Уже расчищается	Уже розчищається
 Not cleared yet	Not cleared yet	Aún no está despejado	Ainda não foi removido	Ещё не расчищено	Ще не розчищено
 Bad obstacle id	Bad obstacle id	Id de obstáculo no válido	Id de obstáculo inválido	Неверный id препятствия	Невірний id перешкоди
+# --- fences & layouts
+Nothing to build	Nothing to build	No hay nada que construir	Nada para construir	Нечего строить	Нічого будувати
+Too many cells at once	Too many cells at once	Demasiadas casillas a la vez	Muitas células de uma vez	Слишком много клеток за раз	Забагато клітинок за раз
+Only fences can be upgraded together	Only fences can be upgraded together	Solo las vallas se mejoran juntas	Só as cercas podem ser melhoradas juntas	Вместе улучшаются только заборы	Разом покращуються лише паркани
+A building is listed twice	A building is listed twice	Un edificio aparece dos veces	Um edifício aparece duas vezes	Здание указано дважды	Будівлю вказано двічі
+Unknown layout	Unknown layout	Disposición desconocida	Disposição desconhecida	Неизвестная планировка	Невідоме планування
+This layout no longer fits: move the new buildings first	This layout no longer fits: move the new buildings first	Esta disposición ya no cabe: mueve primero los edificios nuevos	Esta disposição já não cabe: mova primeiro os edifícios novos	Планировка больше не помещается: сначала передвиньте новые здания	Планування більше не вміщується: спершу пересуньте нові будівлі

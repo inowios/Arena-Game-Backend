@@ -77,3 +77,13 @@ object ClubObstacleClock : org.jetbrains.exposed.sql.Table("clubs") {
     val id = uuid("id")
     val spawnedAt = timestamp("obstacles_spawned_at").nullable()
 }
+
+/** Saved layouts: [data] = "id,x,y,rotation;…" (one entry per building). */
+object ClubLayoutTable : org.jetbrains.exposed.sql.Table("club_layouts") {
+    val clubId = uuid("club_id")
+    val slot = integer("slot")
+    val name = varchar("name", 32)
+    val data = text("data")
+    val updatedAt = timestamp("updated_at")
+    override val primaryKey = PrimaryKey(clubId, slot)
+}

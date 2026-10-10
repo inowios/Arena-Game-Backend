@@ -31,7 +31,7 @@ class AtmosphereTest {
         assertEquals(Atmosphere.STADIUM_PCT, c.stadium)
         assertEquals(Atmosphere.PARKING_PCT, c.parking)
         assertEquals(39, c.total)
-        assertEquals(Atmosphere.CAP, Atmosphere.Bonus(30, 10, 5).total)   // never above the cap
+        assertEquals(Atmosphere.CAP, Atmosphere.Bonus(30, 10, 5, 8).total)   // never above the cap
         assertEquals(0, bonus.getValue(far.id).total)
         assertEquals(0, bonus.getValue(pitch.id).total)        // not an income building
         assertEquals(0, bonus.getValue(parking.id).stadium)     // the car park does not live off the crowd
