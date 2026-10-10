@@ -180,3 +180,6 @@ Only fences can be upgraded together	Only fences can be upgraded together	Solo l
 A building is listed twice	A building is listed twice	Un edificio aparece dos veces	Um edifício aparece duas vezes	Здание указано дважды	Будівлю вказано двічі
 Unknown layout	Unknown layout	Disposición desconocida	Disposição desconhecida	Неизвестная планировка	Невідоме планування
 This layout no longer fits: move the new buildings first	This layout no longer fits: move the new buildings first	Esta disposición ya no cabe: mueve primero los edificios nuevos	Esta disposição já não cabe: mova primeiro os edifícios novos	Планировка больше не помещается: сначала передвиньте новые здания	Планування більше не вміщується: спершу пересуньте нові будівлі
+# --- roads
+Unknown reward	Unknown reward	Recompensa desconocida	Recompensa desconhecida	Неизвестная награда	Невідома нагорода
+Not reached yet	Not reached yet	Todavía no alcanzado	Ainda não alcançado	Ещё не достигнуто	Ще не досягнуто

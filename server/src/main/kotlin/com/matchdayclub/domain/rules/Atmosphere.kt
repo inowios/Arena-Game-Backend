@@ -24,7 +24,10 @@ object Atmosphere {
         return maxOf(dx, dy)
     }
 
-    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0, val fence: Int = 0) { val total get() = minOf(CAP, decor + stadium + parking + fence) }
+    /** [museum]: visitors of a trophy museum nearby; [collection]: complete cosmetic sets (club-wide, above the cap). */
+    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0, val fence: Int = 0, val museum: Int = 0, val collection: Int = 0) {
+        val total get() = minOf(CAP, decor + stadium + parking + fence + museum) + collection
+    }
 
     /** The bonus a [type] building at [fp] would get among [others] (its own row excluded by the caller). */
     fun bonusAt(type: BuildingType, fp: Footprint, others: List<Pair<BuildingType, Footprint>>): Bonus {
@@ -36,9 +39,19 @@ object Atmosphere {
         return Bonus(decor, stadium, parking, fence)
     }
 
-    /** Bonus of every building of a club (only income buildings get one). */
-    fun of(buildings: List<Building>): Map<UUID, Bonus> {
+    /** Bonus of every building of a club (only income buildings get one); [collectionPct] from complete sets. */
+    fun of(buildings: List<Building>, collectionPct: Int = 0): Map<UUID, Bonus> {
         val fps = buildings.associate { it.id to footprint(it.type, it.gridX, it.gridY, it.rotation) }
-        return buildings.associate { b -> b.id to bonusAt(b.type, fps.getValue(b.id), buildings.filter { it.id != b.id }.map { it.type to fps.getValue(it.id) }) }
+        val museums = buildings.filter { it.type == BuildingType.MUSEUM && it.level > 0 }
+        return buildings.associate { b ->
+            var bonus = bonusAt(b.type, fps.getValue(b.id), buildings.filter { it.id != b.id }.map { it.type to fps.getValue(it.id) })
+            if (b.type in incomeTypes) {
+                // a museum under construction keeps the level it had
+                val m = museums.filter { gap(fps.getValue(b.id), fps.getValue(it.id)) <= MuseumRules.RANGE }
+                    .maxOfOrNull { MuseumRules.atmospherePct(if (it.state == com.matchdayclub.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level) } ?: 0
+                bonus = bonus.copy(museum = m, collection = collectionPct)
+            }
+            b.id to bonus
+        }
     }
 }

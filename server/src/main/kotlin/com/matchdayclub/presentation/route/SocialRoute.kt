@@ -37,6 +37,7 @@ fun Route.socialRoutes() {
     val admin: PrivateLeagueAdmin by inject()
     val h2h: HeadToHeadUseCase by inject()
     val grounds: GetGroundsUseCase by inject()
+    val museum: com.matchdayclub.domain.usecase.progress.MuseumService by inject()
     val challenges: ChallengeUseCases by inject()
     val clubs: ClubRepository by inject()
     val clubService: ClubService by inject()
@@ -78,6 +79,7 @@ fun Route.socialRoutes() {
             call.respond(r.toDto(clubs.findByIds(ids).associateBy { it.id }).toSuccessResponse())
         }
         get("/clubs/{id}/grounds") { call.respond(grounds(call.id("id")).toDto().toSuccessResponse()) }
+        get("/clubs/{id}/museum") { call.respond(museum.of(call.id("id")).toDto().toSuccessResponse()) }
 
         route("/challenges") {
             val cfg = application.environment.config

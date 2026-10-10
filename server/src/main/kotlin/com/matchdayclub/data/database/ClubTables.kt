@@ -87,3 +87,12 @@ object ClubLayoutTable : org.jetbrains.exposed.sql.Table("club_layouts") {
     val updatedAt = timestamp("updated_at")
     override val primaryKey = PrimaryKey(clubId, slot)
 }
+
+/** Claimed road steps (trophy road, club-level road). */
+object ClubRoadClaimTable : org.jetbrains.exposed.sql.Table("club_road_claims") {
+    val clubId = uuid("club_id")
+    val road = varchar("road", 16)
+    val step = integer("step")
+    val claimedAt = timestamp("claimed_at")
+    override val primaryKey = PrimaryKey(clubId, road, step)
+}

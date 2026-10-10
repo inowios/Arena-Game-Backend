@@ -86,6 +86,14 @@ class ApiIT {
         assertEquals(ax, back["x"]!!.jsonPrimitive.int)
         assertEquals("Home", call(HttpMethod.Get, "/club/layouts", t).data.jsonArray.single().o()["name"]!!.jsonPrimitive.content)
         call(HttpMethod.Delete, "/club/buildings/$b", t)
+        // long goals: roads, collections, the museum (own and as a visitor)
+        val roads = call(HttpMethod.Get, "/club/roads", t).data.jsonArray
+        assertEquals(listOf("TROPHY", "LEVEL"), roads.map { it.o()["road"]!!.jsonPrimitive.content })
+        call(HttpMethod.Post, "/club/roads/trophy/1/claim", t, expect = 400)   // 0 trophies
+        assertEquals(0, call(HttpMethod.Get, "/club/collections", t).data.o()["incomePct"]!!.jsonPrimitive.int)
+        assertEquals(0, call(HttpMethod.Get, "/club/museum", t).data.o()["capacity"]!!.jsonPrimitive.int)
+        val id = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        call(HttpMethod.Get, "/clubs/$id/museum", t)
     }
 
     @Test

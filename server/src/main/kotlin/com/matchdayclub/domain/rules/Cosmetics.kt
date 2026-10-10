@@ -6,8 +6,8 @@ package com.matchdayclub.domain.rules
  */
 enum class CosmeticKind { DECOR, KIT, FRAME, CELEBRATION }
 
-/** Where an item comes from: free default, the gold shop, a season-pass level, or an achievement tier. */
-enum class CosmeticSource { DEFAULT, SHOP, PASS, ACHIEVEMENT }
+/** Where an item comes from: free default, the gold shop, a season-pass level, an achievement tier or the trophy road. */
+enum class CosmeticSource { DEFAULT, SHOP, PASS, ACHIEVEMENT, ROAD }
 
 data class Cosmetic(
     val id: String,
@@ -38,6 +38,10 @@ object Cosmetics {
         Cosmetic("decor_banner", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.RARE, unlock = "free:30"),
         Cosmetic("decor_statue", CosmeticKind.DECOR, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "premium:15"),
         Cosmetic("decor_trophy", CosmeticKind.DECOR, CosmeticSource.ACHIEVEMENT, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "champion:2"),
+        // the trophy road: the city of the future, one look per arena climbed
+        Cosmetic("decor_led_pole", CosmeticKind.DECOR, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.RARE, unlock = "trophy:300"),
+        Cosmetic("decor_holo_ball", CosmeticKind.DECOR, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.EPIC, unlock = "trophy:2200"),
+        Cosmetic("decor_drone_pad", CosmeticKind.DECOR, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "trophy:5500"),
         // kits
         Cosmetic("kit_plain", CosmeticKind.KIT, CosmeticSource.DEFAULT),
         Cosmetic("kit_stripes", CosmeticKind.KIT, CosmeticSource.SHOP, 60),
@@ -54,6 +58,8 @@ object Cosmetics {
         Cosmetic("frame_gold", CosmeticKind.FRAME, CosmeticSource.PASS, rarity = Cosmetic.Rarity.EPIC, unlock = "premium:10"),
         Cosmetic("frame_laurel", CosmeticKind.FRAME, CosmeticSource.ACHIEVEMENT, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "champion:1"),
         Cosmetic("frame_legend", CosmeticKind.FRAME, CosmeticSource.ACHIEVEMENT, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "climber:6"),
+        Cosmetic("frame_neon", CosmeticKind.FRAME, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.RARE, unlock = "trophy:1000"),
+        Cosmetic("frame_aurora", CosmeticKind.FRAME, CosmeticSource.ROAD, rarity = Cosmetic.Rarity.LEGENDARY, unlock = "trophy:8000"),
         // goal celebrations
         Cosmetic("cel_fist", CosmeticKind.CELEBRATION, CosmeticSource.DEFAULT),
         Cosmetic("cel_slide", CosmeticKind.CELEBRATION, CosmeticSource.SHOP, 50),

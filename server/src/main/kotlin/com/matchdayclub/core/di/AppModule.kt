@@ -62,7 +62,11 @@ val appModule = module {
     single { GetClubUseCase(get()) }
     single { PlaceBuildingUseCase(get(), get(), get(), tx = get(), cosmetics = get()) }
     single { UpgradeBuildingUseCase(get(), get(), get(), tx = get()) }
-    single { CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
+    single { val cos: CosmeticsService = get(); CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get(), collections = { id -> com.matchdayclub.domain.rules.Collections.incomePct(cos.owned(id)) }) }
+    single<com.matchdayclub.domain.usecase.progress.RoadRepository> { com.matchdayclub.data.repository.RoadRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.progress.RoadUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.matchdayclub.domain.usecase.progress.CollectionsUseCases(get(), get()) }
+    single { com.matchdayclub.domain.usecase.progress.MuseumService(get(), get(), get()) }
     single { SpeedUpUseCase(get(), get(), get(), tx = get()) }
     single { RemoveBuildingUseCase(get(), get(), tx = get()) }
     single { MoveBuildingUseCase(get(), get(), get(), tx = get()) }

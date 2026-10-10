@@ -8,7 +8,7 @@ class BuildingRulesTest {
         assertEquals(10, BuildingCatalog.spec(BuildingType.PITCH).maxLevel)
         for (t in BuildingType.values().filter { it !in Stadium.COSMETIC }) {
             val s = BuildingCatalog.spec(t)
-            assertTrue(s.maxLevel in 8..10, "$t has ${s.maxLevel} levels")
+            assertTrue(s.maxLevel in (if (t == BuildingType.MUSEUM) 5..5 else 8..10), "$t has ${s.maxLevel} levels")
             assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.buildSeconds >= a.buildSeconds && b.requiredStadium >= a.requiredStadium && b.requiredTrophies >= a.requiredTrophies }, "$t curves")
             // every level is reachable: the cap at the top stadium is the max level, and caps never go down
             assertEquals(s.maxLevel, s.capAt(Stadium.MAX_LEVEL), "$t top cap")

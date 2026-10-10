@@ -30,6 +30,9 @@ fun Route.clubRoutes() {
     val upgradeFences: UpgradeFencesUseCase by inject()
     val applyLayout: ApplyLayoutUseCase by inject()
     val layouts: LayoutUseCases by inject()
+    val roads: com.matchdayclub.domain.usecase.progress.RoadUseCases by inject()
+    val collections: com.matchdayclub.domain.usecase.progress.CollectionsUseCases by inject()
+    val museum: com.matchdayclub.domain.usecase.progress.MuseumService by inject()
     val clearObstacle: ClearObstacleUseCase by inject()
     val speedObstacle: SpeedUpObstacleUseCase by inject()
     val collectObstacle: CollectObstacleUseCase by inject()
@@ -55,7 +58,7 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                val atmosphere = com.matchdayclub.domain.rules.Atmosphere.of(st.buildings)
+                val atmosphere = com.matchdayclub.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id))
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.matchdayclub.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) }).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
@@ -90,6 +93,15 @@ fun Route.clubRoutes() {
                 val moved = applyLayout(call.userId(), r.moves.map { Placement(uuid(it.id), it.x, it.y, it.rotation) })
                 call.respond(mapOf("moved" to moved.size).toSuccessResponse())
             }
+            get("/roads") { call.respond(roads.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
+            post("/roads/{road}/{step}/claim") {
+                val road = runCatching { com.matchdayclub.domain.rules.Road.valueOf(call.parameters["road"]!!.uppercase()) }.getOrElse { throw ValidationException("Unknown reward") }
+                val step = call.parameters["step"]?.toIntOrNull() ?: throw ValidationException("Unknown reward")
+                val r = roads.claim(call.userId(), road, step)
+                call.respond(r.toDto(java.time.Instant.now()).toSuccessResponse())
+            }
+            get("/collections") { call.respond(collections.list(call.userId()).toDto().toSuccessResponse()) }
+            get("/museum") { call.respond(museum.of(getClub(call.userId()).club.id).toDto().toSuccessResponse()) }
             route("/layouts") {
                 get { call.respond(layouts.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
                 route("/{slot}") {

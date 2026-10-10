@@ -192,7 +192,9 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
 
 data class CollectResult(val building: Building, val coins: Long, val club: Club)
 
-class CollectIncomeUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val progress: ProgressTracker = ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
+/** [collections]: income % of the club's complete cosmetic sets (on top of the atmosphere). */
+class CollectIncomeUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val progress: ProgressTracker = ProgressTracker { _, _ -> }, private val tx: Tx = NoTx,
+                           private val collections: (suspend (UUID) -> Int)? = null) {
     suspend operator fun invoke(userId: UUID, buildingId: UUID): CollectResult = tx {
         val club = service.lockedClubOf(userId)
         val b = service.building(club, buildingId)
@@ -200,7 +202,7 @@ class CollectIncomeUseCase(private val service: ClubService, private val clubs: 
         val spec = BuildingCatalog.level(b.type, b.level)
         if (spec.incomePerHour == 0L) throw ValidationException("This building has no income")
         val now = clock.now()
-        val bonus = Atmosphere.of(buildings.listByClub(club.id))[b.id]?.total ?: 0
+        val bonus = Atmosphere.of(buildings.listByClub(club.id), collections?.invoke(club.id) ?: 0)[b.id]?.total ?: 0
         var amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level, bonus)
         val doubled = club.doubleIncomeUntil != null && now.isBefore(club.doubleIncomeUntil) && amount > 0
         if (doubled) amount *= 2

@@ -4,7 +4,7 @@ import com.matchdayclub.domain.rules.BuildingType.*
 import kotlin.math.ceil
 import kotlin.math.min
 
-enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, CLUB_SHOP, CAFE, PARKING, DECOR, FENCE }
+enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, CLUB_SHOP, CAFE, PARKING, DECOR, FENCE, MUSEUM }
 
 /**
  * One level of a building. [effect] meaning depends on type:
@@ -181,6 +181,14 @@ object BuildingCatalog {
             L(600_000, 66 * H, stadium = 10, effect = 95),
         ),
         DECOR to listOf(L(200, 0)),
+        // the trophy museum: effect = exhibits on its shelves, effect2 = atmosphere % to earning buildings around it
+        MUSEUM to listOf(
+            L(9_000, 4 * H, stadium = 3, effect = 6, effect2 = 2),
+            L(25_000, 10 * H, stadium = 5, effect = 12, effect2 = 4),
+            L(70_000, 20 * H, stadium = 6, effect = 20, effect2 = 6),
+            L(180_000, 36 * H, stadium = 8, effect = 30, effect2 = 8),
+            L(450_000, 60 * H, stadium = 10, effect = 45, effect2 = 10),
+        ),
         // fences: drawn along the plot by dragging, instant to build and to upgrade (no builder) — a coin sink that
         // changes the look: wooden picket → hedge → brick → stone → steel → glass with an LED rail
         FENCE to listOf(L(30, 0), L(150, 0, stadium = 2), L(600, 0, stadium = 3), L(2_000, 0, stadium = 5), L(6_000, 0, stadium = 7), L(15_000, 0, stadium = 9)),
@@ -199,6 +207,7 @@ object BuildingCatalog {
         BuildingSpec(CAFE, 2, 2, true, levelTable.getValue(CAFE), countsFrom(0, 1, 1, 1, 2, 2, 2, 3, 3, 3), CAP10),
         BuildingSpec(PARKING, 3, 2, true, levelTable.getValue(PARKING), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), CAP10),
         BuildingSpec(DECOR, 1, 1, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
+        BuildingSpec(MUSEUM, 2, 2, true, levelTable.getValue(MUSEUM), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
         BuildingSpec(FENCE, 1, 1, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
     ).associateBy { it.type }
 

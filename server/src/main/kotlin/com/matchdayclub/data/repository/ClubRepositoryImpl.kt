@@ -7,6 +7,7 @@ import com.matchdayclub.data.database.MarketPurchaseTable
 import com.matchdayclub.data.database.ObstacleTable
 import com.matchdayclub.data.database.ClubObstacleClock
 import com.matchdayclub.data.database.ClubLayoutTable
+import com.matchdayclub.data.database.ClubRoadClaimTable
 import com.matchdayclub.domain.model.Obstacle
 import com.matchdayclub.domain.model.ObstacleState
 import com.matchdayclub.domain.rules.ObstacleKind
@@ -145,5 +146,15 @@ class LayoutRepositoryImpl : com.matchdayclub.domain.repository.LayoutRepository
         fun decode(s: String) = s.split(";").filter { it.isNotBlank() }.mapNotNull { e ->
             val f = e.split(","); runCatching { com.matchdayclub.domain.usecase.club.Placement(UUID.fromString(f[0]), f[1].toInt(), f[2].toInt(), f[3].toInt()) }.getOrNull()
         }
+    }
+}
+
+class RoadRepositoryImpl : com.matchdayclub.domain.usecase.progress.RoadRepository {
+    override suspend fun claimed(clubId: UUID) = dbQuery {
+        ClubRoadClaimTable.selectAll().where { ClubRoadClaimTable.clubId eq clubId }
+            .groupBy({ com.matchdayclub.domain.rules.Road.valueOf(it[ClubRoadClaimTable.road]) }, { it[ClubRoadClaimTable.step] }).mapValues { it.value.toSet() }
+    }
+    override suspend fun claim(clubId: UUID, road: com.matchdayclub.domain.rules.Road, index: Int, at: java.time.Instant): Boolean = dbQuery {
+        ClubRoadClaimTable.insertIgnore { it[this.clubId] = clubId; it[this.road] = road.name; it[step] = index; it[claimedAt] = at }.insertedCount == 1
     }
 }
