@@ -15,8 +15,8 @@ object Techniques {
     val KEYS = listOf("SHOOT", "PASS", "CROSS", "FEINT", "TACKLE", "SLIDE", "BLOCK", "JUMP")
     private val COST = intArrayOf(1, 1, 2, 3, 4)
 
-    /** Skill points the step to [level] (1..5) costs. */
-    fun cost(level: Int): Int = COST[(level - 1).coerceIn(0, MAX_LEVEL - 1)]
+    /** Skill points the step to [level] (1..5) costs; a point less (never below one) for the athlete's talent. */
+    fun cost(level: Int, talent: Boolean = false): Int = (COST[(level - 1).coerceIn(0, MAX_LEVEL - 1)] - (if (talent) 1 else 0)).coerceAtLeast(1)
 
     /** Outfield footballers learn the moves; keepers (and other sports) do not. */
     fun learns(position: Position): Boolean = position in setOf(Position.DEF, Position.MID, Position.FWD)
@@ -30,6 +30,12 @@ object Techniques {
         Position.MID to listOf("PASS", "CROSS", "FEINT", "TACKLE", "SHOOT", "PASS"),
         Position.DEF to listOf("TACKLE", "SLIDE", "BLOCK", "JUMP", "TACKLE", "PASS"),
     )
+
+    /** The move an athlete is born for: one of the role's favourites, the first for the gifted, random for the rest. */
+    fun talent(position: Position, quality: Int, r: Random): String? {
+        val fav = favourites[position] ?: return null
+        return if (quality >= 60 && r.nextInt(100) < 50) fav[0] else fav[r.nextInt(fav.size)]
+    }
 
     /** What a generated athlete already knows: the better he is, the more (and higher) the moves of his role. */
     fun starting(position: Position, quality: Int, r: Random): Map<String, Int> {

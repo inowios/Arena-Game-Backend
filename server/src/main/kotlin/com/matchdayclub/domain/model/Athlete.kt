@@ -37,6 +37,8 @@ data class Athlete(
     val techniques: Map<String, Int> = emptyMap(),
     val skillPoints: Int = 0,
     val xpTotal: Int = 0,
+    /** The move he was born for: its steps come cheaper (see Techniques.cost). */
+    val talent: String? = null,
 ) {
     fun technique(key: String): Int = techniques[key] ?: 0
     val attributes get() = Attributes(attack, defense, physical, technique, mental)

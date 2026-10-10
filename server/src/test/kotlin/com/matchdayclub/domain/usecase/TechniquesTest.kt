@@ -39,6 +39,9 @@ class TechniquesTest {
         assertTrue(keeper.techniques.isEmpty())
         // the seed decides: the same athlete always comes with the same moves
         assertEquals(star.techniques, AthleteFactory.create(11L, club, Sport.FOOTBALL, 78, 78, Position.FWD, now).techniques)
+        // a talent among the role's moves, none for the keeper; its steps cost a point less (never below one)
+        assertNotNull(star.talent); assertTrue(star.talent in listOf("SHOOT", "FEINT", "CROSS", "PASS", "JUMP")); assertNull(keeper.talent)
+        assertEquals(1, Techniques.cost(1, talent = true)); assertEquals(1, Techniques.cost(3, talent = true)); assertEquals(3, Techniques.cost(5, talent = true)); assertEquals(4, Techniques.cost(5))
     }
 
     @Test

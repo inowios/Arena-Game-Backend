@@ -123,7 +123,7 @@ class UpgradeTechniqueUseCase(private val service: ClubService, private val athl
         if (!Techniques.allowed(a.position, k)) throw ValidationException("This athlete cannot learn that move")
         val level = a.technique(k) + 1
         if (level > Techniques.MAX_LEVEL) throw ConflictException("That move is already mastered")
-        val cost = Techniques.cost(level)
+        val cost = Techniques.cost(level, talent = a.talent == k)
         if (a.skillPoints < cost) throw ValidationException("Not enough skill points: {0} needed", cost)
         val now = clock.now()
         val up = athletes.update(a.copy(techniques = a.techniques + (k to level), skillPoints = a.skillPoints - cost, updatedAt = now))

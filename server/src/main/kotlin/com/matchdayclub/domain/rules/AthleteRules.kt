@@ -44,7 +44,8 @@ object AthleteFactory {
         // separate stream so potential/age overrides don't change the attributes above (balance, tests)
         val pr = Random(seed xor 0x7A11_5EEDL)
         val finalAge = age ?: a.age
-        return a.copy(age = finalAge, potential = Careers.potentialFor(finalAge, a.attributeAverage, pr), techniques = Techniques.starting(pos, q, Random(seed xor 0x7EC4_5EEDL)))
+        val tr = Random(seed xor 0x7EC4_5EEDL)
+        return a.copy(age = finalAge, potential = Careers.potentialFor(finalAge, a.attributeAverage, pr), techniques = Techniques.starting(pos, q, tr), talent = Techniques.talent(pos, q, tr))
     }
 
     /** Squad shape per sport: football 14 (2 GK, 5 DEF, 5 MID, 2 FWD), basketball 8 (3 G, 3 F, 2 C), tennis 3. */

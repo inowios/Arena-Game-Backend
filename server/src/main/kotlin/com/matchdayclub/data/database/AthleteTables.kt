@@ -21,6 +21,7 @@ object AthleteTable : BaseTable("athletes") {
     val techniques = text("techniques")
     val skillPoints = integer("skill_points")
     val xpTotal = integer("xp_total")
+    val talent = varchar("talent", 12).nullable()
 }
 
 object TrainingTable : Table("trainings") {
