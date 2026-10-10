@@ -42,6 +42,7 @@ fun Route.adminRoutes(token: String) {
     val support: SupportQueries by inject()
     val grant: AdminGrantUseCase by inject()
     val tick: SchedulerTick by inject()
+    val liveOps: com.matchdayclub.domain.usecase.liveops.LiveOps by inject()
     val version = AdminRoute::class.java.`package`?.implementationVersion ?: "dev"
 
     get("/metrics") {
@@ -74,6 +75,22 @@ fun Route.adminRoutes(token: String) {
             val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrElse { throw ValidationException("Bad id") }
             val r = call.receive<GrantRequest>()
             call.respond(grant(id, r.coins, r.gold, r.reason).toAdminDto().toSuccessResponse())
+        }
+        // live game: events (on top of the built-in calendar) and developer mail with gifts
+        get("/events") { call.requireAdmin(expected); call.respond(liveOps.adminEvents().map { it.toDto() }.toSuccessResponse()) }
+        post("/events") {
+            call.requireAdmin(expected)
+            val r = call.receive<CreateEventRequest>()
+            val at = { s: String -> runCatching { java.time.Instant.parse(s) }.getOrElse { throw ValidationException("Bad date") } }
+            call.respond(liveOps.createEvent(r.key, at(r.startsAt), at(r.endsAt), r.buildTimePct, r.incomePct, r.obstacleGoldPct, r.goal, r.goalTarget, r.rewardCoins, r.rewardGold, r.rewardItem).toDto().toSuccessResponse())
+        }
+        delete("/events/{id}") { call.requireAdmin(expected); liveOps.deleteEvent(call.parameters["id"] ?: ""); call.respond(mapOf("ok" to true).toSuccessResponse()) }
+        post("/mail") {
+            call.requireAdmin(expected)
+            val r = call.receive<SendMailRequest>()
+            val club = r.clubId?.let { runCatching { UUID.fromString(it) }.getOrElse { throw ValidationException("Bad id") } }
+            val m = liveOps.sendMail(r.title, r.body, r.coins, r.gold, r.item, club, r.days)
+            call.respond(mapOf("id" to m.id.toString()).toSuccessResponse())
         }
         post("/scheduler/run") {
             call.requireAdmin(expected)

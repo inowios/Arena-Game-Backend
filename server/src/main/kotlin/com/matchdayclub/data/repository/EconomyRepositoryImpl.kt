@@ -31,6 +31,9 @@ class EconomyRepositoryImpl : EconomyRepository {
     override suspend fun purchaseByExternalId(externalId: String) = dbQuery {
         PurchaseTable.selectAll().where { PurchaseTable.externalId eq externalId }.singleOrNull()?.let { Purchase(it[PurchaseTable.id], it[PurchaseTable.clubId], it[PurchaseTable.store], it[PurchaseTable.productId], it[PurchaseTable.externalId], it[PurchaseTable.status], it[PurchaseTable.grantedGold], it[PurchaseTable.grantedCoins], it[PurchaseTable.createdAt]) }
     }
+    override suspend fun hasPurchase(clubId: UUID, productId: String) = dbQuery {
+        PurchaseTable.selectAll().where { (PurchaseTable.clubId eq clubId) and (PurchaseTable.productId eq productId) and (PurchaseTable.status eq "GRANTED") }.count() > 0
+    }
     override suspend fun createPurchase(p: Purchase) = dbQuery {
         PurchaseTable.insert { it[id] = p.id; it[clubId] = p.clubId; it[store] = p.store; it[productId] = p.productId; it[externalId] = p.externalId; it[status] = p.status; it[grantedGold] = p.grantedGold; it[grantedCoins] = p.grantedCoins; it[createdAt] = p.createdAt }; p
     }

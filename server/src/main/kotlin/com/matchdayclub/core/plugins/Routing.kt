@@ -43,6 +43,7 @@ fun Route.apiRoutes() {
     economyRoutes()
     socialRoutes()
     allianceRoutes()
+    liveOpsRoutes()
     analyticsRoutes()
     cupRoutes()
     liveRoutes()

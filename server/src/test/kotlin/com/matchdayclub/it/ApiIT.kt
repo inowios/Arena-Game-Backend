@@ -116,6 +116,12 @@ class ApiIT {
         call(HttpMethod.Post, "/club/alliance/leave", b)
         call(HttpMethod.Post, "/club/alliance/leave", a)
         call(HttpMethod.Get, "/alliances/$id", a, expect = 404)
+        // live game: events, mail, offers
+        call(HttpMethod.Get, "/events", a)
+        assertEquals(0, call(HttpMethod.Get, "/club/mail", a).data.jsonArray.size)
+        val offers = call(HttpMethod.Get, "/store/offers", a).data.o()
+        assertTrue(offers["starterAvailable"]!!.jsonPrimitive.boolean)
+        assertEquals(3, offers["daily"]!!.jsonArray.size)
     }
 
     @Test

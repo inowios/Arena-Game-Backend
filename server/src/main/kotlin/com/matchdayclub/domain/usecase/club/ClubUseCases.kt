@@ -34,8 +34,17 @@ data class ClubState(val club: Club, val buildings: List<Building>, val gridSize
 }
 
 /** Shared loading + lazy finalisation of finished timers ("finalise on read"). */
+/** Percentages (100 = no change) the running live events apply. */
+data class EventEffects(val buildTimePct: Int = 100, val incomePct: Int = 100, val obstacleGoldPct: Int = 100) {
+    fun build(seconds: Long) = if (seconds <= 0) seconds else maxOf(1L, seconds * buildTimePct / 100)
+}
+
 class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList(),
                   private val obstacles: ObstacleRepository? = null) {
+    /** What the running live events do (shorter constructions, more income, more gold in obstacles); set by DI. */
+    var effects: suspend () -> EventEffects = { EventEffects() }
+    suspend fun buildSeconds(base: Long) = effects().build(base)
+
     /** The player's club; a retired club (account deleted or moved away) belongs to nobody any more. */
     suspend fun clubOf(userId: UUID): Club = clubs.findByUserId(userId)?.takeUnless { it.isBot } ?: throw NotFoundException("Club not found")
 
@@ -163,8 +172,9 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         if (lvl.buildSeconds > 0) service.requireFreeBuilder(st)
         val club = service.charge(st.club, coins = lvl.cost)
         val now = clock.now()
-        val state = if (lvl.buildSeconds > 0) BuildingState.UPGRADING else BuildingState.IDLE
-        buildings.create(Building(UUID.randomUUID(), club.id, type, 1, x, y, rotation, state, if (lvl.buildSeconds > 0) now.plusSeconds(lvl.buildSeconds) else null, now, now, now,
+        val secs = service.buildSeconds(lvl.buildSeconds)
+        val state = if (secs > 0) BuildingState.UPGRADING else BuildingState.IDLE
+        buildings.create(Building(UUID.randomUUID(), club.id, type, 1, x, y, rotation, state, if (secs > 0) now.plusSeconds(secs) else null, now, now, now,
             variant = variant?.takeUnless { Cosmetics.isDefault(it) }))
     }
 }
@@ -186,7 +196,7 @@ class UpgradeBuildingUseCase(private val service: ClubService, private val build
         service.charge(club, coins = lvl.cost)
         val now = clock.now()
         if (instant) buildings.update(b.copy(level = next, updatedAt = now))
-        else buildings.update(b.copy(level = next, state = BuildingState.UPGRADING, upgradeEndsAt = now.plusSeconds(lvl.buildSeconds), updatedAt = now))
+        else buildings.update(b.copy(level = next, state = BuildingState.UPGRADING, upgradeEndsAt = now.plusSeconds(service.buildSeconds(lvl.buildSeconds)), updatedAt = now))
     }
 }
 
@@ -202,7 +212,7 @@ class CollectIncomeUseCase(private val service: ClubService, private val clubs: 
         val spec = BuildingCatalog.level(b.type, b.level)
         if (spec.incomePerHour == 0L) throw ValidationException("This building has no income")
         val now = clock.now()
-        val bonus = Atmosphere.of(buildings.listByClub(club.id), collections?.invoke(club.id) ?: 0)[b.id]?.total ?: 0
+        val bonus = Atmosphere.of(buildings.listByClub(club.id), collections?.invoke(club.id) ?: 0, service.effects().incomePct - 100)[b.id]?.total ?: 0
         var amount = BuildingCatalog.income(spec, now.epochSecond - b.lastCollectedAt.epochSecond, club.level, bonus)
         val doubled = club.doubleIncomeUntil != null && now.isBefore(club.doubleIncomeUntil) && amount > 0
         if (doubled) amount *= 2
@@ -314,9 +324,10 @@ class CollectObstacleUseCase(private val service: ClubService, private val clubs
         val o = st.obstacles.firstOrNull { it.id == obstacleId } ?: throw NotFoundException("Obstacle not found")
         if (o.state != ObstacleState.READY) throw ConflictException("Not cleared yet")
         if (!obstacles.take(o.id)) throw ConflictException("Not cleared yet")
-        val club = clubs.update(st.club.copy(gold = st.club.gold + o.rewardGold, updatedAt = clock.now()))
+        val gold = o.rewardGold * service.effects().obstacleGoldPct / 100
+        val club = clubs.update(st.club.copy(gold = st.club.gold + gold, updatedAt = clock.now()))
         progress.record(club.id, ProgressEvent.OBSTACLE_CLEARED)
-        ObstacleLoot(o.rewardGold, club)
+        ObstacleLoot(gold, club)
     }
 }
 

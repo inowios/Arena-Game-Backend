@@ -55,7 +55,14 @@ val appModule = module {
     single<BuildingRepository> { BuildingRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
     single<com.matchdayclub.domain.repository.ObstacleRepository> { com.matchdayclub.data.repository.ObstacleRepositoryImpl() }
-    single { ClubService(get(), get(), get(), getAll<BuildingListener>(), get()) }
+    single {
+        ClubService(get(), get(), get(), getAll<BuildingListener>(), get()).also { svc ->
+            val koin = getKoin()
+            svc.effects = { koin.get<com.matchdayclub.domain.usecase.liveops.LiveOps>().modifiers().let { com.matchdayclub.domain.usecase.club.EventEffects(it.buildTimePct, it.incomePct, it.obstacleGoldPct) } }
+        }
+    }
+    single<com.matchdayclub.domain.usecase.liveops.LiveOpsRepository> { com.matchdayclub.data.repository.LiveOpsRepositoryImpl() }
+    single { val econ: EconomyRepository = get(); com.matchdayclub.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get(), purchases = { club, pid -> econ.hasPurchase(club, pid) }) }
     single { SectionService(get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
     single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
@@ -103,7 +110,7 @@ val appModule = module {
     single {
         val sections = get<SectionService>(); val clubs = get<ClubRepository>()
         EconomyService(get(), get(), get(), { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }, achievements = get())
-            .also { e -> val koin = getKoin(); e.also = listOf(com.matchdayclub.domain.usecase.alliance.AllianceProgress { koin.get() }) }
+            .also { e -> val koin = getKoin(); e.also = listOf(com.matchdayclub.domain.usecase.alliance.AllianceProgress { koin.get() }, com.matchdayclub.domain.usecase.liveops.EventProgressTracker { koin.get() }) }
     }
     single<com.matchdayclub.domain.usecase.alliance.AllianceRepository> { com.matchdayclub.data.repository.AllianceRepositoryImpl() }
     single { com.matchdayclub.domain.usecase.alliance.AllianceUseCases(get(), get(), get(), get(), get(), tx = get()) }
@@ -137,7 +144,7 @@ val appModule = module {
             log.info("Receipt verifiers: ${keys.joinToString()}${if (dev) " (dev receipts accepted)" else ""}")
         }
     }
-    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get(), cosmetics = get()) }
     single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get(), repo = get()) }
     single { com.matchdayclub.core.store.AdMobSsvVerifier(get()) }
     single {

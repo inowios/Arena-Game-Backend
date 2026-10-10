@@ -10,6 +10,8 @@ interface EconomyRepository {
     suspend fun tasks(clubId: UUID, day: LocalDate): List<DailyTask>
     suspend fun upsertTask(task: DailyTask): DailyTask
     suspend fun purchaseByExternalId(externalId: String): Purchase?
+    /** Whether the club ever bought [productId] (one-time products like the starter pack). */
+    suspend fun hasPurchase(clubId: UUID, productId: String): Boolean = false
     suspend fun createPurchase(p: Purchase): Purchase
     /** Records a verified rewarded-ad transaction; false when it was already granted (AdMob retries callbacks). */
     suspend fun recordAdReward(transactionId: String, clubId: UUID, placement: String, at: java.time.Instant): Boolean

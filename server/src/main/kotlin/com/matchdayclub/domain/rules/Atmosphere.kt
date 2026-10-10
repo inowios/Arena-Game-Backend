@@ -25,8 +25,9 @@ object Atmosphere {
     }
 
     /** [museum]: visitors of a trophy museum nearby; [collection]: complete cosmetic sets (club-wide, above the cap). */
-    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0, val fence: Int = 0, val museum: Int = 0, val collection: Int = 0) {
-        val total get() = minOf(CAP, decor + stadium + parking + fence + museum) + collection
+    /** [event]: a running live event's extra income % (club-wide, above the cap like collections). */
+    data class Bonus(val decor: Int = 0, val stadium: Int = 0, val parking: Int = 0, val fence: Int = 0, val museum: Int = 0, val collection: Int = 0, val event: Int = 0) {
+        val total get() = minOf(CAP, decor + stadium + parking + fence + museum) + collection + event
     }
 
     /** The bonus a [type] building at [fp] would get among [others] (its own row excluded by the caller). */
@@ -40,7 +41,7 @@ object Atmosphere {
     }
 
     /** Bonus of every building of a club (only income buildings get one); [collectionPct] from complete sets. */
-    fun of(buildings: List<Building>, collectionPct: Int = 0): Map<UUID, Bonus> {
+    fun of(buildings: List<Building>, collectionPct: Int = 0, eventPct: Int = 0): Map<UUID, Bonus> {
         val fps = buildings.associate { it.id to footprint(it.type, it.gridX, it.gridY, it.rotation) }
         val museums = buildings.filter { it.type == BuildingType.MUSEUM && it.level > 0 }
         return buildings.associate { b ->
@@ -49,7 +50,7 @@ object Atmosphere {
                 // a museum under construction keeps the level it had
                 val m = museums.filter { gap(fps.getValue(b.id), fps.getValue(it.id)) <= MuseumRules.RANGE }
                     .maxOfOrNull { MuseumRules.atmospherePct(if (it.state == com.matchdayclub.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level) } ?: 0
-                bonus = bonus.copy(museum = m, collection = collectionPct)
+                bonus = bonus.copy(museum = m, collection = collectionPct, event = eventPct)
             }
             b.id to bonus
         }

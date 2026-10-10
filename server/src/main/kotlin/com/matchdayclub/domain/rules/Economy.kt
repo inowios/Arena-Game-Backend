@@ -33,7 +33,7 @@ data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o:
 
 enum class Store { GOOGLE, APPLE, DEV }
 /** Real-money store product (ids must match Play Console / App Store Connect). */
-data class Product(val id: String, val gold: Int = 0, val coins: Long = 0, val premiumPass: Boolean = false)
+data class Product(val id: String, val gold: Int = 0, val coins: Long = 0, val premiumPass: Boolean = false, val oneTime: Boolean = false, val item: String? = null)
 /** Coins bought with gold (spec §6 "пакеты монет" are sold for gold). */
 data class CoinPack(val id: String, val gold: Int, val coins: Long)
 
@@ -53,6 +53,8 @@ object Economy {
     val PRODUCTS = listOf(
         Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200), Product("gold_huge", gold = 2600),
         Product("season_pass", premiumPass = true),
+        // once per club, at a big discount: gold, coins and a fountain for the plaza
+        Product("starter_pack", gold = 500, coins = 20_000, oneTime = true, item = "decor_fountain"),
     ).associateBy { it.id }
 
     val COIN_PACKS = listOf(CoinPack("coins_small", 25, 3_000), CoinPack("coins_medium", 100, 13_000), CoinPack("coins_large", 400, 60_000)).associateBy { it.id }

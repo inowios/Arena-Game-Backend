@@ -33,6 +33,7 @@ fun Route.clubRoutes() {
     val roads: com.matchdayclub.domain.usecase.progress.RoadUseCases by inject()
     val collections: com.matchdayclub.domain.usecase.progress.CollectionsUseCases by inject()
     val museum: com.matchdayclub.domain.usecase.progress.MuseumService by inject()
+    val clubService: ClubService by inject()
     val clearObstacle: ClearObstacleUseCase by inject()
     val speedObstacle: SpeedUpObstacleUseCase by inject()
     val collectObstacle: CollectObstacleUseCase by inject()
@@ -58,7 +59,7 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                val atmosphere = com.matchdayclub.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id))
+                val atmosphere = com.matchdayclub.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id), clubService.effects().incomePct - 100)
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.matchdayclub.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) }).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
