@@ -80,6 +80,17 @@ class LiveMatchTest {
     }
 
     @Test
+    fun `recent matches list the finished ones with the opponent, newest first`() = runBlocking<Unit> {
+        create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val recent = com.matchdayclub.domain.usecase.live.RecentLiveMatchesUseCase(clubService, clubs, live)
+        val a = start(u1, null); finish(u1, a.match.id, win()); clock.advanceSeconds(60)
+        val b = start(u1, null); finish(u1, b.match.id, LiveReport(0, 1, duration = 250.0))
+        val rows = recent(u1)
+        assertEquals(2, rows.size); assertEquals(b.match.id, rows[0].match.id); assertEquals(0, rows[0].match.homeScore); assertEquals(1, rows[0].match.awayScore)
+        assertNotNull(rows[0].opponent); assertTrue(rows[0].match.trophiesDelta!! < 0); assertTrue(rows[1].match.trophiesDelta!! > 0)
+    }
+
+    @Test
     fun `a match given back before kick-off costs nothing`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val cancel = com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase(clubService, live, clock)

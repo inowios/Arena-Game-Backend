@@ -24,9 +24,11 @@ fun Route.liveRoutes() {
     val start: StartLiveMatchUseCase by inject()
     val finish: FinishLiveMatchUseCase by inject()
     val cancel: com.matchdayclub.domain.usecase.live.CancelLiveMatchUseCase by inject()
+    val recent: com.matchdayclub.domain.usecase.live.RecentLiveMatchesUseCase by inject()
     val clock: Clock by inject()
     val chest: com.matchdayclub.domain.usecase.live.ArenaChestUseCase by inject()
     authenticate(AUTH_JWT) { route("/live") {
+        get("/recent") { call.respond(recent(call.userId()).map { it.toDto() }.toSuccessResponse()) }
         get("/chest") { call.respond(chest.view(call.userId()).toDto().toSuccessResponse()) }
         post("/chest/claim") { val (c, club) = chest.claim(call.userId()); call.respond(c.toDto(club).toSuccessResponse()) }
         post("/start") {

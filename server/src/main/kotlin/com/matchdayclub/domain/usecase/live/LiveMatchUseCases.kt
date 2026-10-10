@@ -129,6 +129,17 @@ class StartLiveMatchUseCase(
     }
 }
 
+/** The club's last live matches with the opponents' cards (the profile's "recent matches"). */
+class RecentLiveMatchesUseCase(private val service: ClubService, private val clubs: ClubRepository, private val live: LiveMatchRepository) {
+    data class Row(val match: LiveMatch, val opponent: Club?)
+    suspend operator fun invoke(userId: UUID, limit: Int = 10): List<Row> {
+        val club = service.clubOf(userId)
+        val rows = live.recent(club.id, limit)
+        val opps = clubs.findByIds(rows.map { it.opponentId }.toSet()).associateBy { it.id }
+        return rows.map { Row(it, opps[it.opponentId]) }
+    }
+}
+
 /** "Another opponent": a match handed out but not kicked off yet (within [LiveRules.CANCEL_SECONDS]) is given back without a result. */
 class CancelLiveMatchUseCase(private val service: ClubService, private val live: LiveMatchRepository, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID, matchId: UUID): LiveMatch = tx {
