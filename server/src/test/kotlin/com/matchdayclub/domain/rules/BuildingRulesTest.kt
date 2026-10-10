@@ -63,6 +63,6 @@ class BuildingRulesTest {
         assertEquals(Footprint(0, 0, 8, 6), a)
         assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.PITCH, 0, 0, 90))
         assertTrue(a.overlaps(Footprint(7, 5, 2, 2))); assertFalse(a.overlaps(Footprint(8, 0, 2, 2)))
-        assertTrue(a.fits(12)); assertFalse(Footprint(10, 0, 3, 1).fits(12))
+        assertTrue(Footprint(Grid.lo(12), Grid.lo(12), 8, 6).fits(12)); assertFalse(a.fits(12)); assertFalse(Footprint(19, 9, 3, 1).fits(12))   // the grid is the centred 12 cells of the 30-cell land
     }
 }

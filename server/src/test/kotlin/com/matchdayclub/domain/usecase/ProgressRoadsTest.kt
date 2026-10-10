@@ -90,7 +90,7 @@ class ProgressRoadsTest {
         assertEquals(0, museum.of(club().id).capacity)
         buildings.setStadium(club().id, 3)
         val now = clock.now()
-        val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.MUSEUM, 1, 0, 1, 0, BuildingState.IDLE, null, now, now, now))
+        val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.MUSEUM, 1, 9, 10, 0, BuildingState.IDLE, null, now, now, now))
         val v = museum.of(club().id)
         assertEquals(1, v.level); assertEquals(6, v.capacity)
         assertTrue(v.exhibits.size <= 6)

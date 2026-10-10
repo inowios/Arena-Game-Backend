@@ -37,7 +37,7 @@ class SectionsTest {
     private fun clubWithCourt(): Club = runBlocking {
         val c = create(user, "Hoops FC", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); buildings.setStadium(c.id, 4)
-        val court = place(user, BuildingType.BASKETBALL_COURT, 0, 10, 0)
+        val court = place(user, BuildingType.BASKETBALL_COURT, 9, 19, 0)
         assertEquals(listOf(Sport.FOOTBALL), sections.active(clubs.rows.getValue(c.id)), "court under construction is not a section yet")
         speed(user, court.id)
         clubs.rows.getValue(c.id)
@@ -57,7 +57,7 @@ class SectionsTest {
     @Test
     fun `academy graduates per section, only for open sections`() = runBlocking<Unit> {
         clubWithCourt()
-        place(user, BuildingType.ACADEMY, 4, 10, 0).let { speed(user, it.id) }
+        place(user, BuildingType.ACADEMY, 13, 19, 0).let { speed(user, it.id) }
         val g = academy(user, Sport.BASKETBALL)
         assertEquals(Sport.BASKETBALL, g.sport); assertTrue(g.position in setOf(Position.G, Position.F, Position.C))
         clock.advanceSeconds(9 * 3600)

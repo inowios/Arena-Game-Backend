@@ -51,7 +51,7 @@ class ClubUseCasesTest {
     @Test
     fun `place charges coins starts timer and finalises on read`() = runBlocking<Unit> {
         newClub()
-        val b = place(user, BuildingType.ACADEMY, 0, 10, 0)
+        val b = place(user, BuildingType.ACADEMY, 9, 19, 0)
         assertEquals(BuildingState.UPGRADING, b.state); assertEquals(1_000, clubs.rows.values.first().coins)
         assertFailsWith<ConflictException> { collect(user, b.id) }
         clock.advanceSeconds(10 * 60)
@@ -61,13 +61,13 @@ class ClubUseCasesTest {
     @Test
     fun `placement validation`() = runBlocking<Unit> {
         newClub()
-        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 3, 4, 0) }           // overlaps pitch
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 11, 11, 0) }       // outside grid
-        assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 0, 10, 0) }        // stadium 3 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 0, 10, 0) }   // stadium 4 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 0, 10, 0) }  // a 2nd office needs stadium 4
-        place(user, BuildingType.ACADEMY, 0, 10, 0)
-        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 3, 10, 0) }          // one academy, ever
+        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 13, 0) }           // overlaps pitch
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 20, 20, 0) }       // outside grid
+        assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 9, 19, 0) }        // stadium 3 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 9, 19, 0) }   // stadium 4 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 9, 19, 0) }  // a 2nd office needs stadium 4
+        place(user, BuildingType.ACADEMY, 9, 19, 0)
+        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 19, 0) }          // one academy, ever
         Unit
     }
 
@@ -128,7 +128,7 @@ class ClubUseCasesTest {
         assertEquals(BuildingState.IDLE, done.state); assertEquals(before - 1, clubs.rows.values.first().gold)   // 9 min left = 1 gold
         val coins = clubs.rows.values.first().coins
         clubs.update(clubs.rows.values.first().copy(coins = 0))
-        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.CAFE, 0, 10, 0) }  // the café opens at stadium 2
+        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.CAFE, 9, 19, 0) }  // the café opens at stadium 2
         clubs.update(clubs.rows.values.first().copy(coins = coins))
         assertFailsWith<ValidationException> { upgrade(user, pitch.id) }                     // stadium 3 needs 300 trophies
         clubs.update(clubs.rows.values.first().copy(trophies = 300))

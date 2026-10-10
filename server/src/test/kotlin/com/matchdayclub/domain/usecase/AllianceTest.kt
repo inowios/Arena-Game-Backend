@@ -69,7 +69,7 @@ class AllianceTest {
         setup()
         val id = alliances.create(a, "Northern Lights", "NL", "", true, 0, null).alliance.id
         alliances.join(b, id); alliances.join(c, id)
-        val (x, y) = (2 to 10)
+        val (x, y) = (11 to 19)
         val academy = place(a, BuildingType.ACADEMY, x, y, 0)
         val ends0 = buildings.findById(academy.id)!!.upgradeEndsAt!!
         val h = alliances.askHelp(a, academy.id)

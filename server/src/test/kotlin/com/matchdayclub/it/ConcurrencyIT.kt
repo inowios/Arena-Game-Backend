@@ -58,7 +58,7 @@ class ConcurrencyIT {
     @Test
     fun `parallel purchases never overspend`() {
         runBlocking { clubs.update(clubs.findByUserId(userId)!!.copy(coins = 1_000)) }
-        val results = parallel(10) { i -> place(userId, BuildingType.DECOR, i, 11, 0) }   // decor costs 200 and is instant
+        val results = parallel(10) { i -> place(userId, BuildingType.DECOR, 9 + i, 20, 0) }   // decor costs 200 and is instant
         assertEquals(5, results.count { it.isSuccess }, "results: $results")
         assertEquals(5, results.count { it.exceptionOrNull() is DomainException })
         assertEquals(0L, runBlocking { clubs.findByUserId(userId)!!.coins })
@@ -67,7 +67,7 @@ class ConcurrencyIT {
     @Test
     fun `a finished training is applied once even when the squad is read in parallel`() {
         runBlocking {
-            place(userId, BuildingType.TRAINING_CENTER, 0, 10, 0)
+            place(userId, BuildingType.TRAINING_CENTER, 9, 19, 0)
             clock.advanceSeconds(3600)
         }
         val athlete = runBlocking { squads.squad(userId).athletes.minBy { it.mental } }   // stays under the pitch cap

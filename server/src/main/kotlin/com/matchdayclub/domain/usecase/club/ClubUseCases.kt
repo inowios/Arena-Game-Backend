@@ -88,7 +88,7 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
 
     private fun freeSpot(kind: ObstacleKind, grid: Int, list: List<Building>, current: List<Obstacle>, r: kotlin.random.Random): Pair<Int, Int>? {
         repeat(60) {
-            val x = r.nextInt(0, grid - kind.width + 1); val y = r.nextInt(0, grid - kind.height + 1)
+            val x = r.nextInt(Grid.lo(grid), Grid.hi(grid) - kind.width + 1); val y = r.nextInt(Grid.lo(grid), Grid.hi(grid) - kind.height + 1)
             val fp = Obstacles.footprint(kind, x, y)
             // keep a margin around buildings so nothing gets walled in
             val padded = Footprint(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 2)
@@ -134,8 +134,9 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val buildings
             if (clubs.findByUserId(userId) != null) throw ConflictException("Club already exists")
             val now = clock.now()
             val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), null, 1, 0, 2_500, 50, timezone, now, null, now, now))
-            buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, 2, 3, 0, BuildingState.IDLE, null, now, now, now))
-            buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, 0, 0, 0, BuildingState.IDLE, null, now, now, now))
+            // the stadium sits in the exact middle of the land (8×6); the ticket office by its corner
+            buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, Grid.CENTRE - 4, Grid.CENTRE - 3, 0, BuildingState.IDLE, null, now, now, now))
+            buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, Grid.CENTRE - 6, Grid.CENTRE - 6, 0, BuildingState.IDLE, null, now, now, now))
             initializers.forEach { it.onClubCreated(club) }
             club
         }

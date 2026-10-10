@@ -235,14 +235,25 @@ object ClubLevels {
     fun reputationForNext(level: Int): Int? = thresholds.getOrNull(level)
 }
 
+/**
+ * The club's land is a 30×30-cell square; the grid the club may build on is the centred [gridSize]×[gridSize] part of
+ * it, so the stadium placed in the middle stays in the middle as the grid grows outwards on every side.
+ */
+object Grid {
+    const val RESERVE = 30
+    fun lo(gridSize: Int) = (RESERVE - gridSize) / 2
+    fun hi(gridSize: Int) = lo(gridSize) + gridSize
+    const val CENTRE = RESERVE / 2
+}
+
 data class Footprint(val x: Int, val y: Int, val w: Int, val h: Int) {
-    fun fits(gridSize: Int) = x >= 0 && y >= 0 && x + w <= gridSize && y + h <= gridSize
+    fun fits(gridSize: Int) = x >= Grid.lo(gridSize) && y >= Grid.lo(gridSize) && x + w <= Grid.hi(gridSize) && y + h <= Grid.hi(gridSize)
     fun overlaps(o: Footprint) = x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h
     fun contains(o: Footprint) = o.x >= x && o.y >= y && o.x + o.w <= x + w && o.y + o.h <= y + h
 }
 
 /**
- * Each other sport has a plot of its own in the club's reserved land (cells of the 30x30 reserve, outside the first
+ * Each other sport has a plot of its own at an edge of the club's land (cells of the 30x30 square, outside the first
  * grids): a derelict court stands in its middle until the stadium allows the sport, then the club restores it there.
  * A court may be placed or moved inside its plot even when the plot lies outside the current grid; anywhere else the
  * grid rules apply as usual.
@@ -250,8 +261,8 @@ data class Footprint(val x: Int, val y: Int, val w: Int, val h: Int) {
 data class ReservedPlot(val type: BuildingType, val plot: Footprint, val courtX: Int, val courtY: Int)
 object ReservedPlots {
     val ALL = listOf(
-        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(18, 3, 7, 6), 20, 5),
-        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(2, 18, 7, 6), 4, 20),
+        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(23, 12, 7, 6), 25, 14),   // the east edge of the land
+        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(0, 12, 7, 6), 2, 14),          // the west edge
     )
     fun of(type: BuildingType): ReservedPlot? = ALL.firstOrNull { it.type == type }
     /** Inside the grid, or a court inside its own plot. */

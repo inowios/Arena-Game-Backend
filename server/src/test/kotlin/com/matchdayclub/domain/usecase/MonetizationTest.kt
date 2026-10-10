@@ -50,7 +50,7 @@ class MonetizationTest {
     private fun setup(gold: Int = 1_000, level: Int = 3, vararg types: BuildingType) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(club().copy(coins = 50_000, gold = gold, level = level)); buildings.setStadium(club().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, 2 + i * 2, 10, 0); speed(user, b.id) }
+        types.forEachIndexed { i, t -> val b = place(user, t, 11 + i * 2, 19, 0); speed(user, b.id) }
         clubs.update(club().copy(gold = gold))
     }
 
@@ -85,10 +85,10 @@ class MonetizationTest {
     @Test
     fun `decor looks at placement and later`() = runBlocking<Unit> {
         setup()
-        assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 15, 15, 0, "decor_fountain") }
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 12, 12, 0, "decor_tree") }
+        assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 19, 19, 0, "decor_fountain") }
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 9, 19, 0, "decor_tree") }
         shop.buy(user, "decor_fountain")
-        val d = place(user, BuildingType.DECOR, 15, 15, 0, "decor_fountain")
+        val d = place(user, BuildingType.DECOR, 19, 19, 0, "decor_fountain")
         assertEquals("decor_fountain", d.variant)
         val tree = shop.setDecorLook(user, d.id, "decor_tree")
         assertNull(tree.variant)
