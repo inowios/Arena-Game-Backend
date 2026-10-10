@@ -26,6 +26,7 @@ enum class ProgressEvent(val task: TaskKind?, val metric: Metric? = null) {
     SECTION_WON(TaskKind.WIN_SECTIONS, Metric.SECTIONS_WON), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null),
     ACADEMY_GRADUATE(null, Metric.ACADEMY_GRADUATES), INVITE_JOINED(null, Metric.INVITES),
     LIVE_PLAYED(TaskKind.PLAY_LIVE_3), LIVE_WON(TaskKind.WIN_LIVE_2), GOAL_SCORED(TaskKind.SCORE_5, Metric.GOALS), SIGNATURE_USED(TaskKind.SIGNATURE_1, Metric.SIGNATURES),
+    OBSTACLE_CLEARED(null, Metric.OBSTACLES_CLEARED),
 }
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }

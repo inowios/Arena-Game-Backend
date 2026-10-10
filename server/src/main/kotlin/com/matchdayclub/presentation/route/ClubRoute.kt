@@ -26,6 +26,9 @@ fun Route.clubRoutes() {
     val updateClub: UpdateClubUseCase by inject()
     val move: MoveBuildingUseCase by inject()
     val buyBuilder: BuyBuilderUseCase by inject()
+    val clearObstacle: ClearObstacleUseCase by inject()
+    val speedObstacle: SpeedUpObstacleUseCase by inject()
+    val collectObstacle: CollectObstacleUseCase by inject()
     val sections: com.matchdayclub.domain.usecase.athlete.SectionService by inject()
     val cosmetics: com.matchdayclub.domain.usecase.economy.CosmeticsUseCases by inject()
     val inbox: com.matchdayclub.domain.usecase.account.InboxService by inject()
@@ -48,7 +51,7 @@ fun Route.clubRoutes() {
             get {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium).toSuccessResponse())
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) }).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             get("/inbox") {
@@ -58,6 +61,12 @@ fun Route.clubRoutes() {
             }
             post("/inbox/read") { inbox.markAllRead(getClub(call.userId()).club.id); call.respond(mapOf("ok" to true).toSuccessResponse()) }
             post("/builders") { call.respond(buyBuilder(call.userId()).toDto().toSuccessResponse()) }
+            route("/obstacles/{id}") {
+                fun RoutingCall.obstacleId() = runCatching { UUID.fromString(parameters["id"]) }.getOrElse { throw ValidationException("Bad obstacle id") }
+                post("/clear") { val o = clearObstacle(call.userId(), call.obstacleId()); val st = getClub(call.userId()); call.respond(o.toDto(st.now, st.stadium).toSuccessResponse()) }
+                post("/speedup") { val o = speedObstacle(call.userId(), call.obstacleId()); val st = getClub(call.userId()); call.respond(o.toDto(st.now, st.stadium).toSuccessResponse()) }
+                post("/collect") { val r = collectObstacle(call.userId(), call.obstacleId()); call.respond(ObstacleLootResponse(r.gold, r.club.toDto()).toSuccessResponse()) }
+            }
             route("/buildings") {
                 post {
                     val r = call.receive<PlaceBuildingRequest>()

@@ -44,7 +44,12 @@ import java.time.Instant
 )
 
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
-                                          /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1)
+                                          /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1,
+                                          val obstacles: List<ObstacleDto> = emptyList())
+/** An obstacle on the plot: [cost]/[seconds] to clear it; [rewardGold] only once it is cleared (READY). */
+@Serializable data class ObstacleDto(val id: String, val kind: String, val x: Int, val y: Int, val w: Int, val h: Int, val state: String, val remainingSeconds: Long,
+                                     val cost: Long, val seconds: Long, val speedUpGold: Int, val rewardGold: Int)
+@Serializable data class ObstacleLootResponse(val gold: Int, val club: ClubDto)
 /** Readiness for a live match: energy of the eleven (0–100), whether they can start, minutes until they can, gold for an instant rest. */
 @Serializable data class LiveReadyDto(val energy: Int, val ready: Boolean, val restMinutes: Int, val tired: Int, val restGold: Int)
 fun com.matchdayclub.domain.usecase.live.LiveReadiness.toDto() = LiveReadyDto(energy, ready, restMinutes, tired, restGold)
@@ -67,4 +72,10 @@ fun Building.toDto(now: Instant, clubLevel: Int): BuildingDto {
     val pending = if (state == BuildingState.IDLE) BuildingCatalog.income(spec, now.epochSecond - lastCollectedAt.epochSecond, clubLevel) else 0
     val next = if (BuildingCatalog.hasLevel(type, level + 1)) BuildingCatalog.level(type, level + 1).toDto(level + 1) else null
     return BuildingDto(id.toString(), type.name, level, gridX, gridY, rotation, state.name, upgradeEndsAt?.toString(), remaining, BuildingCatalog.speedUpGold(remaining), pending, spec.incomePerHour, spec.capHours, next, variant)
+}
+
+fun com.matchdayclub.domain.model.Obstacle.toDto(now: Instant, stadium: Int): ObstacleDto {
+    val remaining = if (state == com.matchdayclub.domain.model.ObstacleState.CLEARING && clearEndsAt != null) maxOf(0, clearEndsAt.epochSecond - now.epochSecond) else 0
+    return ObstacleDto(id.toString(), kind.name, gridX, gridY, kind.width, kind.height, state.name, remaining, com.matchdayclub.domain.rules.Obstacles.cost(kind, stadium), kind.seconds,
+        BuildingCatalog.speedUpGold(remaining), if (state == com.matchdayclub.domain.model.ObstacleState.READY) rewardGold else 0)
 }

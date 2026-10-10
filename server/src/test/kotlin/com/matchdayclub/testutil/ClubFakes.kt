@@ -43,3 +43,22 @@ class FakeMarketRepository : com.matchdayclub.domain.repository.MarketRepository
     override suspend fun purchased(clubId: UUID, period: Long, salt: Int) = rows.filter { it.startsWith("$clubId:$period:$salt:") }.map { it.substringAfterLast(':').toInt() }.toSet()
     override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant) = rows.add("$clubId:$period:$salt:$idx")
 }
+
+class FakeObstacleRepository : com.matchdayclub.domain.repository.ObstacleRepository {
+    val rows = linkedMapOf<UUID, com.matchdayclub.domain.model.Obstacle>()
+    val clocks = mutableMapOf<UUID, java.time.Instant?>()
+    override suspend fun listByClub(clubId: UUID) = rows.values.filter { it.clubId == clubId }
+    override suspend fun create(o: com.matchdayclub.domain.model.Obstacle) = o.also { rows[o.id] = it }
+    override suspend fun update(o: com.matchdayclub.domain.model.Obstacle) = o.also { rows[o.id] = it }
+    override suspend fun finishClearing(o: com.matchdayclub.domain.model.Obstacle): Boolean {
+        val cur = rows[o.id] ?: return false
+        if (cur.state != com.matchdayclub.domain.model.ObstacleState.CLEARING) return false
+        rows[o.id] = o; return true
+    }
+    override suspend fun take(id: UUID): Boolean = rows[id]?.takeIf { it.state == com.matchdayclub.domain.model.ObstacleState.READY }?.let { rows.remove(id); true } ?: false
+    override suspend fun spawnClock(clubId: UUID) = clocks[clubId]
+    override suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean {
+        if (clocks[clubId] != expected) return false
+        clocks[clubId] = next; return true
+    }
+}

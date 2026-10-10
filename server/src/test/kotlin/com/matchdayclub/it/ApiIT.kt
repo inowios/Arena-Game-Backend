@@ -47,13 +47,16 @@ class ApiIT {
         val club = call(HttpMethod.Get, "/club", t).data.o()
         assertEquals(2500, club["club"]!!.o()["coins"]!!.jsonPrimitive.int)
         assertEquals(1, club["club"]!!.o()["builderSlots"]!!.jsonPrimitive.int)
-        val academy = call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":0,"y":10}""", expect = 201).data.o()["id"]!!.jsonPrimitive.content
+        val (ax, ay) = freeSpot(club, 2, 2)   // obstacles turn up at random: find room
+        val academy = call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$ax,"y":$ay}""", expect = 201).data.o()["id"]!!.jsonPrimitive.content
+        val (tx, ty) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
         // one builder: a second construction must wait
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":3,"y":10}""", expect = 409)
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 409)
         call(HttpMethod.Post, "/club/builders", t, expect = 402)   // 250 gold needed, 50 owned
         call(HttpMethod.Post, "/club/buildings/$academy/speedup", t)
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":3,"y":10}""", expect = 402)   // 2 400 coins, 1 000 left
-        call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":0,"y":8,"rotation":0}""")
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 402)   // 2 400 coins, 1 000 left
+        val (mx, my) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
+        call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":$mx,"y":$my,"rotation":0}""")
         val graduate = call(HttpMethod.Post, "/club/academy/claim", t, expect = 201).data.o()
         assertTrue(graduate["overall"]!!.jsonPrimitive.int > 0)
         call(HttpMethod.Post, "/club/academy/claim", t, expect = 409)
@@ -165,9 +168,10 @@ class ApiIT {
         assertEquals("kit_stripes", state["club"]!!.o()["kit"]!!.jsonPrimitive.content)
         assertTrue(state["ads"]!!.o()["freeSpeedupAvailable"]!!.jsonPrimitive.boolean)
         // decor looks
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":11,"y":11,"variant":"decor_flowerbed"}""", expect = 409)
+        val (dx, dy) = freeSpot(state, 1, 1)
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_flowerbed"}""", expect = 409)
         call(HttpMethod.Post, "/club/cosmetics/decor_flowerbed/buy", t)
-        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":11,"y":11,"variant":"decor_flowerbed"}""", expect = 201).data.o()
+        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_flowerbed"}""", expect = 201).data.o()
         assertEquals("decor_flowerbed", decor["variant"]!!.jsonPrimitive.content)
         val tree = call(HttpMethod.Post, "/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant", t, """{"itemId":"decor_tree"}""").data.o()
         assertTrue(tree["variant"] == null || tree["variant"] is JsonNull)
@@ -252,4 +256,20 @@ class ApiIT {
         call(HttpMethod.Delete, "/me", t)
         assertEquals(1, admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()["analyticsEvents"]!!.jsonPrimitive.int)   // only the anonymous account_deleted
     }
+}
+
+/** A free w×h spot on the plot of a GET /club response (buildings and obstacles taken into account). */
+private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: Int): Pair<Int, Int> {
+    val grid = state["gridSize"]!!.jsonPrimitive.int
+    val taken = mutableListOf<com.matchdayclub.domain.rules.Footprint>()
+    for (b in state["buildings"]!!.jsonArray) {
+        val o = b.jsonObject
+        taken += com.matchdayclub.domain.rules.footprint(com.matchdayclub.domain.rules.BuildingType.valueOf(o["type"]!!.jsonPrimitive.content), o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["rotation"]!!.jsonPrimitive.int)
+    }
+    for (b in state["obstacles"]?.jsonArray ?: kotlinx.serialization.json.JsonArray(emptyList())) {
+        val o = b.jsonObject
+        taken += com.matchdayclub.domain.rules.Footprint(o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["w"]!!.jsonPrimitive.int, o["h"]!!.jsonPrimitive.int)
+    }
+    for (y in 0..grid - h) for (x in 0..grid - w) { val fp = com.matchdayclub.domain.rules.Footprint(x, y, w, h); if (taken.none { it.overlaps(fp) }) return x to y }
+    error("no free spot")
 }

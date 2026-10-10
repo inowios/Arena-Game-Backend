@@ -27,3 +27,17 @@ interface BuildingRepository {
     suspend fun move(building: Building): Building
     suspend fun delete(id: UUID)
 }
+
+interface ObstacleRepository {
+    suspend fun listByClub(clubId: UUID): List<com.matchdayclub.domain.model.Obstacle>
+    suspend fun create(o: com.matchdayclub.domain.model.Obstacle): com.matchdayclub.domain.model.Obstacle
+    suspend fun update(o: com.matchdayclub.domain.model.Obstacle): com.matchdayclub.domain.model.Obstacle
+    /** Moves CLEARING → READY only if still CLEARING (concurrent readers finish it once). */
+    suspend fun finishClearing(o: com.matchdayclub.domain.model.Obstacle): Boolean
+    /** Deletes a READY obstacle; false if someone else picked it up first. */
+    suspend fun take(id: UUID): Boolean
+    /** When the last obstacle turned up for the club (null: never). */
+    suspend fun spawnClock(clubId: UUID): java.time.Instant?
+    /** Moves the spawn clock from [expected] to [next]; false if another request already did (it spawns, we don't). */
+    suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean
+}

@@ -61,3 +61,19 @@ object BuildingTable : BaseTable("buildings") {
     val lastCollectedAt = timestamp("last_collected_at")
     val variant = varchar("variant", 40).nullable()
 }
+
+object ObstacleTable : BaseTable("obstacles") {
+    val clubId = uuid("club_id").references(ClubTable.id)
+    val kind = varchar("kind", 16)
+    val gridX = integer("grid_x")
+    val gridY = integer("grid_y")
+    val state = varchar("state", 16)
+    val clearEndsAt = timestamp("clear_ends_at").nullable()
+    val rewardGold = integer("reward_gold")
+}
+
+/** The clubs table's obstacle clock alone (kept out of [ClubTable] so club updates never overwrite it). */
+object ClubObstacleClock : org.jetbrains.exposed.sql.Table("clubs") {
+    val id = uuid("id")
+    val spawnedAt = timestamp("obstacles_spawned_at").nullable()
+}

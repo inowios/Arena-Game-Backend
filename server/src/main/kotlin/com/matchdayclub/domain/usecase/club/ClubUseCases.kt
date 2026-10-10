@@ -7,6 +7,9 @@ import com.matchdayclub.domain.exception.*
 import com.matchdayclub.domain.model.Building
 import com.matchdayclub.domain.model.BuildingState
 import com.matchdayclub.domain.model.Club
+import com.matchdayclub.domain.model.Obstacle
+import com.matchdayclub.domain.model.ObstacleState
+import com.matchdayclub.domain.repository.ObstacleRepository
 import com.matchdayclub.domain.repository.BuildingRepository
 import com.matchdayclub.domain.repository.ClubRepository
 import com.matchdayclub.domain.rules.*
@@ -20,15 +23,19 @@ fun interface ClubInitializer { suspend fun onClubCreated(club: Club) }
 /** Fires exactly once when a construction or upgrade finishes (timer, speed-up or free ad speed-up). */
 fun interface BuildingListener { suspend fun onCompleted(building: Building) }
 
-data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant) {
+data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant, val obstacles: List<Obstacle> = emptyList()) {
     /** The stadium level whose limits apply now (the previous one while the stadium itself is being upgraded). */
     val stadium get() = Stadium.level(buildings)
     /** Constructions (first build or upgrade) occupying a builder. Decor is placed instantly and never occupies one. */
-    val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type != BuildingType.DECOR }
+    val busyBuilders get() = buildings.count { it.state == BuildingState.UPGRADING && it.type != BuildingType.DECOR } + obstacles.count { it.state == ObstacleState.CLEARING }
+    /** A building's footprint is free of other buildings and obstacles ([except] = the building being moved). */
+    fun isFree(fp: Footprint, except: UUID? = null) =
+        buildings.none { it.id != except && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) } && obstacles.none { it.footprint.overlaps(fp) }
 }
 
 /** Shared loading + lazy finalisation of finished timers ("finalise on read"). */
-class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList()) {
+class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList(),
+                  private val obstacles: ObstacleRepository? = null) {
     /** The player's club; a retired club (account deleted or moved away) belongs to nobody any more. */
     suspend fun clubOf(userId: UUID): Club = clubs.findByUserId(userId)?.takeUnless { it.isBot } ?: throw NotFoundException("Club not found")
 
@@ -39,7 +46,46 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         val club = if (lock) lockedClubOf(userId) else clubOf(userId)
         val now = clock.now()
         val list = buildings.listByClub(club.id).map { finalise(it, now) }
-        return ClubState(club, list, maxOf(ClubLevels.gridSize(club.level), Stadium.gridSize(Stadium.level(list))), now)
+        val grid = maxOf(ClubLevels.gridSize(club.level), Stadium.gridSize(Stadium.level(list)))
+        return ClubState(club, list, grid, now, if (club.isBot) emptyList() else obstaclesOf(club, list, grid, now))
+    }
+
+    /** The club's obstacles: finished clearings turn READY, and the ones due since the last visit turn up on free cells. */
+    private suspend fun obstaclesOf(club: Club, list: List<Building>, grid: Int, now: Instant): List<Obstacle> {
+        val repo = obstacles ?: return emptyList()
+        var current = repo.listByClub(club.id).map { o ->
+            if (o.isCleared(now)) { val ready = o.copy(state = ObstacleState.READY, clearEndsAt = null, updatedAt = now); repo.finishClearing(ready); ready } else o
+        }
+        val clock = repo.spawnClock(club.id)
+        val count = if (clock == null) Obstacles.START else Obstacles.due(clock.epochSecond, now.epochSecond, current.size)
+        val next = when {
+            clock == null -> now
+            current.size >= Obstacles.MAX -> now                                                  // full plot: no backlog builds up
+            count > 0 -> clock.plusSeconds(count * Obstacles.SPAWN_SECONDS)
+            else -> null
+        }
+        // only the request that moves the clock spawns, so two readers never spawn twice
+        if (next != null && next != clock && repo.claimSpawn(club.id, clock, next) && count > 0) {
+            val r = kotlin.random.Random(club.id.mostSignificantBits xor now.epochSecond)
+            repeat(count) {
+                val kind = Obstacles.pick(r)
+                val spot = freeSpot(kind, grid, list, current, r) ?: return@repeat
+                val o = Obstacle(UUID.randomUUID(), club.id, kind, spot.first, spot.second, ObstacleState.IDLE, null, Obstacles.gold(kind, r), now, now)
+                repo.create(o); current = current + o
+            }
+        }
+        return current
+    }
+
+    private fun freeSpot(kind: ObstacleKind, grid: Int, list: List<Building>, current: List<Obstacle>, r: kotlin.random.Random): Pair<Int, Int>? {
+        repeat(60) {
+            val x = r.nextInt(0, grid - kind.width + 1); val y = r.nextInt(0, grid - kind.height + 1)
+            val fp = Obstacles.footprint(kind, x, y)
+            // keep a margin around buildings so nothing gets walled in
+            val padded = Footprint(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 2)
+            if (list.none { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(padded) } && current.none { it.footprint.overlaps(fp) }) return x to y
+        }
+        return null
     }
 
     suspend fun building(club: Club, id: UUID): Building {
@@ -113,6 +159,7 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         val fp = footprint(type, x, y, rotation)
         if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
         if (st.buildings.any { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
+        if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         if (lvl.buildSeconds > 0) service.requireFreeBuilder(st)
         val club = service.charge(st.club, coins = lvl.cost)
         val now = clock.now()
@@ -191,6 +238,7 @@ class MoveBuildingUseCase(private val service: ClubService, private val building
         val fp = footprint(b.type, x, y, rotation)
         if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
         if (st.buildings.any { it.id != b.id && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
+        if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         buildings.move(b.copy(gridX = x, gridY = y, rotation = rotation, updatedAt = clock.now()))
     }
 }
@@ -219,5 +267,49 @@ class UpdateClubUseCase(private val service: ClubService, private val clubs: Clu
                 emblemJson = emblemJson ?: club.emblemJson, updatedAt = clock.now(),
             ))
         }
+    }
+}
+
+// ---------- obstacles ----------
+
+/** Puts a free builder on an obstacle: coins now, cleared after its time. */
+class ClearObstacleUseCase(private val service: ClubService, private val obstacles: ObstacleRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, obstacleId: UUID): Obstacle = tx {
+        val st = service.state(userId, lock = true)
+        val o = st.obstacles.firstOrNull { it.id == obstacleId } ?: throw NotFoundException("Obstacle not found")
+        if (o.state != ObstacleState.IDLE) throw ConflictException("Already being cleared")
+        service.requireFreeBuilder(st)
+        service.charge(st.club, coins = Obstacles.cost(o.kind, st.stadium))
+        val now = clock.now()
+        obstacles.update(o.copy(state = ObstacleState.CLEARING, clearEndsAt = now.plusSeconds(o.kind.seconds), updatedAt = now))
+    }
+}
+
+/** Finishes a clearing for gold (the same price as a construction's remaining time). */
+class SpeedUpObstacleUseCase(private val service: ClubService, private val obstacles: ObstacleRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, obstacleId: UUID): Obstacle = tx {
+        val st = service.state(userId, lock = true)
+        val o = st.obstacles.firstOrNull { it.id == obstacleId } ?: throw NotFoundException("Obstacle not found")
+        if (o.state != ObstacleState.CLEARING || o.clearEndsAt == null) throw ConflictException("Nothing to speed up")
+        val now = clock.now()
+        service.charge(st.club, gold = BuildingCatalog.speedUpGold(o.clearEndsAt.epochSecond - now.epochSecond))
+        val ready = o.copy(state = ObstacleState.READY, clearEndsAt = null, updatedAt = now)
+        obstacles.finishClearing(ready); ready
+    }
+}
+
+data class ObstacleLoot(val gold: Int, val club: Club)
+
+/** Picks up what a cleared obstacle held (once) and frees its cells. */
+class CollectObstacleUseCase(private val service: ClubService, private val clubs: ClubRepository, private val obstacles: ObstacleRepository, private val clock: Clock,
+                             private val progress: ProgressTracker = ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
+    suspend operator fun invoke(userId: UUID, obstacleId: UUID): ObstacleLoot = tx {
+        val st = service.state(userId, lock = true)
+        val o = st.obstacles.firstOrNull { it.id == obstacleId } ?: throw NotFoundException("Obstacle not found")
+        if (o.state != ObstacleState.READY) throw ConflictException("Not cleared yet")
+        if (!obstacles.take(o.id)) throw ConflictException("Not cleared yet")
+        val club = clubs.update(st.club.copy(gold = st.club.gold + o.rewardGold, updatedAt = clock.now()))
+        progress.record(club.id, ProgressEvent.OBSTACLE_CLEARED)
+        ObstacleLoot(o.rewardGold, club)
     }
 }

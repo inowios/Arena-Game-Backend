@@ -54,7 +54,8 @@ val appModule = module {
     single<ClubRepository> { ClubRepositoryImpl() }
     single<BuildingRepository> { BuildingRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
-    single { ClubService(get(), get(), get(), getAll<BuildingListener>()) }
+    single<com.matchdayclub.domain.repository.ObstacleRepository> { com.matchdayclub.data.repository.ObstacleRepositoryImpl() }
+    single { ClubService(get(), get(), get(), getAll<BuildingListener>(), get()) }
     single { SectionService(get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
     single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
@@ -66,6 +67,9 @@ val appModule = module {
     single { RemoveBuildingUseCase(get(), get(), tx = get()) }
     single { MoveBuildingUseCase(get(), get(), get(), tx = get()) }
     single { BuyBuilderUseCase(get(), get(), get(), tx = get()) }
+    single { ClearObstacleUseCase(get(), get(), get(), tx = get()) }
+    single { SpeedUpObstacleUseCase(get(), get(), get(), tx = get()) }
+    single { CollectObstacleUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
     single { UpdateClubUseCase(get(), get(), get(), tx = get()) }
 
     single<AthleteRepository> { AthleteRepositoryImpl() }

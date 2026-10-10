@@ -69,3 +69,22 @@ data class Building(
 ) {
     fun isDone(now: Instant) = state == BuildingState.UPGRADING && upgradeEndsAt != null && !now.isBefore(upgradeEndsAt)
 }
+
+enum class ObstacleState { IDLE, CLEARING, READY }
+
+/** An obstacle on the club plot: IDLE → CLEARING (a builder on it) → READY (cleared, gold to pick up) → gone. */
+data class Obstacle(
+    val id: UUID,
+    val clubId: UUID,
+    val kind: com.matchdayclub.domain.rules.ObstacleKind,
+    val gridX: Int,
+    val gridY: Int,
+    val state: ObstacleState,
+    val clearEndsAt: Instant?,
+    val rewardGold: Int,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+) {
+    fun isCleared(now: Instant) = state == ObstacleState.CLEARING && clearEndsAt != null && !now.isBefore(clearEndsAt)
+    val footprint get() = com.matchdayclub.domain.rules.Obstacles.footprint(kind, gridX, gridY)
+}

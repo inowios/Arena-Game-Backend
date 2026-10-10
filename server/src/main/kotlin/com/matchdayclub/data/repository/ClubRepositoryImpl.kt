@@ -4,6 +4,12 @@ import com.matchdayclub.common.extension.dbQuery
 import com.matchdayclub.data.database.BuildingTable
 import com.matchdayclub.data.database.ClubTable
 import com.matchdayclub.data.database.MarketPurchaseTable
+import com.matchdayclub.data.database.ObstacleTable
+import com.matchdayclub.data.database.ClubObstacleClock
+import com.matchdayclub.domain.model.Obstacle
+import com.matchdayclub.domain.model.ObstacleState
+import com.matchdayclub.domain.rules.ObstacleKind
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import com.matchdayclub.domain.model.Building
 import com.matchdayclub.domain.model.BuildingState
 import com.matchdayclub.domain.model.Club
@@ -83,6 +89,33 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.scoutSignedDate],
     this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
 )
+
+class ObstacleRepositoryImpl : com.matchdayclub.domain.repository.ObstacleRepository {
+    override suspend fun listByClub(clubId: UUID) = dbQuery { ObstacleTable.selectAll().where { ObstacleTable.clubId eq clubId }.orderBy(ObstacleTable.createdAt).map { it.toObstacle() } }
+    override suspend fun create(o: Obstacle) = dbQuery {
+        ObstacleTable.insert { it.fill(o); it[id] = o.id; it[clubId] = o.clubId; it[kind] = o.kind.name; it[gridX] = o.gridX; it[gridY] = o.gridY; it[rewardGold] = o.rewardGold; it[createdAt] = o.createdAt }
+        o
+    }
+    override suspend fun update(o: Obstacle) = dbQuery { ObstacleTable.update({ ObstacleTable.id eq o.id }) { it.fill(o) }; o }
+    override suspend fun finishClearing(o: Obstacle): Boolean = dbQuery {
+        ObstacleTable.update({ (ObstacleTable.id eq o.id) and (ObstacleTable.state eq ObstacleState.CLEARING.name) }) { it.fill(o) } == 1
+    }
+    override suspend fun take(id: UUID): Boolean = dbQuery { ObstacleTable.deleteWhere { (ObstacleTable.id eq id) and (ObstacleTable.state eq ObstacleState.READY.name) } == 1 }
+    override suspend fun spawnClock(clubId: UUID) = dbQuery { ClubObstacleClock.selectAll().where { ClubObstacleClock.id eq clubId }.singleOrNull()?.get(ClubObstacleClock.spawnedAt) }
+    override suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean = dbQuery {
+        val cond = if (expected == null) (ClubObstacleClock.id eq clubId) and ClubObstacleClock.spawnedAt.isNull() else (ClubObstacleClock.id eq clubId) and (ClubObstacleClock.spawnedAt eq expected)
+        ClubObstacleClock.update({ cond }) { it[spawnedAt] = next } == 1
+    }
+
+    private fun UpdateBuilder<*>.fill(o: Obstacle) {
+        this[ObstacleTable.state] = o.state.name; this[ObstacleTable.clearEndsAt] = o.clearEndsAt; this[ObstacleTable.updatedAt] = o.updatedAt
+    }
+
+    private fun ResultRow.toObstacle() = Obstacle(
+        this[ObstacleTable.id], this[ObstacleTable.clubId], ObstacleKind.valueOf(this[ObstacleTable.kind]), this[ObstacleTable.gridX], this[ObstacleTable.gridY],
+        ObstacleState.valueOf(this[ObstacleTable.state]), this[ObstacleTable.clearEndsAt], this[ObstacleTable.rewardGold], this[ObstacleTable.createdAt], this[ObstacleTable.updatedAt],
+    )
+}
 
 class MarketRepositoryImpl : com.matchdayclub.domain.repository.MarketRepository {
     override suspend fun purchased(clubId: UUID, period: Long, salt: Int): Set<Int> = dbQuery {
