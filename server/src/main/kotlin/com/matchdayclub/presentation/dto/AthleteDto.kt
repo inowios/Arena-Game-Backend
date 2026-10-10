@@ -47,3 +47,7 @@ fun com.matchdayclub.domain.usecase.athlete.PackShelf.toDto() = PackShelfDto(
     offers.map { PackOfferDto(it.spec.kind.name, it.spec.coins, it.spec.gold, it.spec.chances, it.spec.unlockLevel, it.open, it.freeToday) },
     sinceEpic, sinceLegend, com.matchdayclub.domain.rules.Packs.EPIC_PITY, com.matchdayclub.domain.rules.Packs.LEGEND_PITY, collection, com.matchdayclub.domain.rules.Packs.COLLECTION_MAX)
 fun com.matchdayclub.domain.usecase.athlete.PackResult.toDto(now: Instant) = PackOpenResponse(open.kind.name, open.tiers.map { it.name }, athletes.map { it.toDto(now) }, club.toDto())
+
+@Serializable data class CardXpDto(val id: String, val xp: Int)
+@Serializable data class CardMatchResultRequest(val seed: Int, val won: Boolean, val draw: Boolean = false, val goalsFor: Int = 0, val goalsAgainst: Int = 0, val cards: List<CardXpDto> = emptyList())
+@Serializable data class CardMatchResultResponse(val coins: Long, val club: ClubDto, val athletes: List<AthleteDto>)
