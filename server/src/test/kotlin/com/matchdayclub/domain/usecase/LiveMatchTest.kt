@@ -42,7 +42,7 @@ class LiveMatchTest {
         assertEquals(Outcome.WIN, r.outcome)
         assertTrue(r.trophiesDelta in 15..35, "delta ${r.trophiesDelta}")
         assertEquals(r.trophiesDelta, r.club.trophies)
-        assertEquals(club.coins + Arenas.coins(Outcome.WIN, Arenas.of(0)), r.club.coins)
+        assertEquals(club.coins + Arenas.coins(Outcome.WIN, Arenas.of(0)) + 25, r.club.coins)   // + the gate of a 500-seat stadium
         assertEquals(club.reputation + Arenas.reputation(Outcome.WIN), r.club.reputation)
         assertEquals(1, r.club.liveStreak)
         val tired = athletes.listByClub(club.id).filter { it.id in s.match.starters }
@@ -155,6 +155,8 @@ class GrowthTest {
         // a hat-trick and a win by a youngster: enough for a point or two
         val r = finish(u1, s.match.id, LiveReport(3, 0, duration = 260.0, minutes = listOf(com.matchdayclub.domain.usecase.live.LiveMinutes(scorer.id.toString(), 90, 3, 0))))
         assertEquals(11, r.growth.size)
+        // the gate of the level-1 stadium (500 seats → 25 coins) comes on top of the arena's reward
+        assertEquals(25L, r.gate); assertEquals(club.coins + Arenas.coins(Outcome.WIN, Arenas.of(0)) + 25, r.club.coins)
         val g = r.growth.first { it.athlete.id == scorer.id }
         assertTrue(g.xpGained >= 60, "xp ${g.xpGained}")
         val after = athletes.rows.getValue(scorer.id)

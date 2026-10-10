@@ -32,7 +32,8 @@ import kotlin.random.Random
 
 /** One side of a live match as handed to the device. */
 data class LiveTeam(val club: Club, val starters: List<Athlete>, val bench: List<Athlete>, val tactics: Tactics, val overall: Int)
-data class LiveStart(val match: LiveMatch, val home: LiveTeam, val away: LiveTeam, val halfSeconds: Int = LiveRules.HALF_SECONDS)
+/** [seats]: the home stadium's capacity — the crowd the device draws and the gate the result pays. */
+data class LiveStart(val match: LiveMatch, val home: LiveTeam, val away: LiveTeam, val halfSeconds: Int = LiveRules.HALF_SECONDS, val seats: Int = 500)
 
 /** What the device reports when the match is over. */
 @Serializable data class LiveReportEvent(val minute: Int, val type: String, val side: String, val athleteId: String? = null, val athleteId2: String? = null)
@@ -43,7 +44,7 @@ data class LiveStart(val match: LiveMatch, val home: LiveTeam, val away: LiveTea
     val events: List<LiveReportEvent> = emptyList(), val minutes: List<LiveMinutes> = emptyList(),
 )
 
-data class LiveOutcome(val match: LiveMatch, val club: Club, val outcome: Outcome, val arena: Arena, val coins: Long, val reputation: Int, val trophiesDelta: Int, val pack: Athlete?, val athletes: List<Athlete>, val growth: List<GrowthResult> = emptyList())
+data class LiveOutcome(val match: LiveMatch, val club: Club, val outcome: Outcome, val arena: Arena, val coins: Long, val reputation: Int, val trophiesDelta: Int, val pack: Athlete?, val athletes: List<Athlete>, val growth: List<GrowthResult> = emptyList(), val gate: Long = 0)
 
 object LiveRules {
     const val HALF_SECONDS = 120
@@ -53,6 +54,9 @@ object LiveRules {
     const val OPPONENT_BAND = 150
     /** How long after the hand-out a match may still be given back for another opponent. */
     const val CANCEL_SECONDS = 120L
+    /** The gate: a coin per twenty seats of the home stadium, every match played to the end. */
+    fun gate(seats: Int): Long = (seats / 20).toLong()
+    fun seats(buildings: List<com.matchdayclub.domain.model.Building>?): Int = buildings?.firstOrNull { it.type == BuildingType.PITCH }?.let { BuildingCatalog.level(BuildingType.PITCH, it.level).effect2 } ?: 500
 
     fun tempoCost(t: Tactics) = (if (t.tempo == Tempo.HIGH) 1.5 else 1.0) * (if (t.plan == Plan.PRESSING) 1.2 else 1.0)
 
@@ -89,6 +93,7 @@ object LiveRules {
 class StartLiveMatchUseCase(
     private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val lineupService: LineupService,
     private val bots: BotService, private val live: LiveMatchRepository, private val finisher: FinishLiveMatchUseCase, private val clock: Clock, private val tx: Tx = NoTx,
+    private val buildings: com.matchdayclub.domain.repository.BuildingRepository? = null,
 ) {
     suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): LiveStart = tx {
         var club = service.lockedClubOf(userId)
@@ -107,7 +112,7 @@ class StartLiveMatchUseCase(
         val myOverall = LiveRules.overall(starters); val oppOverall = LiveRules.overall(oppStarters)
         val match = live.create(LiveMatch(UUID.randomUUID(), club.id, opponent.id, now.toEpochMilli() xor club.id.leastSignificantBits xor opponent.id.mostSignificantBits, LiveStatus.OPEN,
             starters.map { it.id }, oppStarters.map { it.id }, LiveRules.tempoCost(lineup.tactics), myOverall, oppOverall, now))
-        LiveStart(match, LiveTeam(club, starters, bench, lineup.tactics, myOverall), LiveTeam(opponent, oppStarters, oppBench, oppLineup.tactics, oppOverall))
+        LiveStart(match, LiveTeam(club, starters, bench, lineup.tactics, myOverall), LiveTeam(opponent, oppStarters, oppBench, oppLineup.tactics, oppOverall), seats = LiveRules.seats(buildings?.listByClub(club.id)))
     }
 
     private suspend fun pickOpponent(club: Club, wanted: UUID?, now: Instant): Club {
@@ -164,7 +169,9 @@ class FinishLiveMatchUseCase(
         val arena = Arenas.of(club.trophies)
         val newTrophies = (club.trophies + Arenas.delta(outcome, m.myOverall, m.oppOverall)).coerceAtLeast(0)
         val delta = newTrophies - club.trophies
-        val coins = Arenas.coins(outcome, arena)
+        val myBuildings = buildings?.listByClub(club.id)
+        val gate = if (status == LiveStatus.FINISHED) LiveRules.gate(LiveRules.seats(myBuildings)) else 0L
+        val coins = Arenas.coins(outcome, arena) + gate
         val rep = Arenas.reputation(outcome)
         val streak = if (outcome == Outcome.WIN) club.liveStreak + 1 else 0
         // the starters pay in fatigue and feel the result
@@ -173,7 +180,7 @@ class FinishLiveMatchUseCase(
         val squad = athletes.listByClub(club.id)
         val starterIds = m.starters.toSet()
         // experience: minutes, goals, assists, saves and the result; the venue caps attributes like training does
-        val cap = TrainingRules.attributeCap(Sport.FOOTBALL, buildings?.listByClub(club.id)?.firstOrNull { it.type == BuildingType.PITCH }?.level ?: 1)
+        val cap = TrainingRules.attributeCap(Sport.FOOTBALL, myBuildings?.firstOrNull { it.type == BuildingType.PITCH }?.level ?: 1)
         val byAthlete = report.minutes.associateBy { it.athleteId }
         val saves = report.events.count { it.type == "SAVE" && it.side == "HOME" }
         val rnd = Random(m.seed xor now.toEpochMilli())
@@ -206,7 +213,7 @@ class FinishLiveMatchUseCase(
             inbox?.add(opp.id, "LIVE_DEFENCE", mapOf("club" to club.name, "home" to report.homeScore.toString(), "away" to report.awayScore.toString(), "trophies" to dd.toString()))
         }
         val fresh = athletes.listByClub(club.id)
-        return LiveOutcome(finished, saved, outcome, Arenas.of(newTrophies), coins, rep, delta, packAthlete, fresh, growth)
+        return LiveOutcome(finished, saved, outcome, Arenas.of(newTrophies), coins, rep, delta, packAthlete, fresh, growth, gate)
     }
 }
 
