@@ -20,6 +20,8 @@ import java.time.Instant
     val skillPoints: Int = 0,
     /** The move he was born for (its steps cost a point less), if any. */
     val talent: String? = null,
+    /** The card kind (CLASSIC … ARENA), the career experience and the card level it reaches within the kind's ceiling. */
+    val cardKind: String = "CLASSIC", val xpTotal: Int = 0, val cardLevel: Int = 1,
 )
 @Serializable data class TrainingDto(val id: String, val athleteId: String, val attribute: String, val delta: Int, val endsAt: String, val remainingSeconds: Long)
 @Serializable data class SquadResponse(val athletes: List<AthleteDto>, val trainings: List<TrainingDto>, val trainingSlots: Int, val serverTime: String)
@@ -29,10 +31,19 @@ import java.time.Instant
 @Serializable data class LineupResponse(val lineup: LineupDto, val athletes: List<AthleteDto>)
 @Serializable data class SetLineupRequest(val starters: List<String>, val bench: List<String> = emptyList(), val tactics: Tactics = Tactics())
 
-fun Athlete.toDto(now: Instant) = AthleteDto(id.toString(), name, sport.name, position.name, overall, attack, defense, physical, technique, mental, age, rarity.name, currentFatigue(now), isInjured(now), injuredUntil?.toString(), morale, potential, xp, com.matchdayclub.domain.rules.Growth.XP_PER_POINT, com.matchdayclub.domain.rules.Market.price(this), techniques, skillPoints, talent)
+fun Athlete.toDto(now: Instant) = AthleteDto(id.toString(), name, sport.name, position.name, overall, attack, defense, physical, technique, mental, age, rarity.name, currentFatigue(now), isInjured(now), injuredUntil?.toString(), morale, potential, xp, com.matchdayclub.domain.rules.Growth.XP_PER_POINT, com.matchdayclub.domain.rules.Market.price(this), techniques, skillPoints, talent, cardKind.name, xpTotal, com.matchdayclub.domain.model.CardKind.levelFor(xpTotal, cardKind))
 @Serializable data class UpgradeTechniqueResponse(val athlete: AthleteDto, val level: Int, val cost: Int)
 fun Training.toDto(now: Instant) = TrainingDto(id.toString(), athleteId.toString(), kindKey, delta, endsAt.toString(), maxOf(0, endsAt.epochSecond - now.epochSecond))
 fun Lineup.toDto() = LineupDto(sport.name, starters.map { it.toString() }, bench.map { it.toString() }, tactics, isDefault)
 
 @Serializable data class ScoutOfferDto(val slot: Int, val kind: String, val athlete: AthleteDto)
 @Serializable data class ScoutReportDto(val offers: List<ScoutOfferDto>, val signedToday: Boolean, val nextAt: String)
+
+@Serializable data class PackOfferDto(val kind: String, val coins: Long, val gold: Int, val chances: List<Double>, val unlockLevel: Int, val open: Boolean, val freeToday: Boolean, val cards: Int = com.matchdayclub.domain.rules.Packs.CARDS_PER_PACK)
+@Serializable data class PackShelfDto(val packs: List<PackOfferDto>, val sinceEpic: Int, val sinceLegend: Int, val epicPity: Int, val legendPity: Int, val collection: Int, val collectionMax: Int)
+@Serializable data class PackOpenResponse(val kind: String, val tiers: List<String>, val athletes: List<AthleteDto>, val club: ClubDto)
+
+fun com.matchdayclub.domain.usecase.athlete.PackShelf.toDto() = PackShelfDto(
+    offers.map { PackOfferDto(it.spec.kind.name, it.spec.coins, it.spec.gold, it.spec.chances, it.spec.unlockLevel, it.open, it.freeToday) },
+    sinceEpic, sinceLegend, com.matchdayclub.domain.rules.Packs.EPIC_PITY, com.matchdayclub.domain.rules.Packs.LEGEND_PITY, collection, com.matchdayclub.domain.rules.Packs.COLLECTION_MAX)
+fun com.matchdayclub.domain.usecase.athlete.PackResult.toDto(now: Instant) = PackOpenResponse(open.kind.name, open.tiers.map { it.name }, athletes.map { it.toDto(now) }, club.toDto())

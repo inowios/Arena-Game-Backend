@@ -101,6 +101,8 @@ val appModule = module {
     single { ReleaseAthleteUseCase(get(), get(), get(), get(), tx = get()) }
     single { UpgradeTechniqueUseCase(get(), get(), get(), tx = get()) }
     single { ScoutingUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single<com.matchdayclub.domain.repository.PackRepository> { com.matchdayclub.data.repository.PackRepositoryImpl() }
+    single { PackUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
     single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }

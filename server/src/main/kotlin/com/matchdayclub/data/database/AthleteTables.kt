@@ -22,6 +22,7 @@ object AthleteTable : BaseTable("athletes") {
     val skillPoints = integer("skill_points")
     val xpTotal = integer("xp_total")
     val talent = varchar("talent", 12).nullable()
+    val cardKind = varchar("card_kind", 12).default("CLASSIC")
 }
 
 object TrainingTable : Table("trainings") {
@@ -43,4 +44,10 @@ object LineupTable : Table("lineups") {
     val tacticsJson = text("tactics_json")
     val updatedAt = timestamp("updated_at")
     override val primaryKey = PrimaryKey(clubId, sport)
+}
+
+object PackOpenTable : Table("pack_opens") {
+    val id = uuid("id"); val clubId = uuid("club_id"); val kind = varchar("kind", 12); val priceCoins = long("price_coins"); val priceGold = integer("price_gold")
+    val tiers = varchar("tiers", 64); val athleteIds = text("athlete_ids"); val createdAt = timestamp("created_at")
+    override val primaryKey = PrimaryKey(id)
 }

@@ -33,6 +33,7 @@ fun Route.athleteRoutes() {
     val scouting: ScoutingUseCases by inject()
     val getLineup: GetLineupUseCase by inject()
     val setLineup: SetLineupUseCase by inject()
+    val packs: PackUseCases by inject()
     val clock: Clock by inject()
 
     authenticate(AUTH_JWT) {
@@ -40,6 +41,11 @@ fun Route.athleteRoutes() {
             get("/athletes") {
                 val s = list(call.userId()); val now = clock.now()
                 call.respond(SquadResponse(s.athletes.map { it.toDto(now) }, s.trainings.map { it.toDto(now) }, s.slots, now.toString()).toSuccessResponse())
+            }
+            get("/packs") { call.respond(packs.shelf(call.userId()).toDto().toSuccessResponse()) }
+            post("/packs/{kind}/open") {
+                val kind = parseEnum<com.matchdayclub.domain.model.CardKind>(call.parameters["kind"] ?: "", "pack")
+                call.respond(HttpStatusCode.Created, packs.open(call.userId(), kind).toDto(clock.now()).toSuccessResponse(201))
             }
             post("/academy/claim") {
                 val sport = runCatching { call.receive<AcademyClaimRequest>() }.getOrNull()?.sport?.let { parseEnum<Sport>(it, "sport") } ?: Sport.FOOTBALL

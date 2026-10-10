@@ -39,6 +39,8 @@ data class Athlete(
     val xpTotal: Int = 0,
     /** The move he was born for: its steps come cheaper (see Techniques.cost). */
     val talent: String? = null,
+    /** The card kind he is printed on (plan §3b); a better kind raises the rating and the level ceiling. */
+    val cardKind: CardKind = CardKind.CLASSIC,
 ) {
     fun technique(key: String): Int = techniques[key] ?: 0
     val attributes get() = Attributes(attack, defense, physical, technique, mental)
@@ -59,4 +61,14 @@ data class Training(val id: UUID, val clubId: UUID, val athleteId: UUID, val att
     fun isDone(now: Instant) = !now.isBefore(endsAt)
     /** What the client shows: the attribute key, or SKILL for a drill. */
     val kindKey: String get() = if (drill) "SKILL" else attribute.name
+}
+
+/** The six card kinds on the six Arena frames: a rating bonus and a level ceiling, opened by the club level. */
+enum class CardKind(val bonus: Int, val cap: Int, val unlockLevel: Int) {
+    CLASSIC(0, 10, 1), TOURNAMENT(2, 15, 3), PREMIUM(4, 20, 5), GOLD(6, 25, 8), LEGEND(8, 30, 12), ARENA(10, 40, 16);
+    companion object {
+        fun xpForLevel(level: Int) = 100 * level
+        /** The card level the career experience reaches, within the kind's ceiling (mirrors the client's Progression). */
+        fun levelFor(xpTotal: Int, kind: CardKind): Int { var xp = xpTotal; var l = 1; while (l < kind.cap && xp >= xpForLevel(l)) { xp -= xpForLevel(l); l++ }; return l }
+    }
 }

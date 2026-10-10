@@ -211,6 +211,10 @@ Mail not found	Mail not found	Correo no encontrado	Correio não encontrado	Пи�
 Offer not found	Offer not found	Oferta no encontrada	Oferta não encontrada	Предложение не найдено	Пропозицію не знайдено
 The event must end after it starts	The event must end after it starts	El evento debe terminar después de empezar	O evento deve terminar depois de começar	Событие должно закончиться позже начала	Подія має закінчитися пізніше початку
 Unknown goal	Unknown goal	Objetivo desconocido	Objetivo desconhecido	Неизвестная цель	Невідома мета
+# --- card packs
+No such pack	No such pack	No existe ese sobre	Não existe esse pacote	Такого пака нет	Такого пака немає
+This pack opens at club level {0}	This pack opens at club level {0}	Este sobre se abre en el nivel de club {0}	Este pacote abre no nível de clube {0}	Этот пак открывается на уровне клуба {0}	Цей пак відкривається на рівні клубу {0}
+The collection is full — release someone first	The collection is full — release someone first	La colección está llena: libera a alguien primero	A coleção está cheia — dispense alguém primeiro	Коллекция заполнена — сначала отпустите кого-то	Колекція заповнена — спочатку відпустіть когось
 # --- admin dashboards
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
 days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90

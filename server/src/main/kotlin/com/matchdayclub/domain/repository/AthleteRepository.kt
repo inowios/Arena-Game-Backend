@@ -25,3 +25,9 @@ interface LineupRepository {
     suspend fun find(clubId: UUID, sport: Sport): Lineup?
     suspend fun upsert(lineup: Lineup): Lineup
 }
+
+interface PackRepository {
+    /** The club's openings, newest first, at most [limit]. */
+    suspend fun listByClub(clubId: UUID, limit: Int = 60): List<com.matchdayclub.domain.model.PackOpen>
+    suspend fun create(open: com.matchdayclub.domain.model.PackOpen): com.matchdayclub.domain.model.PackOpen
+}

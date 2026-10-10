@@ -2,10 +2,12 @@ package com.matchdayclub.data.repository
 
 import com.matchdayclub.common.extension.dbQuery
 import com.matchdayclub.data.database.AthleteTable
+import com.matchdayclub.data.database.PackOpenTable
 import com.matchdayclub.data.database.LineupTable
 import com.matchdayclub.data.database.TrainingTable
 import com.matchdayclub.domain.model.*
 import com.matchdayclub.domain.repository.AthleteRepository
+import com.matchdayclub.domain.repository.PackRepository
 import com.matchdayclub.domain.repository.LineupRepository
 import com.matchdayclub.domain.repository.TrainingRepository
 import com.matchdayclub.engine.model.Position
@@ -34,7 +36,7 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.injuredUntil] = a.injuredUntil; this[AthleteTable.morale] = a.morale; this[AthleteTable.updatedAt] = a.updatedAt
         this[AthleteTable.age] = a.age; this[AthleteTable.potential] = a.potential; this[AthleteTable.retiredAt] = a.retiredAt; this[AthleteTable.xp] = a.xp
         this[AthleteTable.techniques] = TechniqueCodec.encode(a.techniques); this[AthleteTable.skillPoints] = a.skillPoints; this[AthleteTable.xpTotal] = a.xpTotal
-        this[AthleteTable.talent] = a.talent
+        this[AthleteTable.talent] = a.talent; this[AthleteTable.cardKind] = a.cardKind.name
     }
 
     private fun ResultRow.toAthlete() = Athlete(
@@ -43,6 +45,7 @@ class AthleteRepositoryImpl : AthleteRepository {
         this[AthleteTable.age], Rarity.valueOf(this[AthleteTable.rarity]), this[AthleteTable.fatigue], this[AthleteTable.fatigueAt], this[AthleteTable.injuredUntil], this[AthleteTable.morale],
         this[AthleteTable.createdAt], this[AthleteTable.updatedAt], this[AthleteTable.potential], this[AthleteTable.retiredAt], this[AthleteTable.xp],
         TechniqueCodec.decode(this[AthleteTable.techniques]), this[AthleteTable.skillPoints], this[AthleteTable.xpTotal], this[AthleteTable.talent],
+        CardKind.valueOf(this[AthleteTable.cardKind]),
     )
 }
 
@@ -80,4 +83,22 @@ class LineupRepositoryImpl : LineupRepository {
         }
         lineup
     }
+}
+
+class PackRepositoryImpl : PackRepository {
+    override suspend fun listByClub(clubId: UUID, limit: Int) = dbQuery {
+        PackOpenTable.selectAll().where { PackOpenTable.clubId eq clubId }.orderBy(PackOpenTable.createdAt, SortOrder.DESC).limit(limit).map { it.toOpen() }
+    }
+    override suspend fun create(open: PackOpen) = dbQuery {
+        PackOpenTable.insert {
+            it[id] = open.id; it[clubId] = open.clubId; it[kind] = open.kind.name; it[priceCoins] = open.priceCoins; it[priceGold] = open.priceGold
+            it[tiers] = open.tiers.joinToString(",") { t -> t.name }; it[athleteIds] = open.athleteIds.joinToString(","); it[createdAt] = open.createdAt
+        }
+        open
+    }
+    private fun ResultRow.toOpen() = PackOpen(
+        this[PackOpenTable.id], this[PackOpenTable.clubId], CardKind.valueOf(this[PackOpenTable.kind]), this[PackOpenTable.priceCoins], this[PackOpenTable.priceGold],
+        this[PackOpenTable.tiers].split(",").filter { it.isNotBlank() }.map { com.matchdayclub.domain.rules.PullTier.valueOf(it) },
+        this[PackOpenTable.athleteIds].split(",").filter { it.isNotBlank() }.map { UUID.fromString(it) }, this[PackOpenTable.createdAt],
+    )
 }
