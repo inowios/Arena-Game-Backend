@@ -41,7 +41,7 @@ class ClubUseCasesTest {
     fun `create club seeds pitch and ticket office`() = runBlocking<Unit> {
         val c = newClub()
         val st = get(user)
-        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(30, st.gridSize)
+        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(24, st.gridSize)
         assertTrue(st.buildings.any { it.type == BuildingType.PITCH && it.state == BuildingState.IDLE })
         assertFailsWith<ConflictException> { create(user, "Again", "#000000", "#FFFFFF", "UTC") }
         assertFailsWith<ValidationException> { create(UUID.randomUUID(), "ab", "#000000", "#FFFFFF", "UTC") }
@@ -78,14 +78,12 @@ class ClubUseCasesTest {
         // stadium 3: two upgrades of the pitch
         repeat(2) { val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }; upgrade(user, pitch.id); clock.advanceSeconds(24 * 3600) }
         assertEquals(3, get(user).stadium)
-        // the whole square is the grid now (12 October): a court may stand anywhere on it; the plot rules below
-        // still hold as pure checks against a small grid
-        val plot = ReservedPlots.of(BuildingType.BASKETBALL_COURT)!!
-        val court = place(user, BuildingType.BASKETBALL_COURT, plot.courtX, plot.courtY, 0)
-        assertEquals(plot.courtX, court.gridX); assertEquals(plot.courtY, court.gridY)
-        assertTrue(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(plot.plot.x + plot.plot.w - 3, plot.plot.y + plot.plot.h - 2, 3, 2), 12))
-        assertFalse(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(plot.plot.x + plot.plot.w - 2, plot.plot.y, 3, 2), 12))
-        assertFalse(ReservedPlots.allowed(BuildingType.ACADEMY, Footprint(plot.courtX, plot.courtY, 2, 2), 12))
+        // every court stands on the plot like any other building (the eras map, 12 October): no reserved plots
+        assertNull(ReservedPlots.of(BuildingType.BASKETBALL_COURT))
+        val court = place(user, BuildingType.BASKETBALL_COURT, 20, 20, 0)
+        assertEquals(20, court.gridX); assertEquals(20, court.gridY)
+        assertTrue(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(24, 24, 3, 2), 24))
+        assertFalse(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(25, 25, 3, 2), 24))
         Unit
     }
 

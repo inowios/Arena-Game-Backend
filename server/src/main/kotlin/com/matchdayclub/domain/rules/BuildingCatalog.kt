@@ -50,9 +50,8 @@ object Stadium {
     const val MAX_LEVEL = 10
     fun level(buildings: List<com.matchdayclub.domain.model.Building>): Int =
         buildings.firstOrNull { it.type == BuildingType.PITCH }?.let { if (it.state == com.matchdayclub.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level }?.coerceAtLeast(1) ?: 1
-    /** The club plot grows with the stadium (and never shrinks below what the club level already gave). */
-    /** The whole square from day one (the owner, 12 October): the main square is the first zone, buildable everywhere. */
-    fun gridSize(stadium: Int): Int = Grid.RESERVE
+    /** The plot is the same 24-cell square at every level (the eras map, 12 October): buildings grow, the land does not. */
+    fun gridSize(stadium: Int): Int = Grid.PLOT
     fun decorCount(stadium: Int): Int = 8 + 4 * stadium
     fun fenceCount(stadium: Int): Int = 8 * stadium
     /** Types that build and upgrade instantly and never occupy a builder (and do not count as "real" buildings). */
@@ -234,7 +233,7 @@ object ClubLevels {
     private val thresholds = listOf(0, 100, 300, 700, 1_500, 3_000, 5_500, 9_000, 14_000, 20_000)
     const val MAX_LEVEL = 10
     fun levelFor(reputation: Int): Int = thresholds.indexOfLast { reputation >= it } + 1
-    fun gridSize(level: Int): Int = Grid.RESERVE   // the whole square from day one, see Stadium.gridSize
+    fun gridSize(level: Int): Int = Grid.PLOT   // the plot never grows, see Stadium.gridSize
     fun reputationForNext(level: Int): Int? = thresholds.getOrNull(level)
 }
 
@@ -244,6 +243,8 @@ object ClubLevels {
  */
 object Grid {
     const val RESERVE = 30
+    /** The club's plot: the centred 24×24 cells of the 30-cell square (cells 3..26); the ring outside is the client's landscape. */
+    const val PLOT = 24
     fun lo(gridSize: Int) = (RESERVE - gridSize) / 2
     fun hi(gridSize: Int) = lo(gridSize) + gridSize
     const val CENTRE = RESERVE / 2
@@ -263,11 +264,8 @@ data class Footprint(val x: Int, val y: Int, val w: Int, val h: Int) {
  */
 data class ReservedPlot(val type: BuildingType, val plot: Footprint, val courtX: Int, val courtY: Int)
 object ReservedPlots {
-    val ALL = listOf(
-        // each sport owns a quarter of the land, from its corner to the middle of the two roads; the court stands in the corner
-        ReservedPlot(BuildingType.BASKETBALL_COURT, Footprint(15, 0, 15, 15), 26, 1),   // north-east quarter
-        ReservedPlot(BuildingType.TENNIS_COURT, Footprint(0, 0, 15, 15), 1, 1),         // north-west quarter
-    )
+    /** Empty since the eras map (12 October): every court stands on the plot like any other building. */
+    val ALL = emptyList<ReservedPlot>()
     fun of(type: BuildingType): ReservedPlot? = ALL.firstOrNull { it.type == type }
     /** Inside the grid, or a court inside its own plot. */
     fun allowed(type: BuildingType, fp: Footprint, gridSize: Int) = fp.fits(gridSize) || of(type)?.plot?.contains(fp) == true
