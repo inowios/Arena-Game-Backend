@@ -30,7 +30,7 @@ class BuildingRulesTest {
         assertEquals(4, Stadium.level(listOf(pitch(4, com.matchdayclub.domain.model.BuildingState.IDLE))))
         assertEquals(3, Stadium.level(listOf(pitch(4, com.matchdayclub.domain.model.BuildingState.UPGRADING))))
         assertEquals(1, Stadium.level(emptyList()))
-        assertEquals(12, Stadium.gridSize(1)); assertEquals(30, Stadium.gridSize(10))
+        assertEquals(30, Stadium.gridSize(1)); assertEquals(30, Stadium.gridSize(10))   // the whole square from day one
     }
 
     @Test
@@ -54,7 +54,7 @@ class BuildingRulesTest {
     @Test
     fun `club levels and grid`() {
         assertEquals(1, ClubLevels.levelFor(0)); assertEquals(1, ClubLevels.levelFor(99)); assertEquals(2, ClubLevels.levelFor(100)); assertEquals(10, ClubLevels.levelFor(99_999))
-        assertEquals(12, ClubLevels.gridSize(1)); assertEquals(30, ClubLevels.gridSize(10)); assertEquals(100, ClubLevels.reputationForNext(1)); assertNull(ClubLevels.reputationForNext(10))
+        assertEquals(30, ClubLevels.gridSize(1)); assertEquals(30, ClubLevels.gridSize(10)); assertEquals(100, ClubLevels.reputationForNext(1)); assertNull(ClubLevels.reputationForNext(10))
     }
 
     @Test

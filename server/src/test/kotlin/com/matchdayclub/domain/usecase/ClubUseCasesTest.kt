@@ -41,7 +41,7 @@ class ClubUseCasesTest {
     fun `create club seeds pitch and ticket office`() = runBlocking<Unit> {
         val c = newClub()
         val st = get(user)
-        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(12, st.gridSize)
+        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(30, st.gridSize)
         assertTrue(st.buildings.any { it.type == BuildingType.PITCH && it.state == BuildingState.IDLE })
         assertFailsWith<ConflictException> { create(user, "Again", "#000000", "#FFFFFF", "UTC") }
         assertFailsWith<ValidationException> { create(UUID.randomUUID(), "ab", "#000000", "#FFFFFF", "UTC") }
@@ -62,7 +62,7 @@ class ClubUseCasesTest {
     fun `placement validation`() = runBlocking<Unit> {
         newClub()
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 13, 0) }           // overlaps pitch
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 20, 20, 0) }       // outside grid
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 29, 29, 0) }       // outside the square
         assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 9, 19, 0) }        // stadium 3 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 9, 19, 0) }   // stadium 4 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 9, 19, 0) }  // a 2nd office needs stadium 4
@@ -78,9 +78,9 @@ class ClubUseCasesTest {
         // stadium 3: two upgrades of the pitch
         repeat(2) { val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }; upgrade(user, pitch.id); clock.advanceSeconds(24 * 3600) }
         assertEquals(3, get(user).stadium)
-        assertTrue(get(user).gridSize < 20, "the plot lies outside the grid for this test")
+        // the whole square is the grid now (12 October): a court may stand anywhere on it; the plot rules below
+        // still hold as pure checks against a small grid
         val plot = ReservedPlots.of(BuildingType.BASKETBALL_COURT)!!
-        assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_COURT, plot.plot.x + plot.plot.w, plot.plot.y, 0) }   // next to the plot
         val court = place(user, BuildingType.BASKETBALL_COURT, plot.courtX, plot.courtY, 0)
         assertEquals(plot.courtX, court.gridX); assertEquals(plot.courtY, court.gridY)
         assertTrue(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(plot.plot.x + plot.plot.w - 3, plot.plot.y + plot.plot.h - 2, 3, 2), 12))

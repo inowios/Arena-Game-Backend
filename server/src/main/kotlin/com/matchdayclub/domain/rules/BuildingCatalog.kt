@@ -51,7 +51,8 @@ object Stadium {
     fun level(buildings: List<com.matchdayclub.domain.model.Building>): Int =
         buildings.firstOrNull { it.type == BuildingType.PITCH }?.let { if (it.state == com.matchdayclub.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level }?.coerceAtLeast(1) ?: 1
     /** The club plot grows with the stadium (and never shrinks below what the club level already gave). */
-    fun gridSize(stadium: Int): Int = min(12 + (stadium - 1) * 2, 30)
+    /** The whole square from day one (the owner, 12 October): the main square is the first zone, buildable everywhere. */
+    fun gridSize(stadium: Int): Int = Grid.RESERVE
     fun decorCount(stadium: Int): Int = 8 + 4 * stadium
     fun fenceCount(stadium: Int): Int = 8 * stadium
     /** Types that build and upgrade instantly and never occupy a builder (and do not count as "real" buildings). */
@@ -231,7 +232,7 @@ object ClubLevels {
     private val thresholds = listOf(0, 100, 300, 700, 1_500, 3_000, 5_500, 9_000, 14_000, 20_000)
     const val MAX_LEVEL = 10
     fun levelFor(reputation: Int): Int = thresholds.indexOfLast { reputation >= it } + 1
-    fun gridSize(level: Int): Int = min(12 + (level - 1) * 2, 30)
+    fun gridSize(level: Int): Int = Grid.RESERVE   // the whole square from day one, see Stadium.gridSize
     fun reputationForNext(level: Int): Int? = thresholds.getOrNull(level)
 }
 
