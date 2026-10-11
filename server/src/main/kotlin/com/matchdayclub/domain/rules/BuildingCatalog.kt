@@ -195,20 +195,22 @@ object BuildingCatalog {
         FENCE to listOf(L(30, 0), L(150, 0, stadium = 2), L(600, 0, stadium = 3), L(2_000, 0, stadium = 5), L(6_000, 0, stadium = 7), L(15_000, 0, stadium = 9)),
     )
 
+    // Footprints (cells of 10 m) are fixed for all ten levels and generous — the owner, 12 October: a building never
+    // changes its plot, growth is in height and richness; the plots differ by type and are big since the square is big.
     val specs: Map<BuildingType, BuildingSpec> = listOf(
         BuildingSpec(PITCH, 8, 6, true, levelTable.getValue(PITCH)),
         // courts open a sport section (starter squad on completion); level = attribute cap of that section, like the pitch
         BuildingSpec(BASKETBALL_COURT, 3, 2, true, levelTable.getValue(BASKETBALL_COURT), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 8)),
         BuildingSpec(TENNIS_COURT, 3, 2, true, levelTable.getValue(TENNIS_COURT), countsFrom(0, 0, 0, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 8)),
-        BuildingSpec(ACADEMY, 2, 2, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
-        BuildingSpec(TRAINING_CENTER, 2, 2, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
-        BuildingSpec(MEDICAL_CENTER, 2, 2, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
-        BuildingSpec(TICKET_OFFICE, 2, 1, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), CAP10),
-        BuildingSpec(CLUB_SHOP, 2, 2, true, levelTable.getValue(CLUB_SHOP), countsFrom(0, 1, 1, 1, 1, 2, 2, 2, 3, 3), CAP10),
-        BuildingSpec(CAFE, 2, 2, true, levelTable.getValue(CAFE), countsFrom(0, 1, 1, 1, 2, 2, 2, 3, 3, 3), CAP10),
-        BuildingSpec(PARKING, 3, 2, true, levelTable.getValue(PARKING), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), CAP10),
+        BuildingSpec(ACADEMY, 5, 4, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
+        BuildingSpec(TRAINING_CENTER, 6, 4, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
+        BuildingSpec(MEDICAL_CENTER, 4, 4, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
+        BuildingSpec(TICKET_OFFICE, 5, 2, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), CAP10),
+        BuildingSpec(CLUB_SHOP, 4, 3, true, levelTable.getValue(CLUB_SHOP), countsFrom(0, 1, 1, 1, 1, 2, 2, 2, 3, 3), CAP10),
+        BuildingSpec(CAFE, 3, 3, true, levelTable.getValue(CAFE), countsFrom(0, 1, 1, 1, 2, 2, 2, 3, 3, 3), CAP10),
+        BuildingSpec(PARKING, 5, 3, true, levelTable.getValue(PARKING), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), CAP10),
         BuildingSpec(DECOR, 1, 1, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
-        BuildingSpec(MUSEUM, 2, 2, true, levelTable.getValue(MUSEUM), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
+        BuildingSpec(MUSEUM, 4, 5, true, levelTable.getValue(MUSEUM), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
         BuildingSpec(FENCE, 1, 1, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
     ).associateBy { it.type }
 

@@ -73,9 +73,9 @@ class FenceLayoutTest {
     @Test
     fun `a fence line next to an income building adds a little atmosphere`() = runBlocking<Unit> {
         newClub()
-        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (0,0) 2x1
+        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (9,9) 5x2
         val before = Atmosphere.of(get(user).buildings).getValue(office.id)
-        fences(user, listOf(9 to 10, 10 to 10, 11 to 10, 9 to 11))
+        fences(user, listOf(9 to 11, 10 to 11, 11 to 11, 9 to 12))
         val after = Atmosphere.of(get(user).buildings).getValue(office.id)
         assertEquals(4, after.fence)                                  // three touching, (0,2) one cell away
         assertEquals(before.total + 4, after.total)
