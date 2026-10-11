@@ -17,7 +17,9 @@ import java.util.UUID
 import kotlin.random.Random
 
 /** What the device reports after a card match «Три зони» against the AI: the result and the experience per card. */
-data class CardMatchReport(val seed: Int, val won: Boolean, val draw: Boolean, val goalsFor: Int, val goalsAgainst: Int, val cards: Map<UUID, Int>)
+data class CardMatchReport(val seed: Int, val won: Boolean, val draw: Boolean, val goalsFor: Int, val goalsAgainst: Int, val cards: Map<UUID, Int>, val stake: Int = 1, val conceded: Boolean = false)
+/** A real club to play against: the club and its football players (the device builds the deck the same way as its own). */
+data class CardOpponent(val club: Club, val athletes: List<Athlete>)
 data class CardMatchOutcome(val coins: Long, val club: Club, val athletes: List<Athlete>)
 
 /**
@@ -29,7 +31,21 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
     companion object {
         const val MAX_CARDS = 18
         const val MAX_XP_PER_CARD = 30
-        fun coins(won: Boolean, draw: Boolean): Long = if (won) 120 else if (draw) 50 else 20
+        /** Coins by the result at the stake: a win pays stake times more, a loss pays stake times less; a concession pays as a plain loss. */
+        fun coins(won: Boolean, draw: Boolean, stake: Int = 1, conceded: Boolean = false): Long = if (won) 120L * stake else if (draw) 50 else if (conceded) 20 else 20L / stake
+    }
+
+    /** A club of about the same level with a full football squad, chosen at random; null when nobody else is around. */
+    suspend fun opponent(userId: UUID): CardOpponent? {
+        val me = service.clubOf(userId)
+        for (spread in listOf(1, 3, 8, 100)) {
+            val near = clubs.listNear(me.level, spread, me.id, 30).shuffled()
+            for (c in near) {
+                val squad = athletes.listByClub(c.id).filter { it.sport == Sport.FOOTBALL && it.retiredAt == null }
+                if (squad.count { it.position != com.matchdayclub.engine.model.Position.GK } >= 8 && squad.any { it.position == com.matchdayclub.engine.model.Position.GK }) return CardOpponent(c, squad)
+            }
+        }
+        return null
     }
 
     suspend fun report(userId: UUID, r: CardMatchReport): CardMatchOutcome = tx {
@@ -42,7 +58,8 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
         val rnd = Random(r.seed.toLong() xor now.toEpochMilli())
         val mine = athletes.listByClub(club.id).associateBy { it.id }
         val grown = r.cards.mapNotNull { (id, xp) -> mine[id]?.let { a -> athletes.update(Growth.apply(a, xp.coerceIn(0, MAX_XP_PER_CARD), cap, rnd).athlete.copy(updatedAt = now)) } }
-        val coins = coins(r.won, r.draw)
+        if (r.stake !in listOf(1, 2, 4)) throw ValidationException("Bad stake")
+        val coins = coins(r.won, r.draw, r.stake, r.conceded)
         val saved = clubs.update(club.copy(coins = club.coins + coins, updatedAt = now))
         CardMatchOutcome(coins, saved, grown)
     }

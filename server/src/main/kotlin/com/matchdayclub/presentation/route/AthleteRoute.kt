@@ -48,10 +48,15 @@ fun Route.athleteRoutes() {
                 val kind = parseEnum<com.matchdayclub.domain.model.CardKind>(call.parameters["kind"] ?: "", "pack")
                 call.respond(HttpStatusCode.Created, packs.open(call.userId(), kind).toDto(clock.now()).toSuccessResponse(201))
             }
+            get("/cards/opponent") {
+                val o = cardMatch.opponent(call.userId()) ?: throw com.matchdayclub.domain.exception.NotFoundException("No opponent around")
+                val now = clock.now()
+                call.respond(CardOpponentResponse(o.club.toRef(), o.athletes.map { it.toDto(now) }).toSuccessResponse())
+            }
             post("/cards/result") {
                 val r = call.receive<CardMatchResultRequest>()
                 val cards = r.cards.associate { (runCatching { UUID.fromString(it.id) }.getOrElse { throw ValidationException("Bad athlete id") }) to it.xp }
-                val o = cardMatch.report(call.userId(), com.matchdayclub.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards))
+                val o = cardMatch.report(call.userId(), com.matchdayclub.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards, r.stake, r.conceded))
                 val now = clock.now()
                 call.respond(CardMatchResultResponse(o.coins, o.club.toDto(), o.athletes.map { it.toDto(now) }).toSuccessResponse())
             }

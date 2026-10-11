@@ -9,6 +9,8 @@ interface ClubRepository {
     suspend fun findById(id: UUID): Club?
     suspend fun findByIds(ids: Collection<UUID>): List<Club>
     suspend fun listBots(tzBucket: Int): List<Club>
+    /** Clubs within [spread] levels of [level] other than [except], at most [limit], in no particular order. */
+    suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int = 20): List<Club>
     /** SELECT … FOR UPDATE: call inside a [com.matchdayclub.common.tx.Tx] before read-modify-write of currencies. */
     suspend fun lockByUserId(userId: UUID): Club?
     suspend fun lockById(id: UUID): Club?

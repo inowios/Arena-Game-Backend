@@ -12,6 +12,7 @@ class FakeClubRepository : ClubRepository {
     override suspend fun findById(id: UUID) = rows[id]
     override suspend fun findByIds(ids: Collection<UUID>) = ids.mapNotNull { rows[it] }
     override suspend fun listBots(tzBucket: Int) = rows.values.filter { it.isBot && it.tzBucket == tzBucket }
+    override suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int) = rows.values.filter { it.id != except && it.level in (level - spread)..(level + spread) }.take(limit)
     override suspend fun lockByUserId(userId: UUID) = findByUserId(userId)
     override suspend fun lockById(id: UUID) = findById(id)
     override suspend fun create(club: Club): Club { rows[club.id] = club; return club }

@@ -28,6 +28,7 @@ class ClubRepositoryImpl : ClubRepository {
     override suspend fun findById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.singleOrNull()?.toClub() }
     override suspend fun findByIds(ids: Collection<UUID>) = if (ids.isEmpty()) emptyList() else dbQuery { ClubTable.selectAll().where { ClubTable.id inList ids }.map { it.toClub() } }
     override suspend fun listBots(tzBucket: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.isBot eq true) and (ClubTable.tzBucket eq tzBucket) }.map { it.toClub() } }
+    override suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.level greaterEq (level - spread)) and (ClubTable.level lessEq (level + spread)) and (ClubTable.id neq except) }.limit(limit).map { it.toClub() } }
     override suspend fun lockByUserId(userId: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.userId eq userId }.forUpdate().singleOrNull()?.toClub() }
     override suspend fun lockById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.forUpdate().singleOrNull()?.toClub() }
     override suspend fun create(club: Club) = dbQuery { ClubTable.insert { it.fill(club); it[id] = club.id; it[userId] = club.userId; it[createdAt] = club.createdAt }; club }
