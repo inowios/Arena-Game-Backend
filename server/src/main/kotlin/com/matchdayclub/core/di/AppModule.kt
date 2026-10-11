@@ -63,7 +63,9 @@ val appModule = module {
     }
     single<com.matchdayclub.domain.usecase.liveops.LiveOpsRepository> { com.matchdayclub.data.repository.LiveOpsRepositoryImpl() }
     single { val econ: EconomyRepository = get(); com.matchdayclub.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get(), purchases = { club, pid -> econ.hasPurchase(club, pid) }) }
-    single { SectionService(get(), get()) }
+    single<com.matchdayclub.domain.repository.ZoneRepository> { com.matchdayclub.data.repository.ZoneRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.club.ZoneUseCases(get(), get(), get(), get(), tx = get()) }
+    single { SectionService(get(), get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
     single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
@@ -203,7 +205,7 @@ val appModule = module {
     single { SquadService(get(), get(), get(), get()) }
     single { ListAthletesUseCase(get()) }
     single { ClaimAcademyUseCase(get(), get(), get(), get(), tx = get(), sections = get(), progress = get<EconomyService>()) }
-    single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
+    single { StartTrainingUseCase(get(), get(), get(), get(), get(), get<EconomyService>(), tx = get(), zones = get()) }
     single { CompleteTrainingUseCase(get(), get(), get(), get(), tx = get()) }
     single { HealAthleteUseCase(get(), get(), get(), get(), get(), tx = get()) }
     single { GetLineupUseCase(get(), get(), get(), get()) }

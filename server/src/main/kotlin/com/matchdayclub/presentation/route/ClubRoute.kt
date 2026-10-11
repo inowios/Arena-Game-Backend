@@ -42,6 +42,7 @@ fun Route.clubRoutes() {
     val inbox: com.matchdayclub.domain.usecase.account.InboxService by inject()
     val readiness: com.matchdayclub.domain.usecase.live.LiveReadinessUseCase by inject()
     val rest: com.matchdayclub.domain.usecase.live.RestSquadUseCase by inject()
+    val zonesUc: com.matchdayclub.domain.usecase.club.ZoneUseCases by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -63,6 +64,12 @@ fun Route.clubRoutes() {
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.matchdayclub.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) }).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
+            // the stadium zones of the club's rectangle (CITY-BUILD-PLAN stage A)
+            get("/zones") { call.respond(zonesUc.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
+            post("/zones/{sport}/buy") {
+                val sport = runCatching { com.matchdayclub.domain.model.ZoneSport.valueOf(call.parameters["sport"]!!.uppercase()) }.getOrElse { throw com.matchdayclub.domain.exception.ValidationException("Unknown zone") }
+                call.respond(HttpStatusCode.Created, zonesUc.buy(call.userId(), sport).toDto().toSuccessResponse(201))
+            }
             get("/inbox") {
                 val club = getClub(call.userId()).club
                 val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 50

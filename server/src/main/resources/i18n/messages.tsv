@@ -222,3 +222,6 @@ No opponent around	No opponent around	No hay rivales cerca	Não há adversários
 # --- admin dashboards
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
 days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90
+Needs stadium level {0}	Needs stadium level {0}	Necesita el estadio de nivel {0}	Precisa do estádio de nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
+The zone is already yours	The zone is already yours	La zona ya es tuya	A zona já é sua	Эта зона уже ваша	Ця зона вже ваша
+Unknown zone	Unknown zone	Zona desconocida	Zona desconhecida	Неизвестная зона	Невідома зона

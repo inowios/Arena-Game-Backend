@@ -32,14 +32,16 @@ class SectionSquadOnCourt(private val athletes: AthleteRepository, private val c
 }
 
 /** Which sport sections a club fields: enough athletes for a lineup and (for humans) an operational venue. */
-class SectionService(private val buildings: com.matchdayclub.domain.repository.BuildingRepository, private val athletes: AthleteRepository) {
+class SectionService(private val buildings: com.matchdayclub.domain.repository.BuildingRepository, private val athletes: AthleteRepository,
+                     private val zones: com.matchdayclub.domain.usecase.club.ZoneUseCases? = null) {
     suspend fun active(club: Club, squad: List<Athlete>? = null, clubBuildings: List<Building>? = null): List<Sport> {
         val list = squad ?: athletes.listByClub(club.id)
         fun enough(s: Sport) = list.count { it.sport == s } >= com.matchdayclub.domain.rules.Sections.profile(s).startersCount
         if (club.isBot) return com.matchdayclub.domain.rules.Sections.ORDER.filter(::enough)
         val bs = clubBuildings ?: buildings.listByClub(club.id)
+        val open = zones?.openSports(club.id) ?: emptySet()   // an open arena in the club's rectangle stands for the venue
         return com.matchdayclub.domain.rules.Sections.ORDER.filter { s ->
-            enough(s) && (s == Sport.FOOTBALL || bs.any { it.type == com.matchdayclub.domain.rules.Sections.venue(s) && com.matchdayclub.domain.rules.Sections.venueOperational(it) })
+            enough(s) && (s == Sport.FOOTBALL || s in open || bs.any { it.type == com.matchdayclub.domain.rules.Sections.venue(s) && com.matchdayclub.domain.rules.Sections.venueOperational(it) })
         }
     }
 }
@@ -91,7 +93,8 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
     }
 }
 
-class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
+class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.matchdayclub.domain.usecase.economy.ProgressTracker = com.matchdayclub.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx,
+                            private val zones: com.matchdayclub.domain.usecase.club.ZoneUseCases? = null) {
     /** [attribute] null = a technique drill: a skill point for the trees instead of an attribute point. */
     suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind?): Training = tx {
         val st = service.state(userId, lock = true)
@@ -107,8 +110,11 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (drill && !com.matchdayclub.domain.rules.Techniques.learns(a.position)) throw ValidationException("This athlete cannot learn that move")
         if (!drill)
         {
-            val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) } ?: throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
-            if (a.attribute(attribute!!) >= TrainingRules.attributeCap(a.sport, com.matchdayclub.domain.rules.Sections.effectiveLevel(venue))) throw ValidationException("Attribute capped by the venue level; upgrade it")
+            val venue = st.buildings.firstOrNull { it.type == com.matchdayclub.domain.rules.Sections.venue(a.sport) }
+            val arenaOpen = a.sport != Sport.FOOTBALL && zones?.openSports(st.club.id)?.contains(a.sport) == true
+            if (venue == null && !arenaOpen) throw ValidationException("Build the venue for {0} first", com.matchdayclub.common.i18n.Named("sport." + a.sport.name))
+            val venueLevel = if (venue != null) com.matchdayclub.domain.rules.Sections.effectiveLevel(venue) else com.matchdayclub.domain.rules.Zones.ARENA_VENUE_LEVEL
+            if (a.attribute(attribute!!) >= TrainingRules.attributeCap(a.sport, venueLevel)) throw ValidationException("Attribute capped by the venue level; upgrade it")
             if (!com.matchdayclub.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
         }
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
