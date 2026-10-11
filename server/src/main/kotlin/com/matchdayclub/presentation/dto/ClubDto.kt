@@ -18,7 +18,7 @@ import java.time.Instant
 @Serializable data class MoveBuildingRequest(val x: Int, val y: Int, val rotation: Int = 0)
 @Serializable data class CellDto(val x: Int, val y: Int)
 /** A line of fence cells drawn by a drag. */
-@Serializable data class PlaceFencesRequest(val cells: List<CellDto>)
+@Serializable data class PlaceFencesRequest(val cells: List<CellDto>, val type: String = "FENCE")
 @Serializable data class IdsRequest(val ids: List<String>)
 @Serializable data class PlacementDto(val id: String, val x: Int, val y: Int, val rotation: Int = 0)
 /** Edit mode: every moved building at once. */
@@ -60,7 +60,13 @@ import java.time.Instant
 
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
                                           /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1,
-                                          val obstacles: List<ObstacleDto> = emptyList())
+                                          val obstacles: List<ObstacleDto> = emptyList(),
+                                          /** The land: owned parcels (col, row) of the 6×6 field of 12-cell parcels, and the next parcel's price. */
+                                          val parcels: List<ParcelDto> = emptyList(), val land: LandDto? = null)
+@Serializable data class ParcelDto(val col: Int, val row: Int)
+@Serializable data class LandDto(val parcel: Int, val parcels: Int, val nextPrice: Long)
+fun com.matchdayclub.domain.usecase.club.LandView.toDto() = LandDto(com.matchdayclub.domain.rules.Land.PARCEL, com.matchdayclub.domain.rules.Land.PARCELS, nextPrice)
+@Serializable data class LandResponse(val parcels: List<ParcelDto>, val land: LandDto, val club: ClubDto)
 /** An obstacle on the plot: [cost]/[seconds] to clear it; [rewardGold] only once it is cleared (READY). */
 @Serializable data class ObstacleDto(val id: String, val kind: String, val x: Int, val y: Int, val w: Int, val h: Int, val state: String, val remainingSeconds: Long,
                                      val cost: Long, val seconds: Long, val speedUpGold: Int, val rewardGold: Int)

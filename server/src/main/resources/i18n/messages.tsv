@@ -225,3 +225,11 @@ days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	d
 Needs stadium level {0}	Needs stadium level {0}	Necesita el estadio de nivel {0}	Precisa do estádio de nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
 The zone is already yours	The zone is already yours	La zona ya es tuya	A zona já é sua	Эта зона уже ваша	Ця зона вже ваша
 Unknown zone	Unknown zone	Zona desconocida	Zona desconhecida	Неизвестная зона	Невідома зона
+# --- land (the eras map)
+Outside your land	That spot is outside your land	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами твоей земли	Це місце за межами твоєї землі
+No such parcel	There is no such parcel of land	No existe esa parcela	Esse lote não existe	Такого участка нет	Такої ділянки немає
+Bad parcel	Bad parcel	Parcela incorrecta	Lote inválido	Неверный участок	Невірна ділянка
+The land is already yours	This land is already yours	Este terreno ya es tuyo	Este terreno já é seu	Эта земля уже твоя	Ця земля вже твоя
+The parcel must touch your land	Buy land next to the land you own	Compra terreno junto al que ya tienes	Compre terreno ao lado do que você já tem	Покупай землю рядом со своей	Купуй землю поруч зі своєю
+Only fences and roads are drawn	Only roads can be drawn	Solo se pueden dibujar calles	Só ruas podem ser desenhadas	Рисовать можно только дороги	Малювати можна лише дороги
+Unknown type	Unknown building type	Tipo de edificio desconocido	Tipo de prédio desconhecido	Неизвестный тип здания	Невідомий тип будівлі

@@ -56,7 +56,7 @@ val appModule = module {
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
     single<com.matchdayclub.domain.repository.ObstacleRepository> { com.matchdayclub.data.repository.ObstacleRepositoryImpl() }
     single {
-        ClubService(get(), get(), get(), getAll<BuildingListener>(), get()).also { svc ->
+        ClubService(get(), get(), get(), getAll<BuildingListener>(), get(), get()).also { svc ->
             val koin = getKoin()
             svc.effects = { koin.get<com.matchdayclub.domain.usecase.liveops.LiveOps>().modifiers().let { com.matchdayclub.domain.usecase.club.EventEffects(it.buildTimePct, it.incomePct, it.obstacleGoldPct) } }
         }
@@ -64,6 +64,8 @@ val appModule = module {
     single<com.matchdayclub.domain.usecase.liveops.LiveOpsRepository> { com.matchdayclub.data.repository.LiveOpsRepositoryImpl() }
     single { val econ: EconomyRepository = get(); com.matchdayclub.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get(), purchases = { club, pid -> econ.hasPurchase(club, pid) }) }
     single<com.matchdayclub.domain.repository.ZoneRepository> { com.matchdayclub.data.repository.ZoneRepositoryImpl() }
+    single<com.matchdayclub.domain.repository.LandRepository> { com.matchdayclub.data.repository.LandRepositoryImpl() }
+    single { com.matchdayclub.domain.usecase.club.LandUseCases(get(), get(), get(), tx = get()) }
     single { com.matchdayclub.domain.usecase.club.ZoneUseCases(get(), get(), get(), get(), tx = get()) }
     single { SectionService(get(), get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }

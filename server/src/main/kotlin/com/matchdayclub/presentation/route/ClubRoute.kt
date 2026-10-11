@@ -43,6 +43,7 @@ fun Route.clubRoutes() {
     val readiness: com.matchdayclub.domain.usecase.live.LiveReadinessUseCase by inject()
     val rest: com.matchdayclub.domain.usecase.live.RestSquadUseCase by inject()
     val zonesUc: com.matchdayclub.domain.usecase.club.ZoneUseCases by inject()
+    val landUc: com.matchdayclub.domain.usecase.club.LandUseCases by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
 
@@ -61,10 +62,18 @@ fun Route.clubRoutes() {
                 val st = getClub(call.userId())
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
                 val atmosphere = com.matchdayclub.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id), clubService.effects().incomePct - 100)
-                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.matchdayclub.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) }).toSuccessResponse())
+                call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.matchdayclub.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) },
+                    st.parcels.map { ParcelDto(it.first, it.second) }, landUc.view(st).toDto()).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             // the stadium zones of the club's rectangle (CITY-BUILD-PLAN stage A)
+            // the land round the club: buy the parcel (col, row) next to your land
+            post("/land/{col}/{row}/buy") {
+                val col = call.parameters["col"]?.toIntOrNull() ?: throw ValidationException("Bad parcel"); val row = call.parameters["row"]?.toIntOrNull() ?: throw ValidationException("Bad parcel")
+                val view = landUc.buy(call.userId(), col, row)
+                val st = getClub(call.userId())
+                call.respond(HttpStatusCode.Created, LandResponse(view.parcels.map { ParcelDto(it.first, it.second) }, view.toDto(), st.club.toDto()).toSuccessResponse(201))
+            }
             get("/zones") { call.respond(zonesUc.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
             post("/zones/{sport}/buy") {
                 val sport = runCatching { com.matchdayclub.domain.model.ZoneSport.valueOf(call.parameters["sport"]!!.uppercase()) }.getOrElse { throw com.matchdayclub.domain.exception.ValidationException("Unknown zone") }
@@ -86,7 +95,8 @@ fun Route.clubRoutes() {
             fun uuid(s: String) = runCatching { UUID.fromString(s) }.getOrElse { throw ValidationException("Bad building id") }
             post("/fences") {
                 val r = call.receive<PlaceFencesRequest>()
-                val placed = placeFences(call.userId(), r.cells.map { it.x to it.y })
+                val drawn = runCatching { com.matchdayclub.domain.rules.BuildingType.valueOf(r.type) }.getOrElse { throw ValidationException("Unknown type") }
+                val placed = placeFences(call.userId(), r.cells.map { it.x to it.y }, drawn)
                 val st = getClub(call.userId())
                 call.respond(HttpStatusCode.Created, placed.map { it.toDto(st.now, st.club.level) }.toSuccessResponse(201))
             }

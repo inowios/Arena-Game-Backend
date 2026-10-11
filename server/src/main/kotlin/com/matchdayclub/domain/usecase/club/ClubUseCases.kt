@@ -23,7 +23,9 @@ fun interface ClubInitializer { suspend fun onClubCreated(club: Club) }
 /** Fires exactly once when a construction or upgrade finishes (timer, speed-up or free ad speed-up). */
 fun interface BuildingListener { suspend fun onCompleted(building: Building) }
 
-data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant, val obstacles: List<Obstacle> = emptyList()) {
+data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant, val obstacles: List<Obstacle> = emptyList(),
+                     /** The parcels the club owns (the home ones included): the land a building may stand on. */
+                     val parcels: Set<Pair<Int, Int>> = Land.HOME) {
     /** The stadium level whose limits apply now (the previous one while the stadium itself is being upgraded). */
     val stadium get() = Stadium.level(buildings)
     /** Constructions (first build or upgrade) occupying a builder. Decor is placed instantly and never occupies one. */
@@ -40,7 +42,7 @@ data class EventEffects(val buildTimePct: Int = 100, val incomePct: Int = 100, v
 }
 
 class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList(),
-                  private val obstacles: ObstacleRepository? = null) {
+                  private val obstacles: ObstacleRepository? = null, private val land: com.matchdayclub.domain.repository.LandRepository? = null) {
     /** What the running live events do (shorter constructions, more income, more gold in obstacles); set by DI. */
     var effects: suspend () -> EventEffects = { EventEffects() }
     suspend fun buildSeconds(base: Long) = effects().build(base)
@@ -56,11 +58,12 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         val now = clock.now()
         val list = buildings.listByClub(club.id).map { finalise(it, now) }
         val grid = maxOf(ClubLevels.gridSize(club.level), Stadium.gridSize(Stadium.level(list)))
-        return ClubState(club, list, grid, now, if (club.isBot) emptyList() else obstaclesOf(club, list, grid, now))
+        val parcels = Land.HOME + (land?.listByClub(club.id)?.toSet() ?: emptySet())
+        return ClubState(club, list, grid, now, if (club.isBot) emptyList() else obstaclesOf(club, list, parcels, now), parcels)
     }
 
     /** The club's obstacles: finished clearings turn READY, and the ones due since the last visit turn up on free cells. */
-    private suspend fun obstaclesOf(club: Club, list: List<Building>, grid: Int, now: Instant): List<Obstacle> {
+    private suspend fun obstaclesOf(club: Club, list: List<Building>, parcels: Set<Pair<Int, Int>>, now: Instant): List<Obstacle> {
         val repo = obstacles ?: return emptyList()
         var current = repo.listByClub(club.id).map { o ->
             if (o.isCleared(now)) { val ready = o.copy(state = ObstacleState.READY, clearEndsAt = null, updatedAt = now); repo.finishClearing(ready); ready } else o
@@ -78,7 +81,7 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
             val r = kotlin.random.Random(club.id.mostSignificantBits xor now.epochSecond)
             repeat(count) {
                 val kind = Obstacles.pick(r)
-                val spot = freeSpot(kind, grid, list, current, r) ?: return@repeat
+                val spot = freeSpot(kind, parcels, list, current, r) ?: return@repeat
                 val o = Obstacle(UUID.randomUUID(), club.id, kind, spot.first, spot.second, ObstacleState.IDLE, null, Obstacles.gold(kind, r), now, now)
                 repo.create(o); current = current + o
             }
@@ -86,10 +89,14 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         return current
     }
 
-    private fun freeSpot(kind: ObstacleKind, grid: Int, list: List<Building>, current: List<Obstacle>, r: kotlin.random.Random): Pair<Int, Int>? {
+    private fun freeSpot(kind: ObstacleKind, parcels: Set<Pair<Int, Int>>, list: List<Building>, current: List<Obstacle>, r: kotlin.random.Random): Pair<Int, Int>? {
+        val owned = parcels.toList()
         repeat(60) {
-            val x = r.nextInt(Grid.lo(grid), Grid.hi(grid) - kind.width + 1); val y = r.nextInt(Grid.lo(grid), Grid.hi(grid) - kind.height + 1)
+            // a cell of a random owned parcel (the whole footprint must stay on owned land)
+            val (pc, pr) = owned[r.nextInt(owned.size)]
+            val x = Land.cell(pc) + r.nextInt(Land.PARCEL - kind.width + 1); val y = Land.cell(pr) + r.nextInt(Land.PARCEL - kind.height + 1)
             val fp = Obstacles.footprint(kind, x, y)
+            if (!Land.fits(fp, parcels)) return@repeat
             // keep a margin around buildings so nothing gets walled in
             val padded = Footprint(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 2)
             if (list.none { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(padded) } && current.none { it.footprint.overlaps(fp) }) return x to y
@@ -167,7 +174,7 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         }
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(type, x, y, rotation)
-        if (!ReservedPlots.allowed(type, fp, st.gridSize)) throw ValidationException("Outside the club grid")
+        if (!Land.fits(fp, st.parcels)) throw ValidationException("Outside your land")
         if (st.buildings.any { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         if (lvl.buildSeconds > 0) service.requireFreeBuilder(st)
@@ -252,7 +259,7 @@ class MoveBuildingUseCase(private val service: ClubService, private val building
         val b = st.buildings.firstOrNull { it.id == buildingId } ?: throw NotFoundException("Building not found")
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(b.type, x, y, rotation)
-        if (!ReservedPlots.allowed(b.type, fp, st.gridSize)) throw ValidationException("Outside the club grid")
+        if (!Land.fits(fp, st.parcels)) throw ValidationException("Outside your land")
         if (st.buildings.any { it.id != b.id && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         buildings.move(b.copy(gridX = x, gridY = y, rotation = rotation, updatedAt = clock.now()))
@@ -336,13 +343,15 @@ class CollectObstacleUseCase(private val service: ClubService, private val clubs
 
 /** Draws a line of fence cells in one go (a drag on the plot): every cell is checked like a placement, paid at once. */
 class PlaceFencesUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
-    suspend operator fun invoke(userId: UUID, cells: List<Pair<Int, Int>>): List<Building> = tx {
+    /** [type]: FENCE, or ROAD — the town's roads are drawn the same way. */
+    suspend operator fun invoke(userId: UUID, cells: List<Pair<Int, Int>>, type: BuildingType = BuildingType.FENCE): List<Building> = tx {
+        if (type != BuildingType.FENCE && type != BuildingType.ROAD) throw ValidationException("Only fences and roads are drawn")
         if (cells.isEmpty()) throw ValidationException("Nothing to build")
         if (cells.size > MAX_CELLS) throw ValidationException("Too many cells at once")
         if (cells.toSet().size != cells.size) throw ValidationException("Overlaps another building")
         val st = service.state(userId, lock = true)
-        val spec = BuildingCatalog.spec(BuildingType.FENCE)
-        val have = st.buildings.count { it.type == BuildingType.FENCE }
+        val spec = BuildingCatalog.spec(type)
+        val have = st.buildings.count { it.type == type }
         if (have + cells.size > spec.countAt(st.stadium)) {
             val next = (st.stadium + 1..Stadium.MAX_LEVEL).firstOrNull { spec.countAt(it) >= have + cells.size }
             if (next != null) throw ValidationException("Requires stadium level {0}", next)
@@ -351,13 +360,13 @@ class PlaceFencesUseCase(private val service: ClubService, private val buildings
         val taken = st.buildings.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
         for ((x, y) in cells) {
             val fp = Footprint(x, y, 1, 1)
-            if (!fp.fits(st.gridSize)) throw ValidationException("Outside the club grid")
+            if (!Land.fits(fp, st.parcels)) throw ValidationException("Outside your land")
             if (taken.any { it.overlaps(fp) }) throw ConflictException("Overlaps another building")
             if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         }
         val club = service.charge(st.club, coins = spec.levels[0].cost * cells.size)
         val now = clock.now()
-        cells.map { (x, y) -> buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.FENCE, 1, x, y, 0, BuildingState.IDLE, null, now, now, now)) }
+        cells.map { (x, y) -> buildings.create(Building(UUID.randomUUID(), club.id, type, 1, x, y, 0, BuildingState.IDLE, null, now, now, now)) }
     }
 
     companion object { const val MAX_CELLS = 40 }
@@ -411,7 +420,7 @@ class ApplyLayoutUseCase(private val service: ClubService, private val buildings
             }
         }
         val fps = final.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
-        fps.forEach { if (!it.fits(st.gridSize)) throw ValidationException("Outside the club grid") }
+        fps.forEach { if (!Land.fits(it, st.parcels)) throw ValidationException("Outside your land") }
         for (i in fps.indices) for (j in i + 1 until fps.size) if (fps[i].overlaps(fps[j])) throw ConflictException("Overlaps another building")
         if (fps.any { fp -> st.obstacles.any { it.footprint.overlaps(fp) } }) throw ConflictException("Clear the obstacle first")
         val changed = final.filter { f -> byId.getValue(f.id).let { it.gridX != f.gridX || it.gridY != f.gridY || it.rotation != f.rotation } }
@@ -448,4 +457,25 @@ class LayoutUseCases(private val service: ClubService, private val layouts: com.
     }
 
     companion object { const val MAX_SLOTS = 3 }
+}
+
+// ---------- land ----------
+
+/** The land round the club: what the club owns, what it may buy next and for how much. */
+data class LandView(val parcels: Set<Pair<Int, Int>>, val nextPrice: Long)
+
+/** Buys a parcel of land next to the club's land (the eras map, 13 October): coins now, the land is cleared at once. */
+class LandUseCases(private val service: ClubService, private val land: com.matchdayclub.domain.repository.LandRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+    fun view(st: ClubState) = LandView(st.parcels, Land.price(st.parcels.size - Land.HOME.size))
+
+    suspend fun buy(userId: UUID, col: Int, row: Int): LandView = tx {
+        val st = service.state(userId, lock = true)
+        if (!Land.inField(col, row)) throw ValidationException("No such parcel")
+        if ((col to row) in st.parcels) throw ConflictException("The land is already yours")
+        if (!Land.adjacent(col, row, st.parcels)) throw ValidationException("The parcel must touch your land")
+        val price = Land.price(st.parcels.size - Land.HOME.size)
+        service.charge(st.club, coins = price)
+        land.add(st.club.id, col, row, clock.now())
+        LandView(st.parcels + (col to row), Land.price(st.parcels.size - Land.HOME.size + 1))
+    }
 }

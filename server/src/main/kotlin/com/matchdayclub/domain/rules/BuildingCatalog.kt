@@ -4,7 +4,9 @@ import com.matchdayclub.domain.rules.BuildingType.*
 import kotlin.math.ceil
 import kotlin.math.min
 
-enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, CLUB_SHOP, CAFE, PARKING, DECOR, FENCE, MUSEUM }
+enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, CLUB_SHOP, CAFE, PARKING, DECOR, FENCE, MUSEUM,
+    // the town the player builds on bought land (the eras map, 13 October): homes and workplaces pay tax, parks please, roads join
+    HOUSE, APARTMENT, OFFICE, PARK, ROAD }
 
 /**
  * One level of a building. [effect] meaning depends on type:
@@ -55,7 +57,7 @@ object Stadium {
     fun decorCount(stadium: Int): Int = 8 + 4 * stadium
     fun fenceCount(stadium: Int): Int = 8 * stadium
     /** Types that build and upgrade instantly and never occupy a builder (and do not count as "real" buildings). */
-    val COSMETIC = setOf(BuildingType.DECOR, BuildingType.FENCE)
+    val COSMETIC = setOf(BuildingType.DECOR, BuildingType.FENCE, BuildingType.ROAD)
 }
 
 object BuildingCatalog {
@@ -192,6 +194,56 @@ object BuildingCatalog {
         // fences: drawn along the plot by dragging, instant to build and to upgrade (no builder) — a coin sink that
         // changes the look: wooden picket → hedge → brick → stone → steel → glass with an LED rail
         FENCE to listOf(L(30, 0), L(150, 0, stadium = 2), L(600, 0, stadium = 3), L(2_000, 0, stadium = 5), L(6_000, 0, stadium = 7), L(15_000, 0, stadium = 9)),
+        // the town on bought land: tax per hour; the look follows the era (levels 4-6 the town, 7-9 the city of the future, 10 the apex)
+        HOUSE to listOf(
+            L(2_500, 20 * M, stadium = 4, incomePerHour = 60, capHours = 8),
+            L(4_500, 40 * M, stadium = 4, incomePerHour = 80, capHours = 8),
+            L(8_000, 90 * M, stadium = 4, incomePerHour = 110, capHours = 9),
+            L(14_000, 3 * H, stadium = 4, incomePerHour = 150, capHours = 9),
+            L(24_000, 5 * H, stadium = 5, incomePerHour = 200, capHours = 10),
+            L(40_000, 8 * H, stadium = 6, incomePerHour = 260, capHours = 10),
+            L(70_000, 12 * H, stadium = 7, incomePerHour = 340, capHours = 11),
+            L(120_000, 18 * H, stadium = 8, incomePerHour = 440, capHours = 12),
+            L(200_000, 26 * H, stadium = 9, incomePerHour = 570, capHours = 13),
+            L(330_000, 36 * H, stadium = 10, incomePerHour = 740, capHours = 14),
+        ),
+        APARTMENT to listOf(
+            L(9_000, 2 * H, stadium = 5, incomePerHour = 180, capHours = 8),
+            L(15_000, 3 * H, stadium = 5, incomePerHour = 230, capHours = 8),
+            L(25_000, 5 * H, stadium = 5, incomePerHour = 300, capHours = 9),
+            L(42_000, 8 * H, stadium = 5, incomePerHour = 390, capHours = 9),
+            L(70_000, 12 * H, stadium = 5, incomePerHour = 500, capHours = 10),
+            L(115_000, 16 * H, stadium = 6, incomePerHour = 640, capHours = 10),
+            L(190_000, 22 * H, stadium = 7, incomePerHour = 820, capHours = 11),
+            L(300_000, 30 * H, stadium = 8, incomePerHour = 1_050, capHours = 12),
+            L(470_000, 40 * H, stadium = 9, incomePerHour = 1_300, capHours = 13),
+            L(720_000, 54 * H, stadium = 10, incomePerHour = 1_650, capHours = 14),
+        ),
+        OFFICE to listOf(
+            L(16_000, 3 * H, stadium = 6, incomePerHour = 260, capHours = 10),
+            L(27_000, 5 * H, stadium = 6, incomePerHour = 330, capHours = 10),
+            L(45_000, 8 * H, stadium = 6, incomePerHour = 430, capHours = 11),
+            L(75_000, 12 * H, stadium = 6, incomePerHour = 550, capHours = 11),
+            L(120_000, 16 * H, stadium = 6, incomePerHour = 700, capHours = 12),
+            L(190_000, 22 * H, stadium = 6, incomePerHour = 890, capHours = 12),
+            L(300_000, 30 * H, stadium = 7, incomePerHour = 1_130, capHours = 13),
+            L(460_000, 40 * H, stadium = 8, incomePerHour = 1_430, capHours = 13),
+            L(700_000, 52 * H, stadium = 9, incomePerHour = 1_800, capHours = 14),
+            L(1_000_000, 66 * H, stadium = 10, incomePerHour = 2_250, capHours = 14),
+        ),
+        // parks: effect = atmosphere % to earning buildings around (like the museum)
+        PARK to listOf(
+            L(5_000, 1 * H, stadium = 4, effect2 = 3),
+            L(12_000, 3 * H, stadium = 5, effect2 = 4),
+            L(30_000, 6 * H, stadium = 6, effect2 = 5),
+            L(70_000, 10 * H, stadium = 7, effect2 = 6),
+            L(150_000, 16 * H, stadium = 8, effect2 = 7),
+            L(300_000, 24 * H, stadium = 9, effect2 = 8),
+            L(600_000, 36 * H, stadium = 10, effect2 = 10),
+            L(900_000, 48 * H, stadium = 10, effect2 = 12),
+        ),
+        // roads: drawn by dragging like fences, instant; a coin sink that joins the town up
+        ROAD to listOf(L(40, 0, stadium = 4), L(200, 0, stadium = 7), L(800, 0, stadium = 10)),
     )
 
     // Footprints (cells of 10 m) are fixed for all ten levels and generous — the owner, 12 October: a building never
@@ -211,6 +263,11 @@ object BuildingCatalog {
         BuildingSpec(DECOR, 1, 1, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
         BuildingSpec(MUSEUM, 4, 5, true, levelTable.getValue(MUSEUM), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
         BuildingSpec(FENCE, 1, 1, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
+        BuildingSpec(HOUSE, 3, 3, true, levelTable.getValue(HOUSE), countsFrom(0, 0, 0, 4, 8, 12, 16, 20, 24, 30), CAP10),
+        BuildingSpec(APARTMENT, 4, 3, true, levelTable.getValue(APARTMENT), countsFrom(0, 0, 0, 0, 2, 4, 6, 8, 10, 12), CAP10),
+        BuildingSpec(OFFICE, 4, 4, true, levelTable.getValue(OFFICE), countsFrom(0, 0, 0, 0, 0, 2, 3, 4, 6, 8), CAP10),
+        BuildingSpec(PARK, 4, 4, true, levelTable.getValue(PARK), countsFrom(0, 0, 0, 2, 3, 4, 5, 6, 8, 10), listOf(0, 0, 0, 1, 2, 3, 4, 5, 6, 8)),
+        BuildingSpec(ROAD, 1, 1, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 60, 120, 200, 300, 400, 500, 600), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
     ).associateBy { it.type }
 
     fun spec(type: BuildingType): BuildingSpec = specs.getValue(type)
@@ -242,8 +299,8 @@ object ClubLevels {
  * it, so the stadium placed in the middle stays in the middle as the grid grows outwards on every side.
  */
 object Grid {
+    /** The old club square (30 cells): the plot is its centred [PLOT] cells (3..26). The land round it is [Land]'s field. */
     const val RESERVE = 30
-    /** The club's plot: the centred 24×24 cells of the 30-cell square (cells 3..26); the ring outside is the client's landscape. */
     const val PLOT = 24
     fun lo(gridSize: Int) = (RESERVE - gridSize) / 2
     fun hi(gridSize: Int) = lo(gridSize) + gridSize
@@ -274,4 +331,35 @@ object ReservedPlots {
 fun footprint(type: BuildingType, x: Int, y: Int, rotation: Int): Footprint {
     val s = BuildingCatalog.spec(type)
     return if (rotation % 180 == 0) Footprint(x, y, s.width, s.height) else Footprint(x, y, s.height, s.width)
+}
+
+/**
+ * The land round the club (the eras map, 13 October: the player buys the land and builds the town on it). The field is
+ * [Grid.RESERVE] cells = [PARCELS]×[PARCELS] parcels of [PARCEL] cells; the club starts with the plot ([HOME]) and buys
+ * parcels one by one, each adjacent to one it owns; a building fits when every cell of its footprint lies in an owned parcel.
+ */
+object Land {
+    const val PARCEL = 12
+    const val PARCELS = 6
+    /** The field's first cell: the plot (cells 3..26) is parcels 2..3, so the field runs from cell -21 to 50. */
+    const val ORIGIN = -21
+    const val CELLS = PARCEL * PARCELS
+    val HOME: Set<Pair<Int, Int>> = setOf(2 to 2, 3 to 2, 2 to 3, 3 to 3)
+    const val BASE_PRICE = 4_000L
+    fun parcelOf(x: Int, y: Int) = ((x - ORIGIN) / PARCEL) to ((y - ORIGIN) / PARCEL)
+    fun inField(col: Int, row: Int) = col in 0 until PARCELS && row in 0 until PARCELS
+    /** The first cell of parcel [col] (or row). */
+    fun cell(col: Int) = ORIGIN + col * PARCEL
+    /** Every cell of [fp] on owned land. */
+    fun fits(fp: Footprint, owned: Set<Pair<Int, Int>>): Boolean {
+        if (fp.x < ORIGIN || fp.y < ORIGIN || fp.x + fp.w > ORIGIN + CELLS || fp.y + fp.h > ORIGIN + CELLS) return false
+        val (c0, r0) = parcelOf(fp.x, fp.y); val (c1, r1) = parcelOf(fp.x + fp.w - 1, fp.y + fp.h - 1)
+        for (cx in c0..c1) for (cy in r0..r1) if ((cx to cy) !in owned) return false
+        return true
+    }
+    fun adjacent(col: Int, row: Int, owned: Set<Pair<Int, Int>>) =
+        (col - 1 to row) in owned || (col + 1 to row) in owned || (col to row - 1) in owned || (col to row + 1) in owned
+    fun canBuy(col: Int, row: Int, owned: Set<Pair<Int, Int>>) = inField(col, row) && (col to row) !in owned && adjacent(col, row, owned)
+    /** The next parcel's price grows with every one bought: 4 000, 6 200, 9 600, 14 900 … (rounded to 100). */
+    fun price(bought: Int): Long = (BASE_PRICE * Math.pow(1.55, bought.toDouble())).toLong() / 100 * 100
 }
