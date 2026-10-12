@@ -35,4 +35,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:prod,ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ghcr.io/inowios/arena-game-backend:prod,ghcr.io/inowios/arena-game-backend:${{ github.sha }}
