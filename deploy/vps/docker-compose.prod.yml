@@ -1,0 +1,47 @@
+# Matchday Club on the shared VPS (next to qrkontaq and Arena Pro Play, see ~/StudioProjects/ops).
+# Shared-VPS rules: a unique compose name, a localhost-only port no other project uses, no published DB port.
+#   qrkontaq 127.0.0.1:8080 · Arena dev 8081 · Arena prod 8082 · Matchday Club 8083
+# Lives in /opt/arenacity/prod with .env.prod next to it (setup.sh creates both).
+name: arenacity-prod
+
+services:
+  app:
+    image: ghcr.io/inowios/arena-game-backend:${MDC_TAG:-prod}
+    container_name: arenacity-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8083:8080"
+    env_file:
+      - .env.prod
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/matchdayclub
+      KTOR_DEVELOPMENT: "false"
+      IAP_DEV_MODE: "false"
+      ADS_CLIENT_REWARDS: "false"
+    volumes:
+      - ./secrets:/app/secrets:ro
+    mem_limit: 1g            # the JVM takes 75 % of it (-XX:MaxRAMPercentage=75)
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arenacity-db-prod   # /opt/ops/projects.conf backs it up by this name
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    # no published port: only the app reaches it, over the compose network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+volumes:
+  pgdata:
+    name: arenacity-prod-pgdata

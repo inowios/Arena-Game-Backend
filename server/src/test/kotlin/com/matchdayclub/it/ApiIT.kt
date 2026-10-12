@@ -329,7 +329,6 @@ class ApiIT {
 
 /** A free w×h spot on the plot of a GET /club response (buildings and obstacles taken into account). */
 private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: Int): Pair<Int, Int> {
-    val grid = state["gridSize"]!!.jsonPrimitive.int
     val taken = mutableListOf<com.matchdayclub.domain.rules.Footprint>()
     for (b in state["buildings"]!!.jsonArray) {
         val o = b.jsonObject
@@ -339,6 +338,13 @@ private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: In
         val o = b.jsonObject
         taken += com.matchdayclub.domain.rules.Footprint(o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["w"]!!.jsonPrimitive.int, o["h"]!!.jsonPrimitive.int)
     }
-    for (y in 0..grid - h) for (x in 0..grid - w) { val fp = com.matchdayclub.domain.rules.Footprint(x, y, w, h); if (taken.none { it.overlaps(fp) }) return x to y }
+    // the club's own land (the HOME parcels at the start; GET /club lists them as "parcels")
+    val land = com.matchdayclub.domain.rules.Land
+    val owned = state["parcels"]?.jsonArray?.map { it.jsonObject["col"]!!.jsonPrimitive.int to it.jsonObject["row"]!!.jsonPrimitive.int }?.toSet() ?: land.HOME
+    val lo = land.ORIGIN; val hi = land.ORIGIN + land.CELLS
+    for (y in lo..hi - h) for (x in lo..hi - w) {
+        val fp = com.matchdayclub.domain.rules.Footprint(x, y, w, h)
+        if (land.fits(fp, owned) && taken.none { it.overlaps(fp) }) return x to y
+    }
     error("no free spot")
 }
