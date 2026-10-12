@@ -9,7 +9,7 @@ see `~/StudioProjects/ops` (backups, runbook). Files: `deploy/vps/`.
 |---|---|
 | URL | `https://arenacity.arenaproplay.com` (Cloudflare, account B; the same origin certificate as `api.arenaproplay.com`) |
 | server dir | `/opt/arenacity/prod` (`docker-compose.yml`, `.env.prod`, `secrets/`) |
-| containers | `arenacity-prod` on `127.0.0.1:8083` (qrkontaq 8080, Arena dev 8081, Arena prod 8082), `arenacity-db-prod` (no published port) |
+| containers | `arenacity-prod` on `127.0.0.1:8084` (qrkontaq 8080, Arena dev 8081, Arena prod 8082, letsplay 8083), `arenacity-db-prod` (no published port) |
 | volume | `arenacity-prod-pgdata`; nightly off-site dumps by `/opt/ops/backup.sh` |
 | image | `ghcr.io/inowios/arena-game-backend:<sha>` / `:prod`, built by CI on every push to `main` |
 
@@ -21,7 +21,7 @@ see `~/StudioProjects/ops` (backups, runbook). Files: `deploy/vps/`.
    scp -r deploy/vps/* arena-prod:/opt/arenacity/prod/
    ssh arena-prod 'bash /opt/arenacity/prod/setup.sh'
    ```
-   `setup.sh` creates `.env.prod` with random secrets (never overwrites it), checks that port 8083 is free and that the
+   `setup.sh` creates `.env.prod` with random secrets (never overwrites it), checks that port 8084 is free and that the
    origin certificate covers the subdomain, starts the containers, adds the nginx site (`nginx -t` before the reload;
    the other sites are not touched) and joins the nightly backups. Afterwards fill in `.env.prod` as needed
    (`SUPPORT_EMAIL`, sign-in, purchases, push) and `docker compose up -d app`.

@@ -1,6 +1,6 @@
 # Arena City on the shared VPS (next to qrkontaq and Arena Pro Play, see ~/StudioProjects/ops).
 # Shared-VPS rules: a unique compose name, a localhost-only port no other project uses, no published DB port.
-#   qrkontaq 127.0.0.1:8080 · Arena dev 8081 · Arena prod 8082 · Arena City 8083
+#   qrkontaq 127.0.0.1:8080 · Arena dev 8081 · Arena prod 8082 · letsplay 8083 · Arena City 8084
 # Lives in /opt/arenacity/prod with .env.prod next to it (setup.sh creates both).
 name: arenacity-prod
 
@@ -10,7 +10,7 @@ services:
     container_name: arenacity-prod
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8083:8080"
+      - "127.0.0.1:8084:8080"
     env_file:
       - .env.prod
     environment:

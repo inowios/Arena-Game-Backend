@@ -3,12 +3,12 @@
 #   ssh arena-prod 'mkdir -p /opt/arenacity/prod'
 #   scp -r deploy/vps/* arena-prod:/opt/arenacity/prod/
 #   ssh arena-prod 'bash /opt/arenacity/prod/setup.sh'
-# Touches nothing of the other projects: its own dir, compose project, containers, volume, port 8083 and nginx site.
+# Touches nothing of the other projects: its own dir, compose project, containers, volume, port 8084 and nginx site.
 # Re-running is safe (keeps .env.prod and the database).
 set -euo pipefail
 cd "$(dirname "$0")"
 DOMAIN=arenacity.arenaproplay.com
-PORT=8083
+PORT=8084
 say() { echo "▸ $*"; }; die() { echo "✗ $*" >&2; exit 1; }
 
 command -v docker >/dev/null || die "no docker"
