@@ -41,7 +41,7 @@ class ClubUseCasesTest {
     fun `create club seeds pitch and ticket office`() = runBlocking<Unit> {
         val c = newClub()
         val st = get(user)
-        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(24, st.gridSize)
+        assertEquals(2_500, c.coins); assertEquals(2, st.buildings.size); assertEquals(48, st.gridSize)
         assertTrue(st.buildings.any { it.type == BuildingType.PITCH && it.state == BuildingState.IDLE })
         assertFailsWith<ConflictException> { create(user, "Again", "#000000", "#FFFFFF", "UTC") }
         assertFailsWith<ValidationException> { create(UUID.randomUUID(), "ab", "#000000", "#FFFFFF", "UTC") }
@@ -62,7 +62,8 @@ class ClubUseCasesTest {
     fun `placement validation`() = runBlocking<Unit> {
         newClub()
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 13, 0) }           // overlaps pitch
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 29, 29, 0) }       // outside the square
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 36, 29, 0) }       // outside the plot (cells -9..38)
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, -10, 0, 0) }
         assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 9, 19, 0) }        // stadium 3 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 9, 19, 0) }   // stadium 4 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 9, 19, 0) }  // a 2nd office needs stadium 4

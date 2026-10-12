@@ -74,10 +74,29 @@ class ApiIT {
         val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
         assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
         val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        // both showcases stand on the plot alone (the sixteen home parcels, 48×48 cells) since the archipelago
         val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
-        assertEquals(36, g["parcels"]!!.jsonArray.size)
+        assertEquals(16, g["parcels"]!!.jsonArray.size); assertEquals(48, g["gridSize"]!!.jsonPrimitive.int)
         assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
-        assertTrue(g["buildings"]!!.jsonArray.size > 300)
+        val types = g["buildings"]!!.jsonArray.map { it.o()["type"]!!.jsonPrimitive.content }
+        assertEquals(com.arenacity.domain.rules.Showcase.city(10).slots.size, types.size)
+        assertTrue(types.count { it != "ROAD" && it != "DECOR" } >= 15)
+        // and the land round the plot is not for sale: GET /club shows no price, buying answers a clear error
+        val land = call(HttpMethod.Get, "/club", t).data.o()
+        assertEquals((1..4).flatMap { c -> (1..4).map { r -> c to r } }.toSet(),
+            land["parcels"]!!.jsonArray.map { it.o()["col"]!!.jsonPrimitive.int to it.o()["row"]!!.jsonPrimitive.int }.toSet())
+        assertEquals(48, land["gridSize"]!!.jsonPrimitive.int)
+        assertEquals(0, land["land"]!!.o()["nextPrice"]!!.jsonPrimitive.int); assertEquals(false, land["land"]!!.o()["buyable"]!!.jsonPrimitive.boolean)
+        val refused = call(HttpMethod.Post, "/club/land/5/2/buy", t, expect = 400, lang = "ru").o()["errors"]!!.jsonArray.single().jsonPrimitive.content
+        assertEquals("Земля вокруг твоего участка не продаётся: клуб растёт на островах", refused)
+        assertEquals(16, call(HttpMethod.Get, "/club", t).data.o()["parcels"]!!.jsonArray.size)
+        // the plot's new land is the club's at once: the first free spot lies on a parcel that was not home before v2
+        val (nx, ny) = freeSpot(land, "ACADEMY")
+        assertTrue(ny < 3, "($nx, $ny)")
+        call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$nx,"y":$ny}""", expect = 201)
+        // the old field round the plot is sea
+        val sea = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":-12,"y":5}]}""", expect = 400).o()["errors"]!!.jsonArray.single().jsonPrimitive.content
+        assertEquals("That spot is outside your land", sea)
     }
 
     @Test

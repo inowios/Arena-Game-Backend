@@ -201,8 +201,10 @@ data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: 
 class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService, private val land: com.arenacity.domain.repository.LandRepository? = null) {
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        val list = buildings.listByClub(club.id)
-        val parcels = com.arenacity.domain.rules.Land.HOME + (land?.listByClub(club.id)?.toSet() ?: emptySet())
+        val parcels = com.arenacity.domain.rules.Land.owned(land?.listByClub(club.id) ?: emptyList())
+        // what stands on the club's land: a building left on a parcel that is sea now (bought before the archipelago)
+        // moves onto the plot when its owner next opens the club (ClubService.rehome); until then a visitor does not see it
+        val list = buildings.listByClub(club.id).filter { com.arenacity.domain.rules.Land.fits(com.arenacity.domain.rules.footprint(it.type, it.gridX, it.gridY, it.rotation), parcels) }
         return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list), parcels)
     }
 }

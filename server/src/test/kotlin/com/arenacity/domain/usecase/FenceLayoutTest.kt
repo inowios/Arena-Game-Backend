@@ -43,7 +43,7 @@ class FenceLayoutTest {
     fun `fence cells are checked like placements and limited by the stadium`() = runBlocking<Unit> {
         newClub()
         assertFailsWith<ConflictException> { fences(user, listOf(9 to 9)) }          // the ticket office
-        assertFailsWith<ValidationException> { fences(user, listOf(30 to 31)) }      // outside the square
+        assertFailsWith<ValidationException> { fences(user, listOf(39 to 31)) }      // outside the plot (cells -9..38)
         assertFailsWith<ValidationException> { fences(user, listOf(10 to 20, 10 to 20)) }
         val limit = Stadium.fenceCount(1)
         val tooMany = (0 until limit + 1).map { 9 + it % 12 to 19 + it / 12 }
@@ -91,7 +91,7 @@ class FenceLayoutTest {
         assertEquals(9, st.buildings.first { it.id == b.id }.gridX)
         assertFailsWith<ConflictException> { applyLayout(user, listOf(Placement(a.id, 9, 20, 0))) }   // onto b
         val office = st.buildings.first { it.type == BuildingType.TICKET_OFFICE }
-        assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(office.id, 29, 9, 0))) }   // 2 wide: outside the square
+        assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(office.id, 35, 9, 0))) }   // 5 wide: off the plot's edge (cell 38)
     }
 
     @Test

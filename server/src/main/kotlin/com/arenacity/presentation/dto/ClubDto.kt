@@ -61,11 +61,12 @@ import java.time.Instant
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
                                           /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1,
                                           val obstacles: List<ObstacleDto> = emptyList(),
-                                          /** The land: owned parcels (col, row) of the 6×6 field of 12-cell parcels, and the next parcel's price. */
+                                          /** The land: owned parcels (col, row) of the 6×6 field of 12-cell parcels, and the next parcel's price (0 and buyable=false while land is not for sale). */
                                           val parcels: List<ParcelDto> = emptyList(), val land: LandDto? = null)
 @Serializable data class ParcelDto(val col: Int, val row: Int)
-@Serializable data class LandDto(val parcel: Int, val parcels: Int, val nextPrice: Long)
-fun com.arenacity.domain.usecase.club.LandView.toDto() = LandDto(com.arenacity.domain.rules.Land.PARCEL, com.arenacity.domain.rules.Land.PARCELS, nextPrice)
+/** [buyable] false (since the archipelago, 12 October): the land round the plot is not for sale, [nextPrice] is 0. */
+@Serializable data class LandDto(val parcel: Int, val parcels: Int, val nextPrice: Long, val buyable: Boolean = false)
+fun com.arenacity.domain.usecase.club.LandView.toDto() = LandDto(com.arenacity.domain.rules.Land.PARCEL, com.arenacity.domain.rules.Land.PARCELS, nextPrice, buyable)
 @Serializable data class LandResponse(val parcels: List<ParcelDto>, val land: LandDto, val club: ClubDto)
 /** An obstacle on the plot: [cost]/[seconds] to clear it; [rewardGold] only once it is cleared (READY). */
 @Serializable data class ObstacleDto(val id: String, val kind: String, val x: Int, val y: Int, val w: Int, val h: Int, val state: String, val remainingSeconds: Long,

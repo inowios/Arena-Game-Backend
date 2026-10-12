@@ -52,7 +52,7 @@ object Stadium {
     const val MAX_LEVEL = 10
     fun level(buildings: List<com.arenacity.domain.model.Building>): Int =
         buildings.firstOrNull { it.type == BuildingType.PITCH }?.let { if (it.state == com.arenacity.domain.model.BuildingState.UPGRADING) it.level - 1 else it.level }?.coerceAtLeast(1) ?: 1
-    /** The plot is the same 24-cell square at every level (the eras map, 12 October): buildings grow, the land does not. */
+    /** The plot is the same [Grid.PLOT]-cell square at every level (the eras map, 12 October): buildings grow, the land does not. */
     fun gridSize(stadium: Int): Int = Grid.PLOT
     fun decorCount(stadium: Int): Int = 8 + 4 * stadium
     fun fenceCount(stadium: Int): Int = 8 * stadium
@@ -295,13 +295,17 @@ object ClubLevels {
 }
 
 /**
- * The club's land is a 30×30-cell square; the grid the club may build on is the centred [gridSize]×[gridSize] part of
- * it, so the stadium placed in the middle stays in the middle as the grid grows outwards on every side.
+ * The grid is centred on the old 30×30-cell club square; the grid the club may build on is the centred [gridSize]×[gridSize]
+ * cells round its middle, so the stadium placed in the middle stays in the middle whatever the size.
  */
 object Grid {
-    /** The old club square (30 cells): the plot is its centred [PLOT] cells (3..26). The land round it is [Land]'s field. */
+    /** The old club square (30 cells): its middle (cell 15) is the plot's middle. The land round it is [Land]'s field. */
     const val RESERVE = 30
-    const val PLOT = 24
+    /**
+     * The plot: 48 cells (-9..38, metres -90..390) = [Land.HOME], the central 4×4 parcels of the field (the archipelago v2,
+     * 12 October: the owner, «the central island much bigger»; it was 24 cells, 3..26, the four middle parcels).
+     */
+    const val PLOT = 48
     fun lo(gridSize: Int) = (RESERVE - gridSize) / 2
     fun hi(gridSize: Int) = lo(gridSize) + gridSize
     const val CENTRE = RESERVE / 2
@@ -335,17 +339,30 @@ fun footprint(type: BuildingType, x: Int, y: Int, rotation: Int): Footprint {
 
 /**
  * The land round the club (the eras map, 13 October: the player buys the land and builds the town on it). The field is
- * [Grid.RESERVE] cells = [PARCELS]×[PARCELS] parcels of [PARCEL] cells; the club starts with the plot ([HOME]) and buys
+ * [PARCELS]×[PARCELS] parcels of [PARCEL] cells; the club starts with the plot ([HOME]) and buys
  * parcels one by one, each adjacent to one it owns; a building fits when every cell of its footprint lies in an owned parcel.
+ * Buying is switched off since the archipelago (the owner, 12 October: the main island is the plot, the club grows on the
+ * side islands later): [BUYING] is false, [canBuy] answers no and the buy endpoint refuses; the code path stays for later.
+ * The plot is the central 4×4 parcels since the archipelago v2 (docs/art/PAINTED-MAP.md): every club owns all sixteen
+ * because [HOME] is never stored, it is always part of [owned] — older clubs got the twelve new parcels without a migration.
  */
 object Land {
     const val PARCEL = 12
     const val PARCELS = 6
-    /** The field's first cell: the plot (cells 3..26) is parcels 2..3, so the field runs from cell -21 to 50. */
+    /** The field's first cell: the plot (cells -9..38) is parcels 1..4, so the field runs from cell -21 to 50. */
     const val ORIGIN = -21
     const val CELLS = PARCEL * PARCELS
-    val HOME: Set<Pair<Int, Int>> = setOf(2 to 2, 3 to 2, 2 to 3, 3 to 3)
+    /** The plot, owned from the start: the central 4×4 parcels (48×48 cells, [Grid.PLOT]). */
+    val HOME: Set<Pair<Int, Int>> = (1..4).flatMap { c -> (1..4).map { r -> c to r } }.toSet()
     const val BASE_PRICE = 4_000L
+    /** Whether the land round the plot is for sale (off since the archipelago, 12 October). */
+    const val BUYING = false
+    /**
+     * The land a club builds on: the plot, and the parcels it bought while land is for sale ([open]). With buying off a
+     * parcel bought before the archipelago gives nothing — the ring round the plot is sea now (its row stays, harmless).
+     */
+    fun owned(bought: Collection<Pair<Int, Int>>, open: Boolean = BUYING): Set<Pair<Int, Int>> =
+        if (open) HOME + bought.filter { inField(it.first, it.second) } else HOME
     fun parcelOf(x: Int, y: Int) = ((x - ORIGIN) / PARCEL) to ((y - ORIGIN) / PARCEL)
     fun inField(col: Int, row: Int) = col in 0 until PARCELS && row in 0 until PARCELS
     /** The first cell of parcel [col] (or row). */
@@ -359,7 +376,7 @@ object Land {
     }
     fun adjacent(col: Int, row: Int, owned: Set<Pair<Int, Int>>) =
         (col - 1 to row) in owned || (col + 1 to row) in owned || (col to row - 1) in owned || (col to row + 1) in owned
-    fun canBuy(col: Int, row: Int, owned: Set<Pair<Int, Int>>) = inField(col, row) && (col to row) !in owned && adjacent(col, row, owned)
+    fun canBuy(col: Int, row: Int, owned: Set<Pair<Int, Int>>, open: Boolean = BUYING) = open && inField(col, row) && (col to row) !in owned && adjacent(col, row, owned)
     /** The next parcel's price grows with every one bought: 4 000, 6 200, 9 600, 14 900 … (rounded to 100). */
     fun price(bought: Int): Long = (BASE_PRICE * Math.pow(1.55, bought.toDouble())).toLong() / 100 * 100
 }

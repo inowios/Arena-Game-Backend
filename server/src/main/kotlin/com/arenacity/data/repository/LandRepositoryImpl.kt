@@ -3,6 +3,9 @@ package com.arenacity.data.repository
 import com.arenacity.common.extension.dbQuery
 import com.arenacity.data.database.LandParcelTable
 import com.arenacity.domain.repository.LandRepository
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import java.time.Instant
@@ -14,5 +17,8 @@ class LandRepositoryImpl : LandRepository {
     }
     override suspend fun add(clubId: UUID, col: Int, row: Int, at: Instant) {
         dbQuery { LandParcelTable.insertIgnore { it[LandParcelTable.clubId] = clubId; it[LandParcelTable.col] = col; it[LandParcelTable.row] = row; it[boughtAt] = at } }
+    }
+    override suspend fun remove(clubId: UUID, col: Int, row: Int) {
+        dbQuery { LandParcelTable.deleteWhere { (LandParcelTable.clubId eq clubId) and (LandParcelTable.col eq col) and (LandParcelTable.row eq row) } }
     }
 }

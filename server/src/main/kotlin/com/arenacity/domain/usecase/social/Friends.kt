@@ -12,7 +12,8 @@ import java.util.UUID
 
 /**
  * The two showcase friends every player has (rules.Showcase): bot clubs outside every league (tzBucket −1), their cities
- * rebuilt from the layout at start-up whenever the layout changed, so they always show what the current game allows.
+ * rebuilt from the layout at start-up whenever the layout changed, so they always show what the current game allows
+ * (the 48×48 plot of the archipelago v2 rebuilds the older 24×24 and whole-field towns on the first start).
  */
 class ShowcaseService(
     private val users: UserRepository,
@@ -43,8 +44,12 @@ class ShowcaseService(
             clubs.create(Club(d.id, userId, d.name, d.primary, d.secondary, null, d.level, d.reputation, 0, 0, "UTC", null, null, now, now,
                 isBot = true, division = 1, tzBucket = BUCKET))
         }
+        // the land: the parcels the layout needs beyond the plot (none since the archipelago: the plot is the sixteen home
+        // parcels, never stored), every other stored row given back — older layouts owned the whole 6×6 field
         val owned = land.listByClub(d.id).toSet()
-        for ((c, r) in city.parcels) if ((c to r) !in owned && (c to r) !in com.arenacity.domain.rules.Land.HOME) land.add(d.id, c, r, now)
+        val need = city.parcels - com.arenacity.domain.rules.Land.HOME
+        for ((c, r) in need - owned) land.add(d.id, c, r, now)
+        for ((c, r) in owned - need) land.remove(d.id, c, r)
         // the buildings: replaced only when the layout differs from what is stored
         val have = buildings.listByClub(d.id)
         val want = city.slots.map { Triple(it.type, it.level, it.x to it.y) }.toSet()

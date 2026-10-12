@@ -7,4 +7,6 @@ import java.util.UUID
 interface LandRepository {
     suspend fun listByClub(clubId: UUID): List<Pair<Int, Int>>
     suspend fun add(clubId: UUID, col: Int, row: Int, at: Instant)
+    /** Gives a parcel back (the showcase cities shrink to the plot now that land is not for sale). */
+    suspend fun remove(clubId: UUID, col: Int, row: Int)
 }

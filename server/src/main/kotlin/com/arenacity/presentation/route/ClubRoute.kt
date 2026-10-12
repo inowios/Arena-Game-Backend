@@ -67,7 +67,7 @@ fun Route.clubRoutes() {
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             // the stadium zones of the club's rectangle (CITY-BUILD-PLAN stage A)
-            // the land round the club: buy the parcel (col, row) next to your land
+            // the land round the club: buy the parcel (col, row) next to your land (closed since the archipelago: 400 "Land is not for sale")
             post("/land/{col}/{row}/buy") {
                 val col = call.parameters["col"]?.toIntOrNull() ?: throw ValidationException("Bad parcel"); val row = call.parameters["row"]?.toIntOrNull() ?: throw ValidationException("Bad parcel")
                 val view = landUc.buy(call.userId(), col, row)

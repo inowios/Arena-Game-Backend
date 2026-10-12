@@ -41,8 +41,10 @@ data class EventEffects(val buildTimePct: Int = 100, val incomePct: Int = 100, v
     fun build(seconds: Long) = if (seconds <= 0) seconds else maxOf(1L, seconds * buildTimePct / 100)
 }
 
+/** [landOpen]: whether bought parcels count as the club's land ([Land.BUYING]; tests of the old buying path switch it on). */
 class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList(),
-                  private val obstacles: ObstacleRepository? = null, private val land: com.arenacity.domain.repository.LandRepository? = null) {
+                  private val obstacles: ObstacleRepository? = null, private val land: com.arenacity.domain.repository.LandRepository? = null,
+                  private val landOpen: Boolean = Land.BUYING) {
     /** What the running live events do (shorter constructions, more income, more gold in obstacles); set by DI. */
     var effects: suspend () -> EventEffects = { EventEffects() }
     suspend fun buildSeconds(base: Long) = effects().build(base)
@@ -56,16 +58,46 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
     suspend fun state(userId: UUID, lock: Boolean = false): ClubState {
         val club = if (lock) lockedClubOf(userId) else clubOf(userId)
         val now = clock.now()
-        val list = buildings.listByClub(club.id).map { finalise(it, now) }
+        val parcels = Land.owned(land?.listByClub(club.id) ?: emptyList(), landOpen)
+        val list = rehome(club, buildings.listByClub(club.id).map { finalise(it, now) }, parcels, now)
         val grid = maxOf(ClubLevels.gridSize(club.level), Stadium.gridSize(Stadium.level(list)))
-        val parcels = Land.HOME + (land?.listByClub(club.id)?.toSet() ?: emptySet())
         return ClubState(club, list, grid, now, if (club.isBot) emptyList() else obstaclesOf(club, list, parcels, now), parcels)
+    }
+
+    /**
+     * Buildings left off the club's land move onto the plot, each to the free spot nearest where it stood (with a lawn
+     * cell round it where there is room). Only a club that built on a parcel bought before the archipelago has any: that
+     * ring of parcels is sea now (12 October). Roads and fences there are taken away instead (one by one they would land
+     * as stray tiles along the plot's edge, cut off from the lines they belonged to). A building with no room anywhere
+     * stays put; it may still be moved by hand.
+     */
+    private suspend fun rehome(club: Club, list: List<Building>, parcels: Set<Pair<Int, Int>>, now: Instant): List<Building> {
+        val off = list.filter { !Land.fits(footprint(it.type, it.gridX, it.gridY, it.rotation), parcels) }
+        if (off.isEmpty()) return list
+        val (lines, lost) = off.partition { it.type == BuildingType.ROAD || it.type == BuildingType.FENCE }
+        lines.forEach { buildings.delete(it.id) }
+        val taken = (list - off.toSet()).map { footprint(it.type, it.gridX, it.gridY, it.rotation) }.toMutableList()
+        obstacles?.listByClub(club.id)?.forEach { taken += it.footprint }
+        val cells = parcels.flatMap { (c, r) -> (0 until Land.PARCEL * Land.PARCEL).map { Land.cell(c) + it % Land.PARCEL to Land.cell(r) + it / Land.PARCEL } }
+        val moved = HashMap<UUID, Building>()
+        for (b in lost) {
+            val size = footprint(b.type, 0, 0, b.rotation)
+            fun free(x: Int, y: Int, pad: Int) = Footprint(x - pad, y - pad, size.w + 2 * pad, size.h + 2 * pad).let { fp -> taken.none { it.overlaps(fp) } }
+            val near = cells.filter { (x, y) -> Land.fits(Footprint(x, y, size.w, size.h), parcels) && free(x, y, 0) }
+                .sortedBy { (x, y) -> (x - b.gridX) * (x - b.gridX) + (y - b.gridY) * (y - b.gridY) }
+            val (x, y) = near.firstOrNull { (x, y) -> free(x, y, 1) } ?: near.firstOrNull() ?: continue
+            moved[b.id] = buildings.move(b.copy(gridX = x, gridY = y, updatedAt = now))
+            taken += Footprint(x, y, size.w, size.h)
+        }
+        val gone = lines.map { it.id }.toSet()
+        return list.filter { it.id !in gone }.map { moved[it.id] ?: it }
     }
 
     /** The club's obstacles: finished clearings turn READY, and the ones due since the last visit turn up on free cells. */
     private suspend fun obstaclesOf(club: Club, list: List<Building>, parcels: Set<Pair<Int, Int>>, now: Instant): List<Obstacle> {
         val repo = obstacles ?: return emptyList()
-        var current = repo.listByClub(club.id).map { o ->
+        // an obstacle on a parcel bought before the archipelago (sea now) is left out: unseen, it neither counts nor blocks
+        var current = repo.listByClub(club.id).filter { Land.fits(it.footprint, parcels) }.map { o ->
             if (o.isCleared(now)) { val ready = o.copy(state = ObstacleState.READY, clearEndsAt = null, updatedAt = now); repo.finishClearing(ready); ready } else o
         }
         val clock = repo.spawnClock(club.id)
@@ -426,8 +458,8 @@ class ApplyLayoutUseCase(private val service: ClubService, private val buildings
         val changed = final.filter { f -> byId.getValue(f.id).let { it.gridX != f.gridX || it.gridY != f.gridY || it.rotation != f.rotation } }
         if (changed.isEmpty()) return emptyList()
         val now = clock.now()
-        // step 1: park the movers off the grid (unique negative cells), step 2: put them down
-        changed.forEachIndexed { i, b -> buildings.move(byId.getValue(b.id).copy(gridX = -1 - i, gridY = -1, updatedAt = now)) }
+        // step 1: park the movers off the field (unique cells before its first one; the plot itself reaches cell -9 now), step 2: put them down
+        changed.forEachIndexed { i, b -> buildings.move(byId.getValue(b.id).copy(gridX = Land.ORIGIN - 1 - i, gridY = Land.ORIGIN - 1, updatedAt = now)) }
         return changed.map { buildings.move(it.copy(updatedAt = now)) }
     }
 }
@@ -461,14 +493,20 @@ class LayoutUseCases(private val service: ClubService, private val layouts: com.
 
 // ---------- land ----------
 
-/** The land round the club: what the club owns, what it may buy next and for how much. */
-data class LandView(val parcels: Set<Pair<Int, Int>>, val nextPrice: Long)
+/** The land round the club: what the club owns, whether land is for sale, what it may buy next and for how much (0 when not for sale). */
+data class LandView(val parcels: Set<Pair<Int, Int>>, val nextPrice: Long, val buyable: Boolean)
 
-/** Buys a parcel of land next to the club's land (the eras map, 13 October): coins now, the land is cleared at once. */
-class LandUseCases(private val service: ClubService, private val land: com.arenacity.domain.repository.LandRepository, private val clock: Clock, private val tx: Tx = NoTx) {
-    fun view(st: ClubState) = LandView(st.parcels, Land.price(st.parcels.size - Land.HOME.size))
+/**
+ * Buys a parcel of land next to the club's land (the eras map, 13 October): coins now, the land is cleared at once.
+ * Closed since the archipelago ([Land.BUYING], 12 October): the view shows no price and buying answers an error; [open]
+ * keeps the old path testable.
+ */
+class LandUseCases(private val service: ClubService, private val land: com.arenacity.domain.repository.LandRepository, private val clock: Clock, private val tx: Tx = NoTx,
+                   private val open: Boolean = Land.BUYING) {
+    fun view(st: ClubState) = LandView(st.parcels, if (open) Land.price(st.parcels.size - Land.HOME.size) else 0, open)
 
     suspend fun buy(userId: UUID, col: Int, row: Int): LandView = tx {
+        if (!open) throw ValidationException("Land is not for sale")
         val st = service.state(userId, lock = true)
         if (!Land.inField(col, row)) throw ValidationException("No such parcel")
         if ((col to row) in st.parcels) throw ConflictException("The land is already yours")
@@ -476,6 +514,6 @@ class LandUseCases(private val service: ClubService, private val land: com.arena
         val price = Land.price(st.parcels.size - Land.HOME.size)
         service.charge(st.club, coins = price)
         land.add(st.club.id, col, row, clock.now())
-        LandView(st.parcels + (col to row), Land.price(st.parcels.size - Land.HOME.size + 1))
+        LandView(st.parcels + (col to row), Land.price(st.parcels.size - Land.HOME.size + 1), open)
     }
 }
