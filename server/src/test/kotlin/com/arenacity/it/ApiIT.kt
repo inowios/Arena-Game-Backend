@@ -47,15 +47,15 @@ class ApiIT {
         val club = call(HttpMethod.Get, "/club", t).data.o()
         assertEquals(2500, club["club"]!!.o()["coins"]!!.jsonPrimitive.int)
         assertEquals(1, club["club"]!!.o()["builderSlots"]!!.jsonPrimitive.int)
-        val (ax, ay) = freeSpot(club, 2, 2)   // obstacles turn up at random: find room
+        val (ax, ay) = freeSpot(club, "ACADEMY")   // obstacles turn up at random: find room
         val academy = call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$ax,"y":$ay}""", expect = 201).data.o()["id"]!!.jsonPrimitive.content
-        val (tx, ty) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
+        val (tx, ty) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "TRAINING_CENTER")
         // one builder: a second construction must wait
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 409)
         call(HttpMethod.Post, "/club/builders", t, expect = 402)   // 250 gold needed, 50 owned
         call(HttpMethod.Post, "/club/buildings/$academy/speedup", t)
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 402)   // 2 400 coins, 1 000 left
-        val (mx, my) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
+        val (mx, my) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "ACADEMY")
         call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":$mx,"y":$my,"rotation":0}""")
         val graduate = call(HttpMethod.Post, "/club/academy/claim", t, expect = 201).data.o()
         assertTrue(graduate["overall"]!!.jsonPrimitive.int > 0)
@@ -326,6 +326,12 @@ class ApiIT {
         call(HttpMethod.Delete, "/me", t)
         assertEquals(1, admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()["analyticsEvents"]!!.jsonPrimitive.int)   // only the anonymous account_deleted
     }
+}
+
+/** A free spot for a building type (its real footprint, unrotated). */
+private fun freeSpot(state: kotlinx.serialization.json.JsonObject, type: String): Pair<Int, Int> {
+    val fp = com.arenacity.domain.rules.footprint(com.arenacity.domain.rules.BuildingType.valueOf(type), 0, 0, 0)
+    return freeSpot(state, fp.w, fp.h)
 }
 
 /** A free w×h spot on the plot of a GET /club response (buildings and obstacles taken into account). */
