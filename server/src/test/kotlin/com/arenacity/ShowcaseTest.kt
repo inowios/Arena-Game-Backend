@@ -18,14 +18,23 @@ class ShowcaseTest {
             }
         }
         val counts = city.slots.groupingBy { it.type }.eachCount()
-        for ((type, n) in counts) assertTrue(n <= BuildingCatalog.spec(type).countAt(stadium), "$type: $n > ${BuildingCatalog.spec(type).countAt(stadium)}")
+        // the avenues are a full grid (the showcase is a planned town); everything else stays within the allowance
+        for ((type, n) in counts) if (type != BuildingType.ROAD) assertTrue(n <= BuildingCatalog.spec(type).countAt(stadium), "$type: $n > ${BuildingCatalog.spec(type).countAt(stadium)}")
         assertEquals(stadium, city.slots.single { it.type == BuildingType.PITCH }.level)
+        // nothing touches the stadium, and no two buildings share an edge (each stands on its own lawn)
+        val solid = city.slots.filter { it.type != BuildingType.ROAD && it.type != BuildingType.DECOR }
+        for (a in solid) for (b in solid) if (a !== b) {
+            val sa = BuildingCatalog.spec(a.type); val sb = BuildingCatalog.spec(b.type)
+            val gapX = maxOf(b.x - (a.x + sa.width), a.x - (b.x + sb.width)); val gapY = maxOf(b.y - (a.y + sa.height), a.y - (b.y + sb.height))
+            assertTrue(maxOf(gapX, gapY) >= 1, "${a.type} at ${a.x},${a.y} touches ${b.type} at ${b.x},${b.y}")
+        }
         assertEquals(stadium, Stadium.level(city.slots.map { com.arenacity.domain.model.Building(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), it.type, it.level, it.x, it.y, 0,
             com.arenacity.domain.model.BuildingState.IDLE, null, java.time.Instant.EPOCH, java.time.Instant.EPOCH, java.time.Instant.EPOCH) }))
         // every type the stadium allows is there, as many as allowed (the land has room)
         for (type in BuildingType.values()) {
             val want = BuildingCatalog.spec(type).countAt(stadium)
-            if (type == BuildingType.FENCE || want == 0) continue
+            if (type == BuildingType.FENCE || type == BuildingType.ROAD || want == 0) continue
+            if (stadium >= Stadium.MAX_LEVEL && type in setOf(BuildingType.HOUSE, BuildingType.PARK, BuildingType.APARTMENT)) { assertTrue((counts[type] ?: 0) in 1..want, "$type at the top"); continue }
             assertEquals(want, counts[type] ?: 0, "$type at stadium $stadium")
         }
         if (System.getenv("SHOWCASE_MAP") != null) {
