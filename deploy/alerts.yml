@@ -1,8 +1,8 @@
 groups:
-  - name: matchdayclub
+  - name: arenacity
     rules:
       - alert: ApiDown
-        expr: up{job="matchdayclub"} == 0
+        expr: up{job="arenacity"} == 0
         for: 2m
         annotations: { summary: "API not scraped for 2 minutes" }
       - alert: SchedulerStale

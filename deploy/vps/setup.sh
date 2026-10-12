@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# First start of Matchday Club on the shared VPS (run as root ON the server, once):
+# First start of Arena City on the shared VPS (run as root ON the server, once):
 #   ssh arena-prod 'mkdir -p /opt/arenacity/prod'
 #   scp -r deploy/vps/* arena-prod:/opt/arenacity/prod/
 #   ssh arena-prod 'bash /opt/arenacity/prod/setup.sh'

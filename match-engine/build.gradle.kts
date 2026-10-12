@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "com.matchdayclub"
+group = "com.arenacity"
 version = "0.1.0"
 
 repositories { mavenCentral() }
@@ -18,7 +18,7 @@ dependencies {
 
 kotlin { jvmToolchain(17) }
 
-application { mainClass.set("com.matchdayclub.engine.balance.BalanceKt") }
+application { mainClass.set("com.arenacity.engine.balance.BalanceKt") }
 
 tasks.test {
     useJUnitPlatform()

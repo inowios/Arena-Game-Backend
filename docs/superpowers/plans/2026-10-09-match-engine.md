@@ -16,7 +16,7 @@
 - Event list must be playable by the client as highlights: every event has `minute`, `type`, `team`, optional `athleteId`, optional `detail`.
 - Football targets (public-league baseline, equal teams): mean goals/match 2.4–3.0, draw share 22–30%, home win 40–48%, ≤ 2% matches with 7+ goals.
 - Balance tests are statistical: they use fixed seeds and generous bounds so they never flake.
-- Repo: `/Users/kushpe/StudioProjects/Arena/Arena-Game-Backend`. Backend code base will follow `Arena_Backend` conventions (`com.proplayarena`-style package → here `com.matchdayclub`).
+- Repo: `/Users/kushpe/StudioProjects/Arena/Arena-Game-Backend`. Backend code base will follow `Arena_Backend` conventions (`com.proplayarena`-style package → here `com.arenacity`).
 
 ---
 
@@ -29,7 +29,7 @@ Arena-Game-Backend/
   gradle/ gradlew ...                copied from Arena_Backend (wrapper 8.x)
   match-engine/
     build.gradle.kts
-    src/main/kotlin/com/matchdayclub/engine/
+    src/main/kotlin/com/arenacity/engine/
       model/Athlete.kt               Athlete, Position, Attributes
       model/Lineup.kt                Lineup (starters, bench, captain), Tactics, Style, Tempo, Plan
       model/Sport.kt                 SportProfile + FOOTBALL profile constants
@@ -38,7 +38,7 @@ Arena-Game-Backend/
       sim/Possession.kt              one possession resolution (chance → shot → goal / save / miss)
       sim/MatchSimulator.kt          simulate(home, away, sport, seed): MatchResult
       balance/Balance.kt             main(): runs N matches, prints stats
-    src/test/kotlin/com/matchdayclub/engine/
+    src/test/kotlin/com/arenacity/engine/
       StrengthTest.kt
       PossessionTest.kt
       MatchSimulatorTest.kt
@@ -51,7 +51,7 @@ Arena-Game-Backend/
 
 **Files:**
 - Create: `settings.gradle.kts`, `build.gradle.kts`, `match-engine/build.gradle.kts`, `gradle.properties`, `.gitignore`; copy `gradlew`, `gradlew.bat`, `gradle/wrapper/*` from `../Arena_Backend`.
-- Create: `match-engine/src/test/kotlin/com/matchdayclub/engine/SmokeTest.kt`
+- Create: `match-engine/src/test/kotlin/com/arenacity/engine/SmokeTest.kt`
 
 - [ ] **Step 1: Copy wrapper and write build files**
 
@@ -82,7 +82,7 @@ plugins {
     application
 }
 
-group = "com.matchdayclub"
+group = "com.arenacity"
 version = "0.1.0"
 
 repositories { mavenCentral() }
@@ -96,7 +96,7 @@ dependencies {
 
 kotlin { jvmToolchain(17) }
 
-application { mainClass.set("com.matchdayclub.engine.balance.BalanceKt") }
+application { mainClass.set("com.arenacity.engine.balance.BalanceKt") }
 
 tasks.test {
     useJUnitPlatform()
@@ -123,9 +123,9 @@ local.properties
 
 - [ ] **Step 2: Smoke test**
 
-`match-engine/src/test/kotlin/com/matchdayclub/engine/SmokeTest.kt`:
+`match-engine/src/test/kotlin/com/arenacity/engine/SmokeTest.kt`:
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -151,8 +151,8 @@ git init -b main 2>/dev/null; git add -A && git commit -m "match-engine: gradle 
 ### Task 2: Domain model
 
 **Files:**
-- Create: `match-engine/src/main/kotlin/com/matchdayclub/engine/model/Athlete.kt`, `Lineup.kt`, `Sport.kt`, `MatchEvent.kt`
-- Test: `match-engine/src/test/kotlin/com/matchdayclub/engine/ModelTest.kt`
+- Create: `match-engine/src/main/kotlin/com/arenacity/engine/model/Athlete.kt`, `Lineup.kt`, `Sport.kt`, `MatchEvent.kt`
+- Test: `match-engine/src/test/kotlin/com/arenacity/engine/ModelTest.kt`
 
 **Interfaces (produced, used by every later task):**
 
@@ -183,9 +183,9 @@ enum class EventType { KICKOFF, CHANCE, SHOT, GOAL, SAVE, MISS, INJURY, SUBSTITU
 
 `ModelTest.kt`:
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
-import com.matchdayclub.engine.model.*
+import com.arenacity.engine.model.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -224,7 +224,7 @@ class ModelTest {
 
 `model/Athlete.kt`:
 ```kotlin
-package com.matchdayclub.engine.model
+package com.arenacity.engine.model
 
 import kotlinx.serialization.Serializable
 
@@ -267,7 +267,7 @@ data class Athlete(
 
 `model/Lineup.kt`:
 ```kotlin
-package com.matchdayclub.engine.model
+package com.arenacity.engine.model
 
 import kotlinx.serialization.Serializable
 
@@ -289,7 +289,7 @@ data class Lineup(
 
 `model/Sport.kt`:
 ```kotlin
-package com.matchdayclub.engine.model
+package com.arenacity.engine.model
 
 import kotlinx.serialization.Serializable
 
@@ -320,7 +320,7 @@ val FOOTBALL = SportProfile(
 
 `model/MatchEvent.kt`:
 ```kotlin
-package com.matchdayclub.engine.model
+package com.arenacity.engine.model
 
 import kotlinx.serialization.Serializable
 
@@ -368,10 +368,10 @@ Rules: strength from the first `sport.startersCount` non-injured starters' `effe
 - [ ] **Step 1: Failing test**
 
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
-import com.matchdayclub.engine.model.*
-import com.matchdayclub.engine.sim.Strength
+import com.arenacity.engine.model.*
+import com.arenacity.engine.sim.Strength
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -416,9 +416,9 @@ class StrengthTest {
 
 `sim/Strength.kt`:
 ```kotlin
-package com.matchdayclub.engine.sim
+package com.arenacity.engine.sim
 
-import com.matchdayclub.engine.model.*
+import com.arenacity.engine.model.*
 
 data class TeamStrength(val attack: Double, val defense: Double, val midfield: Double, val keeper: Double, val tempoCost: Double)
 
@@ -487,10 +487,10 @@ Formulas: `pHome = home.midfield / (home.midfield + away.midfield)`. Chance prob
 - [ ] **Step 1: Failing test**
 
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
-import com.matchdayclub.engine.model.*
-import com.matchdayclub.engine.sim.*
+import com.arenacity.engine.model.*
+import com.arenacity.engine.sim.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -537,9 +537,9 @@ class PossessionTest {
 
 `sim/Possession.kt`:
 ```kotlin
-package com.matchdayclub.engine.sim
+package com.arenacity.engine.sim
 
-import com.matchdayclub.engine.model.*
+import com.arenacity.engine.model.*
 import java.util.SplittableRandom
 import kotlin.math.pow
 
@@ -608,10 +608,10 @@ Algorithm:
 - [ ] **Step 1: Failing test**
 
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
-import com.matchdayclub.engine.model.*
-import com.matchdayclub.engine.sim.MatchSimulator
+import com.arenacity.engine.model.*
+import com.arenacity.engine.sim.MatchSimulator
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -662,9 +662,9 @@ class MatchSimulatorTest {
 
 `sim/MatchSimulator.kt`:
 ```kotlin
-package com.matchdayclub.engine.sim
+package com.arenacity.engine.sim
 
-import com.matchdayclub.engine.model.*
+import com.arenacity.engine.model.*
 
 object MatchSimulator {
     private class Side(val lineup: Lineup, val isHome: Boolean) {
@@ -766,9 +766,9 @@ fun main(args: Array<String>)   // prints a table for (70 vs 70), (80 vs 60), (6
 - [ ] **Step 1: Failing test**
 
 ```kotlin
-package com.matchdayclub.engine
+package com.arenacity.engine
 
-import com.matchdayclub.engine.balance.Balance
+import com.arenacity.engine.balance.Balance
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -796,11 +796,11 @@ class BalanceTest {
 
 `balance/Balance.kt`:
 ```kotlin
-package com.matchdayclub.engine.balance
+package com.arenacity.engine.balance
 
-import com.matchdayclub.engine.model.*
-import com.matchdayclub.engine.sim.MatchSimulator
-import com.matchdayclub.engine.sim.Rng
+import com.arenacity.engine.model.*
+import com.arenacity.engine.sim.MatchSimulator
+import com.arenacity.engine.sim.Rng
 
 data class Stats(
     val matches: Int, val meanGoals: Double, val drawShare: Double, val homeWinShare: Double, val awayWinShare: Double,

@@ -48,7 +48,7 @@ curl -sf -X POST "$B/club" -H "$H" -H "Authorization: Bearer $AT2" -d '{"name":"
 curl -sf -X POST "$B/leagues/private/join" -H "$H" -H "Authorization: Bearer $AT2" -d "{\"code\":\"$CODE\"}" | j "assert d['data']['memberCount']==2"
 if [ "${SMOKE_MATCHDAY:-1}" = "1" ] && command -v psql >/dev/null; then
   step "force matchday: backdate season and run the scheduler tick (dev route)"
-  psql -q -d "${SMOKE_DB:-matchdayclub}" -c "update leagues set season_start = current_date - 1 where id = '$LID'"
+  psql -q -d "${SMOKE_DB:-arenacity}" -c "update leagues set season_start = current_date - 1 where id = '$LID'"
   curl -sf -X POST "$B/dev/matchday/run" | j "assert d['data']['played']>=4, d"
   curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert len(p['table'])==8 and p['table'][0]['played']>=1; assert len(d['data']['private'][0]['table'])==2"
   curl -sf "$B/leagues/$LID/fixtures?round=1" -H "$A" | j "assert len(d['data'])==4 and all(f['status']=='PLAYED' for f in d['data'])"

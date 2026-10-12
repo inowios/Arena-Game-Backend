@@ -1,6 +1,6 @@
-# Arena Game Backend (Matchday Club)
+# Arena Game Backend (Arena City)
 
-Kotlin backend for the Matchday Club mobile game. Design spec and plans live in
+Kotlin backend for the Arena City mobile game. Design spec and plans live in
 `../Arena-Game-Mobile/docs/superpowers/` (specs) and `docs/superpowers/plans/` (plans for this repo).
 
 ## Modules
@@ -16,7 +16,7 @@ Kotlin backend for the Matchday Club mobile game. Design spec and plans live in
     ./gradlew :match-engine:run --args=3000   # balance table (3000 matches per scenario)
 
     ./gradlew :server:test                    # unit tests (fakes, no DB)
-    ./gradlew :server:run                     # local server on :8080 (needs PostgreSQL `matchdayclub`)
+    ./gradlew :server:run                     # local server on :8080 (needs PostgreSQL `arenacity`)
     ./scripts/smoke.sh                        # end-to-end smoke against a running server
 
 Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides: `DATABASE_URL`, `DATABASE_USER`,
@@ -131,7 +131,7 @@ so parallel requests can neither double-grant nor overspend (`ConcurrencyIT`).
 
 Integration tests (real PostgreSQL, skipped when the variable is unset):
 
-    TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/matchdayclub_test TEST_DATABASE_USER=$USER ./gradlew :server:test
+    TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/arenacity_test TEST_DATABASE_USER=$USER ./gradlew :server:test
 
 ## match-engine rules
 

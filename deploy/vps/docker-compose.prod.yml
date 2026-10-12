@@ -1,12 +1,12 @@
-# Matchday Club on the shared VPS (next to qrkontaq and Arena Pro Play, see ~/StudioProjects/ops).
+# Arena City on the shared VPS (next to qrkontaq and Arena Pro Play, see ~/StudioProjects/ops).
 # Shared-VPS rules: a unique compose name, a localhost-only port no other project uses, no published DB port.
-#   qrkontaq 127.0.0.1:8080 · Arena dev 8081 · Arena prod 8082 · Matchday Club 8083
+#   qrkontaq 127.0.0.1:8080 · Arena dev 8081 · Arena prod 8082 · Arena City 8083
 # Lives in /opt/arenacity/prod with .env.prod next to it (setup.sh creates both).
 name: arenacity-prod
 
 services:
   app:
-    image: ghcr.io/inowios/arena-game-backend:${MDC_TAG:-prod}
+    image: ghcr.io/inowios/arena-game-backend:${ARENA_TAG:-prod}
     container_name: arenacity-prod
     restart: unless-stopped
     ports:
@@ -14,7 +14,7 @@ services:
     env_file:
       - .env.prod
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/matchdayclub
+      DATABASE_URL: jdbc:postgresql://postgres:5432/arenacity
       KTOR_DEVELOPMENT: "false"
       IAP_DEV_MODE: "false"
       ADS_CLIENT_REWARDS: "false"

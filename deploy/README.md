@@ -6,7 +6,7 @@ The matchday scheduler runs inside the app and assumes **a single app instance**
 ## First deploy
 
 ```bash
-git clone … /opt/matchdayclub && cd /opt/matchdayclub
+git clone … /opt/arenacity && cd /opt/arenacity
 cp .env.example .env && $EDITOR .env        # JWT_SECRET, DB password, DOMAIN, PUBLIC_BASE_URL, ADMIN_TOKEN, …
 docker compose --profile tls up -d --build  # app + postgres + Caddy (HTTPS on 443)
 curl -s https://$DOMAIN/health              # {"code":200,"data":"ok"}

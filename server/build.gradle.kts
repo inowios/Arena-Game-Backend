@@ -4,7 +4,7 @@ plugins {
     id("io.ktor.plugin")
 }
 
-group = "com.matchdayclub"
+group = "com.arenacity"
 version = "0.1.0"
 
 repositories { mavenCentral() }
@@ -57,7 +57,7 @@ dependencies {
 kotlin { jvmToolchain(17) }
 
 application {
-    mainClass.set("com.matchdayclub.ApplicationKt")
+    mainClass.set("com.arenacity.ApplicationKt")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=${project.ext.has("development")}")
 }
 

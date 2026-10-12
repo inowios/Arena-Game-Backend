@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Package `com.matchdayclub`. Module `server` depends on `match-engine`.
+- Package `com.arenacity`. Module `server` depends on `match-engine`.
 - Every DB access goes through `dbQuery { }` (supervisorScope + newSuspendedTransaction(IO)); `DatabaseConfig { defaultMaxAttempts = 1 }`.
 - Responses: `ApiResponse<T>(code, data, errors, requestId)`; errors only via `DomainException` subclasses.
 - JWT HS256, `sub` = userId, access 12h, refresh opaque UUID stored as SHA-256 hash, rotation on refresh.
@@ -18,7 +18,7 @@
 - All timers: `ends_at TIMESTAMPTZ`; "is done" = `now >= ends_at` on the server.
 - Clients send commands, never state (`collect building 12`, not `I have 500 coins`).
 - Flyway migrations `V{n}__Snake_case.sql`, UUID PKs, `created_at/updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
-- Local DB: PostgreSQL 16 on localhost (`brew services`), database `matchdayclub`, user `postgres`/`postgres` (create in Task 1).
+- Local DB: PostgreSQL 16 on localhost (`brew services`), database `arenacity`, user `postgres`/`postgres` (create in Task 1).
 - Spec §3 numbers: academy produces an athlete every 8 h; currencies coins / reputation / gold; club level grows with reputation.
 
 ---
@@ -29,7 +29,7 @@
 server/
   build.gradle.kts
   src/main/resources/application.conf, logback.xml, db/migration/V1..V6
-  src/main/kotlin/com/matchdayclub/
+  src/main/kotlin/com/arenacity/
     Application.kt                         main + module()
     core/plugins/{Koin,Database,Migrations,Security,Serialization,StatusPages,Monitoring,RequestId,CORS,RateLimiting,Routing}.kt
     core/di/AppModule.kt
@@ -49,7 +49,7 @@ server/
     presentation/dto/{AuthDto, ClubDto, AthleteDto, LineupDto}.kt
     presentation/mapper/{ClubMapper, AthleteMapper}.kt
     presentation/route/{AuthRoute, MeRoute, ClubRoute, BuildingRoute, AthleteRoute, LineupRoute}.kt
-  src/test/kotlin/com/matchdayclub/
+  src/test/kotlin/com/arenacity/
     testutil/{Fakes.kt, FixedClock.kt, Fixtures.kt}
     domain/rules/{BuildingCatalogTest, ClubLevelsTest, AthleteFactoryTest, TrainingRulesTest}.kt
     domain/usecase/{GuestLoginUseCaseTest, RefreshTokenUseCaseTest, CreateClubUseCaseTest, BuildingUseCasesTest, AthleteUseCasesTest, SetLineupUseCaseTest}.kt
@@ -89,9 +89,9 @@ Income = `incomePerHour * min(hoursSinceCollect, capHours)`; reputation multipli
 
 ### Task 1: Server module, config, database, plugins, health
 
-**Files:** `settings.gradle.kts` (add `server`), `build.gradle.kts` (bump Kotlin to 2.2.20, add ktor plugin alias), `gradle/libs.versions.toml`, `server/build.gradle.kts`, `server/src/main/resources/{application.conf,logback.xml}`, `server/src/main/kotlin/com/matchdayclub/Application.kt`, `core/plugins/*.kt`, `common/response/ApiResponse.kt`, `common/extension/DatabaseExtensions.kt`, `common/time/Clock.kt`, `domain/exception/DomainException.kt`, `data/database/BaseTable.kt`, `V1__Create_users_and_refresh_tokens.sql`, test `ApplicationSmokeTest.kt`.
+**Files:** `settings.gradle.kts` (add `server`), `build.gradle.kts` (bump Kotlin to 2.2.20, add ktor plugin alias), `gradle/libs.versions.toml`, `server/build.gradle.kts`, `server/src/main/resources/{application.conf,logback.xml}`, `server/src/main/kotlin/com/arenacity/Application.kt`, `core/plugins/*.kt`, `common/response/ApiResponse.kt`, `common/extension/DatabaseExtensions.kt`, `common/time/Clock.kt`, `domain/exception/DomainException.kt`, `data/database/BaseTable.kt`, `V1__Create_users_and_refresh_tokens.sql`, test `ApplicationSmokeTest.kt`.
 
-- [ ] Create local DB: `createdb -U "$USER" matchdayclub 2>/dev/null || true` (local Postgres trusts the mac user); `application.conf` default `jdbcUrl = "jdbc:postgresql://localhost:5432/matchdayclub"`, `user = ${USER}`… use env `DATABASE_USER` default `kushpe`, password empty.
+- [ ] Create local DB: `createdb -U "$USER" arenacity 2>/dev/null || true` (local Postgres trusts the mac user); `application.conf` default `jdbcUrl = "jdbc:postgresql://localhost:5432/arenacity"`, `user = ${USER}`… use env `DATABASE_USER` default `kushpe`, password empty.
 - [ ] Copy verbatim from the Arena_Backend map: `ApiResponse`, `dbQuery`, `DomainException` set, `BaseTable` (but with `timestampWithTimeZone`), `configureDatabase` (Hikari + Flyway `classpath:db/migration`), `configureSecurity` (jwt "auth-jwt"), `configureSerialization`, `configureStatusPages`, `configureMonitoring` (CallLogging), `configureRequestId`, `configureCORS` (anyHost in dev), `configureRateLimiting` (AUTH 20/min, API 600/min).
 - [ ] `Clock` interface + `SystemClock` (Koin single) so use cases are testable.
 - [ ] `V1`: `users(id uuid pk, auth_provider varchar(10) not null, provider_id varchar(255), email varchar(255), display_name varchar(80), avatar_url text, is_active bool default true, created_at, updated_at, unique(auth_provider, provider_id))`; `refresh_tokens(id uuid pk, user_id uuid fk cascade, token_hash varchar(64) unique, expires_at timestamptz, revoked_at timestamptz null, created_at)`; `push_tokens(id, user_id, token text unique, platform varchar(10), created_at, updated_at)`.
@@ -151,10 +151,10 @@ Income = `incomePerHour * min(hoursSinceCollect, capHours)`; reputation multipli
 
 ### Task 5: Lineup & tactics (football)
 
-**Files:** `domain/model/Lineup.kt` (uses `com.matchdayclub.engine.model.Tactics`), `V4__Create_lineups.sql` (`lineups(club_id, sport, starters uuid[], bench uuid[], tactics_json text, updated_at, pk(club_id, sport))`), `SetLineupUseCase` + validation rules, `LineupRoute` (`GET/PUT /club/lineup/{sport}`), `LineupMapper` to engine `Lineup` (`toEngineLineup(athletes)`), tests.
+**Files:** `domain/model/Lineup.kt` (uses `com.arenacity.engine.model.Tactics`), `V4__Create_lineups.sql` (`lineups(club_id, sport, starters uuid[], bench uuid[], tactics_json text, updated_at, pk(club_id, sport))`), `SetLineupUseCase` + validation rules, `LineupRoute` (`GET/PUT /club/lineup/{sport}`), `LineupMapper` to engine `Lineup` (`toEngineLineup(athletes)`), tests.
 
 - [ ] `PUT` validates per Lineup rules; `GET` returns current or an auto-generated default (best 11 by overall with 1 GK) and `isDefault = true`.
-- [ ] `EngineBridge.toEngineLineup(club, athletes, lineup): com.matchdayclub.engine.model.Lineup` with fatigue/injury flags — unit test that an injured athlete maps to `injured = true`.
+- [ ] `EngineBridge.toEngineLineup(club, athletes, lineup): com.arenacity.engine.model.Lineup` with fatigue/injury flags — unit test that an injured athlete maps to `injured = true`.
 - [ ] Commit: `server: football lineup and tactics`.
 
 ### Task 6: Wiring, smoke run, docs
