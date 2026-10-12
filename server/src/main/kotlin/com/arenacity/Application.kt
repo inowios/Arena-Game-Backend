@@ -18,4 +18,5 @@ fun Application.module() {
     configureRateLimiting()
     configureMatchdayScheduler()
     configureRouting()
+    configureShowcase()
 }

@@ -195,14 +195,15 @@ class HeadToHeadUseCase(private val service: ClubService, private val clubs: Clu
     }
 }
 
-data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>)
+data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>, val parcels: Set<Pair<Int, Int>> = com.arenacity.domain.rules.Land.HOME)
 
 /** Another club's grounds, read-only (spec §5 "прогресс друга": visit the friend's club). */
-class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService) {
+class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService, private val land: com.arenacity.domain.repository.LandRepository? = null) {
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
         val list = buildings.listByClub(club.id)
-        return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list))
+        val parcels = com.arenacity.domain.rules.Land.HOME + (land?.listByClub(club.id)?.toSet() ?: emptySet())
+        return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list), parcels)
     }
 }
 

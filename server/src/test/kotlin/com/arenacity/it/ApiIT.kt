@@ -67,6 +67,20 @@ class ApiIT {
     }
 
     @Test
+    fun `showcase friends and their cities over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val t = guestWithClub("it-device-friends", "Friends FC")
+        val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
+        assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
+        val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
+        assertEquals(36, g["parcels"]!!.jsonArray.size)
+        assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
+        assertTrue(g["buildings"]!!.jsonArray.size > 300)
+    }
+
+    @Test
     fun `fences, edit mode and saved layouts over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }

@@ -184,7 +184,9 @@ val appModule = module {
     single { val koin = getKoin(); com.arenacity.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get(), channels = { club, ch -> koin.get<com.arenacity.domain.usecase.alliance.AllianceUseCases>().isMember(club, ch) }) }
     single { com.arenacity.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
-    single { com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get()) }
+    single { com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get(), get()) }
+    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get()) }
+    single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
     single { com.arenacity.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
