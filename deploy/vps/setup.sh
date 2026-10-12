@@ -30,9 +30,12 @@ if [ ! -f .env.prod ]; then
 fi
 mkdir -p secrets
 
-# the Cloudflare origin certificate must name the subdomain
-if ! openssl x509 -in /etc/ssl/cloudflare-cert.pem -noout -ext subjectAltName 2>/dev/null | grep -qE "\*\.arenaproplay\.com|$DOMAIN"; then
-  echo "⚠ /etc/ssl/cloudflare-cert.pem does not cover $DOMAIN — make a new origin certificate for *.arenaproplay.com in Cloudflare"
+# the certificate for the Cloudflare → VPS hop (Cloudflare shows its own to the players); kept if already there
+if [ ! -f /etc/ssl/arenacity/cert.pem ]; then
+  say "self-signed origin certificate in /etc/ssl/arenacity (Cloudflare SSL mode Full)"
+  mkdir -p /etc/ssl/arenacity && chmod 700 /etc/ssl/arenacity
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=$DOMAIN" -addext "subjectAltName=DNS:$DOMAIN" \
+    -keyout /etc/ssl/arenacity/key.pem -out /etc/ssl/arenacity/cert.pem 2>/dev/null
 fi
 
 cp docker-compose.prod.yml docker-compose.yml   # docker compose finds it without -f
