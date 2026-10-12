@@ -1,5 +1,39 @@
 # Deploying and running the backend
 
+## Production: the shared VPS (arenacity.arenaproplay.com)
+
+Arena City runs on the same VPS and domain as Arena Pro Play (and qrkontaq), each project fully separate —
+see `~/StudioProjects/ops` (backups, runbook). Files: `deploy/vps/`.
+
+| | |
+|---|---|
+| URL | `https://arenacity.arenaproplay.com` (Cloudflare, account B; the same origin certificate as `api.arenaproplay.com`) |
+| server dir | `/opt/arenacity/prod` (`docker-compose.yml`, `.env.prod`, `secrets/`) |
+| containers | `arenacity-prod` on `127.0.0.1:8083` (qrkontaq 8080, Arena dev 8081, Arena prod 8082), `arenacity-db-prod` (no published port) |
+| volume | `arenacity-prod-pgdata`; nightly off-site dumps by `/opt/ops/backup.sh` |
+| image | `ghcr.io/inowios/arena-game-backend:<sha>` / `:prod`, built by CI on every push to `main` |
+
+**First start** (once):
+1. Cloudflare (arenaproplay.com) → DNS → an `A` record `arenacity` → the VPS IP, proxied (orange cloud), like `api`.
+2. From this repo:
+   ```bash
+   ssh arena-prod 'mkdir -p /opt/arenacity/prod'
+   scp -r deploy/vps/* arena-prod:/opt/arenacity/prod/
+   ssh arena-prod 'bash /opt/arenacity/prod/setup.sh'
+   ```
+   `setup.sh` creates `.env.prod` with random secrets (never overwrites it), checks that port 8083 is free and that the
+   origin certificate covers the subdomain, starts the containers, adds the nginx site (`nginx -t` before the reload;
+   the other sites are not touched) and joins the nightly backups. Afterwards fill in `.env.prod` as needed
+   (`SUPPORT_EMAIL`, sign-in, purchases, push) and `docker compose up -d app`.
+3. `curl https://arenacity.arenaproplay.com/health` → `{"code":200,"data":"ok",…}`
+
+**Updates:** push to `main`, then `deploy/deploy-vps.sh` (waits for CI on that commit, pulls its image on the VPS,
+restarts the app — migrations run on boot — and checks `/health`). Roll back: `deploy/deploy-vps.sh <older sha>`.
+
+**The app:** `SERVER=prod unity/scripts/run_sim.sh device` (Arena-Game-Mobile) builds the iPhone app against production.
+
+## Own server (generic)
+
 One VPS with Docker is enough for launch (2 vCPU / 4 GB comfortably runs the app, PostgreSQL and Caddy).
 The matchday scheduler runs inside the app and assumes **a single app instance**.
 
