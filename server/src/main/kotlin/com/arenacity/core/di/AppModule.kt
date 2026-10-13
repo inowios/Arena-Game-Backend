@@ -55,21 +55,24 @@ val appModule = module {
     single<BuildingRepository> { BuildingRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
     single<com.arenacity.domain.repository.ObstacleRepository> { com.arenacity.data.repository.ObstacleRepositoryImpl() }
+    single<com.arenacity.domain.rules.LandMap> { com.arenacity.domain.rules.Lands.MAP }
+    single<com.arenacity.domain.repository.RehomeLogRepository> { com.arenacity.data.repository.RehomeLogRepositoryImpl() }
     single {
-        ClubService(get(), get(), get(), getAll<BuildingListener>(), get(), get()).also { svc ->
+        ClubService(get(), get(), get(), getAll<BuildingListener>(), get(), lands = get(), tx = get(), moves = get()).also { svc ->
             val koin = getKoin()
             svc.effects = { koin.get<com.arenacity.domain.usecase.liveops.LiveOps>().modifiers().let { com.arenacity.domain.usecase.club.EventEffects(it.buildTimePct, it.incomePct, it.obstacleGoldPct) } }
+            // a side island opens with its arena: the club's OPEN zones (as GET /club/zones has them)
+            svc.openZones = { id -> com.arenacity.domain.usecase.club.openZoneSports(koin.get(), id, koin.get<Clock>().now()) }
         }
     }
     single<com.arenacity.domain.usecase.liveops.LiveOpsRepository> { com.arenacity.data.repository.LiveOpsRepositoryImpl() }
     single { val econ: EconomyRepository = get(); com.arenacity.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get(), purchases = { club, pid -> econ.hasPurchase(club, pid) }) }
     single<com.arenacity.domain.repository.ZoneRepository> { com.arenacity.data.repository.ZoneRepositoryImpl() }
-    single<com.arenacity.domain.repository.LandRepository> { com.arenacity.data.repository.LandRepositoryImpl() }
-    single { com.arenacity.domain.usecase.club.LandUseCases(get(), get(), get(), tx = get()) }
+    single { com.arenacity.domain.usecase.club.LandSweep(get(), get()) }
     single { com.arenacity.domain.usecase.club.ZoneUseCases(get(), get(), get(), get(), tx = get()) }
     single { SectionService(get(), get(), get()) }
     single<BuildingListener>(qualifier = org.koin.core.qualifier.named("sectionSquad")) { SectionSquadOnCourt(get(), get()) }
-    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get()) }
+    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get(), lands = get()) }
     single { GetClubUseCase(get()) }
     single { PlaceBuildingUseCase(get(), get(), get(), tx = get(), cosmetics = get()) }
     single { UpgradeBuildingUseCase(get(), get(), get(), tx = get()) }
@@ -184,7 +187,12 @@ val appModule = module {
     single { val koin = getKoin(); com.arenacity.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get(), channels = { club, ch -> koin.get<com.arenacity.domain.usecase.alliance.AllianceUseCases>().isMember(club, ch) }) }
     single { com.arenacity.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
-    single { com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get(), get()) }
+    single {
+        com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get(), get()).also { g ->
+            val koin = getKoin()
+            g.openZones = { id -> com.arenacity.domain.usecase.club.openZoneSports(koin.get(), id, koin.get<Clock>().now()) }
+        }
+    }
     single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get()) }
     single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }

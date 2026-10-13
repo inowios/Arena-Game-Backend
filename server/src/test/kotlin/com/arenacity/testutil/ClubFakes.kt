@@ -16,21 +16,28 @@ class FakeClubRepository : ClubRepository {
     override suspend fun lockByUserId(userId: UUID) = findByUserId(userId)
     override suspend fun lockById(id: UUID) = findById(id)
     override suspend fun create(club: Club): Club { rows[club.id] = club; return club }
-    override suspend fun update(club: Club): Club { rows[club.id] = club; return club }
+    /** Like the real one: never writes the land mask (a stale copy keeps the stored one). */
+    override suspend fun update(club: Club): Club { rows[club.id] = club.copy(landMask = rows[club.id]?.landMask ?: club.landMask); return rows.getValue(club.id) }
+    override suspend fun setLandMask(id: UUID, mask: String) { rows[id]?.let { rows[id] = it.copy(landMask = mask) } }
+    override suspend fun staleLand(mask: String) = rows.values.filter { it.landMask != mask }.map { it.id }
 }
 
+/** Keeps the table's UNIQUE (club_id, grid_x, grid_y): a create or move onto another building's top-left cell fails like the database. */
 class FakeBuildingRepository : BuildingRepository {
     val rows = linkedMapOf<UUID, Building>()
+    private fun unique(b: Building) = check(rows.values.none { it.id != b.id && it.clubId == b.clubId && it.gridX == b.gridX && it.gridY == b.gridY }) {
+        "duplicate key value violates unique constraint (club_id, grid_x, grid_y) = (${b.clubId}, ${b.gridX}, ${b.gridY})"
+    }
     override suspend fun listByClub(clubId: UUID) = rows.values.filter { it.clubId == clubId }
     override suspend fun findById(id: UUID) = rows[id]
-    override suspend fun create(building: Building): Building { rows[building.id] = building; return building }
+    override suspend fun create(building: Building): Building { unique(building); rows[building.id] = building; return building }
     override suspend fun update(building: Building): Building { rows[building.id] = building; return building }
     override suspend fun completeConstruction(building: Building): Boolean {
         val cur = rows[building.id] ?: return false
         if (cur.state != com.arenacity.domain.model.BuildingState.UPGRADING) return false
         rows[building.id] = building; return true
     }
-    override suspend fun move(building: Building): Building { rows[building.id] = building; return building }
+    override suspend fun move(building: Building): Building { unique(building); rows[building.id] = building; return building }
     override suspend fun delete(id: UUID) { rows.remove(id) }
     /** Tests that need buildings a bigger stadium opens: puts the club's stadium on [level] at once. */
     fun setStadium(clubId: UUID, level: Int) {
@@ -57,9 +64,15 @@ class FakeObstacleRepository : com.arenacity.domain.repository.ObstacleRepositor
         rows[o.id] = o; return true
     }
     override suspend fun take(id: UUID): Boolean = rows[id]?.takeIf { it.state == com.arenacity.domain.model.ObstacleState.READY }?.let { rows.remove(id); true } ?: false
+    override suspend fun delete(id: UUID) { rows.remove(id) }
     override suspend fun spawnClock(clubId: UUID) = clocks[clubId]
     override suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean {
         if (clocks[clubId] != expected) return false
         clocks[clubId] = next; return true
     }
+}
+
+class FakeRehomeLog : com.arenacity.domain.repository.RehomeLogRepository {
+    val rows = mutableListOf<com.arenacity.domain.repository.RehomeMove>()
+    override suspend fun record(moves: List<com.arenacity.domain.repository.RehomeMove>) { rows += moves }
 }

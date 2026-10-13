@@ -14,8 +14,8 @@ class ObstacleTest {
     private val clubs = FakeClubRepository()
     private val buildings = FakeBuildingRepository()
     private val obstacles = FakeObstacleRepository()
-    private val service = ClubService(clubs, buildings, clock, obstacles = obstacles)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
+    private val service = ClubService(clubs, buildings, clock, obstacles = obstacles, lands = TestLand.NOTCHED)
+    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList(), lands = TestLand.NOTCHED)
     private val get = GetClubUseCase(service)
     private val place = PlaceBuildingUseCase(service, buildings, clock)
     private val clear = ClearObstacleUseCase(service, obstacles, clock)
@@ -32,7 +32,7 @@ class ObstacleTest {
         assertEquals(Obstacles.START, st.obstacles.size)
         // never on a building, never on each other, inside the plot
         for (o in st.obstacles) {
-            assertTrue(o.footprint.fits(st.gridSize))
+            assertTrue(st.land.fits(o.footprint))
             assertTrue(st.buildings.none { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(o.footprint) })
             assertEquals(1, st.obstacles.count { it.footprint.overlaps(o.footprint) })
         }

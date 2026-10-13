@@ -39,7 +39,8 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/auth/transfer-code`; `/auth/transfer` `{code, deviceId}` | move an account to another device with a one-time code (24 h) |
 | GET/POST | `/api/v1/club/inbox`, `/club/inbox/read` | in-app inbox (matchday results, season end, accepted challenges, new league members); `GET /club` has `inboxUnread` |
 | GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level) |
-| POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, grid) |
+| GET | `/api/v1/catalog/land` | the land mask (`resources/land/land_mask.json`, from the art pipeline; the old 48×48 square until it is installed): 10 m cells of the main island and the locked side islands; `ETag` = its sha1 id |
+| POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, `land` = `{maskId, regions, locked}`; `parcels`/`gridSize` are the old square's, kept for one client release) |
 | POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` |
 | POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`, `/move` `{x,y,rotation}`; DELETE | building actions (one builder; constructions queue on it) |
 | POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |

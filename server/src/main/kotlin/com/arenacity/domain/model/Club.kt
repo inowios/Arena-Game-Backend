@@ -47,6 +47,11 @@ data class Club(
     val marketSalt: Int = 0,
     /** ISO week (year*100 + week) the arena chest was last opened in. */
     val arenaChestWeek: Int = 0,
+    /**
+     * The land mask (rules.Lands, its id) the club's buildings were last moved onto; null = never. Read-only in
+     * [com.arenacity.domain.repository.ClubRepository.update]: only ClubService.settle moves it on.
+     */
+    val landMask: String? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

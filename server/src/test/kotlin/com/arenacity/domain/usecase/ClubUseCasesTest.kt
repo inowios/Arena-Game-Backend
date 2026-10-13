@@ -15,8 +15,9 @@ class ClubUseCasesTest {
     private val clock = FixedClock()
     private val clubs = FakeClubRepository()
     private val buildings = FakeBuildingRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
+    // the old square with a corner cut off: the cells these tests name are on it or off it whatever mask the server ships
+    private val service = ClubService(clubs, buildings, clock, lands = TestLand.NOTCHED)
+    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList(), lands = TestLand.NOTCHED)
     private val get = GetClubUseCase(service)
     private val place = PlaceBuildingUseCase(service, buildings, clock)
     private val upgrade = UpgradeBuildingUseCase(service, buildings, clock)
@@ -73,18 +74,16 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `a court may stand on its own plot outside the grid, nowhere else outside it`() = runBlocking<Unit> {
+    fun `a court stands on the land like any other building`() = runBlocking<Unit> {
         newClub()
         clubs.update(clubs.rows.values.first().copy(coins = 1_000_000, trophies = 100_000))
         // stadium 3: two upgrades of the pitch
         repeat(2) { val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }; upgrade(user, pitch.id); clock.advanceSeconds(24 * 3600) }
         assertEquals(3, get(user).stadium)
-        // every court stands on the plot like any other building (the eras map, 12 October): no reserved plots
-        assertNull(ReservedPlots.of(BuildingType.BASKETBALL_COURT))
+        // every court stands on the land like any other building (the eras map, 12 October): no reserved plots
         val court = place(user, BuildingType.BASKETBALL_COURT, 20, 20, 0)
         assertEquals(20, court.gridX); assertEquals(20, court.gridY)
-        assertTrue(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(24, 24, 3, 2), 24))
-        assertFalse(ReservedPlots.allowed(BuildingType.BASKETBALL_COURT, Footprint(25, 25, 3, 2), 24))
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 39, 39, 0) }.template)
         Unit
     }
 

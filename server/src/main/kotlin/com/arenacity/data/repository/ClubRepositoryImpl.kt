@@ -31,8 +31,10 @@ class ClubRepositoryImpl : ClubRepository {
     override suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.level greaterEq (level - spread)) and (ClubTable.level lessEq (level + spread)) and (ClubTable.id neq except) }.limit(limit).map { it.toClub() } }
     override suspend fun lockByUserId(userId: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.userId eq userId }.forUpdate().singleOrNull()?.toClub() }
     override suspend fun lockById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.forUpdate().singleOrNull()?.toClub() }
-    override suspend fun create(club: Club) = dbQuery { ClubTable.insert { it.fill(club); it[id] = club.id; it[userId] = club.userId; it[createdAt] = club.createdAt }; club }
+    override suspend fun create(club: Club) = dbQuery { ClubTable.insert { it.fill(club); it[id] = club.id; it[userId] = club.userId; it[createdAt] = club.createdAt; it[landMask] = club.landMask }; club }
     override suspend fun update(club: Club) = dbQuery { ClubTable.update({ ClubTable.id eq club.id }) { it.fill(club) }; club }
+    override suspend fun setLandMask(id: UUID, mask: String) { dbQuery { ClubTable.update({ ClubTable.id eq id }) { it[landMask] = mask } } }
+    override suspend fun staleLand(mask: String) = dbQuery { ClubTable.select(ClubTable.id).where { ClubTable.landMask.isNull() or (ClubTable.landMask neq mask) }.map { it[ClubTable.id] } }
 
     private fun UpdateBuilder<*>.fill(c: Club) {
         this[ClubTable.name] = c.name; this[ClubTable.primaryColor] = c.primaryColor; this[ClubTable.secondaryColor] = c.secondaryColor
@@ -91,6 +93,7 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.builderSlots], this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
     this[ClubTable.scoutSignedDate],
     this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
+    this[ClubTable.landMask],
 )
 
 class ObstacleRepositoryImpl : com.arenacity.domain.repository.ObstacleRepository {
@@ -104,6 +107,7 @@ class ObstacleRepositoryImpl : com.arenacity.domain.repository.ObstacleRepositor
         ObstacleTable.update({ (ObstacleTable.id eq o.id) and (ObstacleTable.state eq ObstacleState.CLEARING.name) }) { it.fill(o) } == 1
     }
     override suspend fun take(id: UUID): Boolean = dbQuery { ObstacleTable.deleteWhere { (ObstacleTable.id eq id) and (ObstacleTable.state eq ObstacleState.READY.name) } == 1 }
+    override suspend fun delete(id: UUID) { dbQuery { ObstacleTable.deleteWhere { ObstacleTable.id eq id } } }
     override suspend fun spawnClock(clubId: UUID) = dbQuery { ClubObstacleClock.selectAll().where { ClubObstacleClock.id eq clubId }.singleOrNull()?.get(ClubObstacleClock.spawnedAt) }
     override suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean = dbQuery {
         val cond = if (expected == null) (ClubObstacleClock.id eq clubId) and ClubObstacleClock.spawnedAt.isNull() else (ClubObstacleClock.id eq clubId) and (ClubObstacleClock.spawnedAt eq expected)

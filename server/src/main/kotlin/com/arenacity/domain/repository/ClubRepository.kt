@@ -15,7 +15,12 @@ interface ClubRepository {
     suspend fun lockByUserId(userId: UUID): Club?
     suspend fun lockById(id: UUID): Club?
     suspend fun create(club: Club): Club
+    /** Writes the club's fields; never [Club.landMask] (a stale copy must not move the club back onto an older land mask). */
     suspend fun update(club: Club): Club
+    /** The club's buildings now stand on the land mask [mask] (ClubService.settle). */
+    suspend fun setLandMask(id: UUID, mask: String)
+    /** Clubs whose buildings were last moved onto another land mask than [mask], or never (the start-up sweep). */
+    suspend fun staleLand(mask: String): List<UUID>
 }
 
 interface BuildingRepository {
@@ -38,6 +43,8 @@ interface ObstacleRepository {
     suspend fun finishClearing(o: com.arenacity.domain.model.Obstacle): Boolean
     /** Deletes a READY obstacle; false if someone else picked it up first. */
     suspend fun take(id: UUID): Boolean
+    /** Takes an obstacle away whatever its state (the land migration: it stood where the sea is now). */
+    suspend fun delete(id: UUID)
     /** When the last obstacle turned up for the club (null: never). */
     suspend fun spawnClock(clubId: UUID): java.time.Instant?
     /** Moves the spawn clock from [expected] to [next]; false if another request already did (it spawns, we don't). */

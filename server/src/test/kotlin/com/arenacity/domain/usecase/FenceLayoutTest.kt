@@ -14,8 +14,9 @@ class FenceLayoutTest {
     private val clock = FixedClock()
     private val clubs = FakeClubRepository()
     private val buildings = FakeBuildingRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
+    // the old square with a corner cut off: the cells these tests name are on it or off it whatever mask the server ships
+    private val service = ClubService(clubs, buildings, clock, lands = TestLand.NOTCHED)
+    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList(), lands = TestLand.NOTCHED)
     private val get = GetClubUseCase(service)
     private val fences = PlaceFencesUseCase(service, buildings, clock)
     private val upFences = UpgradeFencesUseCase(service, buildings, clock)

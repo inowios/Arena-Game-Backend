@@ -43,9 +43,16 @@ fun Route.clubRoutes() {
     val readiness: com.arenacity.domain.usecase.live.LiveReadinessUseCase by inject()
     val rest: com.arenacity.domain.usecase.live.RestSquadUseCase by inject()
     val zonesUc: com.arenacity.domain.usecase.club.ZoneUseCases by inject()
-    val landUc: com.arenacity.domain.usecase.club.LandUseCases by inject()
 
     get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
+    // the land mask (rules.Lands): land_mask.json as data, what the client bundles when the ids match (ETag = the id)
+    val landMask by lazy { kotlinx.serialization.json.Json.parseToJsonElement(clubService.lands.json) }
+    get("/catalog/land") {
+        val tag = "\"${clubService.lands.id}\""
+        call.response.header(HttpHeaders.ETag, tag)
+        if (call.request.headers[HttpHeaders.IfNoneMatch] == tag) call.respond(HttpStatusCode.NotModified)
+        else call.respond(landMask.toSuccessResponse())
+    }
 
     authenticate(AUTH_JWT) {
         route("/club") {
@@ -63,17 +70,12 @@ fun Route.clubRoutes() {
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
                 val atmosphere = com.arenacity.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id), clubService.effects().incomePct - 100)
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.arenacity.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) },
-                    st.parcels.map { ParcelDto(it.first, it.second) }, landUc.view(st).toDto()).toSuccessResponse())
+                    LEGACY_HOME_PARCELS, st.land.toDto(clubService.lands)).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
+            // the old land buying (parcels round the plot): gone since the land is a mask, the route answers so for one client release
+            post("/land/{col}/{row}/buy") { throw ValidationException("Land is not for sale") }
             // the stadium zones of the club's rectangle (CITY-BUILD-PLAN stage A)
-            // the land round the club: buy the parcel (col, row) next to your land (closed since the archipelago: 400 "Land is not for sale")
-            post("/land/{col}/{row}/buy") {
-                val col = call.parameters["col"]?.toIntOrNull() ?: throw ValidationException("Bad parcel"); val row = call.parameters["row"]?.toIntOrNull() ?: throw ValidationException("Bad parcel")
-                val view = landUc.buy(call.userId(), col, row)
-                val st = getClub(call.userId())
-                call.respond(HttpStatusCode.Created, LandResponse(view.parcels.map { ParcelDto(it.first, it.second) }, view.toDto(), st.club.toDto()).toSuccessResponse(201))
-            }
             get("/zones") { call.respond(zonesUc.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
             post("/zones/{sport}/buy") {
                 val sport = runCatching { com.arenacity.domain.model.ZoneSport.valueOf(call.parameters["sport"]!!.uppercase()) }.getOrElse { throw com.arenacity.domain.exception.ValidationException("Unknown zone") }

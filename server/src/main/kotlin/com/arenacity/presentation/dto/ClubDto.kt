@@ -6,9 +6,11 @@ import com.arenacity.domain.model.Club
 import com.arenacity.domain.rules.BuildingCatalog
 import com.arenacity.domain.rules.BuildingSpec
 import com.arenacity.domain.rules.ClubLevels
+import com.arenacity.domain.rules.LandMap
+import com.arenacity.domain.rules.LandSet
 import com.arenacity.domain.rules.LevelSpec
-import com.arenacity.domain.rules.ReservedPlots
 import com.arenacity.domain.rules.Stadium
+import com.arenacity.domain.rules.Zones
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
@@ -44,9 +46,7 @@ import java.time.Instant
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredStadium: Int, val requiredTrophies: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
 /** [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first stadium level with a copy. */
 @Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>,
-                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1,
-                                         /** The sport's own plot in the reserved land (courts only; plotW = 0 when none) and where its court stands. */
-                                         val plotX: Int = 0, val plotY: Int = 0, val plotW: Int = 0, val plotH: Int = 0, val courtX: Int = 0, val courtY: Int = 0)
+                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1)
 
 @Serializable data class BuildingDto(
     val id: String, val type: String, val level: Int, val x: Int, val y: Int, val rotation: Int, val state: String,
@@ -61,13 +61,34 @@ import java.time.Instant
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
                                           /** The stadium level whose limits apply now (the club's town hall). */ val stadium: Int = 1,
                                           val obstacles: List<ObstacleDto> = emptyList(),
-                                          /** The land: owned parcels (col, row) of the 6×6 field of 12-cell parcels, and the next parcel's price (0 and buyable=false while land is not for sale). */
-                                          val parcels: List<ParcelDto> = emptyList(), val land: LandDto? = null)
+                                          /** Deprecated, for one client release: the old square plot's parcels (the 4×4 home parcels of the 6×6 field), see [LandDto]. */
+                                          val parcels: List<ParcelDto> = emptyList(),
+                                          /** The club's land: the land mask's id and regions (see [LandDto]). */
+                                          val land: LandDto? = null)
 @Serializable data class ParcelDto(val col: Int, val row: Int)
-/** [buyable] false (since the archipelago, 12 October): the land round the plot is not for sale, [nextPrice] is 0. */
-@Serializable data class LandDto(val parcel: Int, val parcels: Int, val nextPrice: Long, val buyable: Boolean = false)
-fun com.arenacity.domain.usecase.club.LandView.toDto() = LandDto(com.arenacity.domain.rules.Land.PARCEL, com.arenacity.domain.rules.Land.PARCELS, nextPrice, buyable)
-@Serializable data class LandResponse(val parcels: List<ParcelDto>, val land: LandDto, val club: ClubDto)
+/**
+ * The club's land since the owner's picture (13 October, docs/art/PERSPECTIVE-MAP.md §5.5 in the mobile repo): [maskId] =
+ * the sha1 id of the land mask (GET /catalog/land; the client compares its bundled copy), [regions] = the ids of the
+ * regions the club builds on (the main island; a side island once its arena opens it), [locked] = the side islands
+ * still locked. [parcel]/[parcels]/[nextPrice]/[buyable] are the old parcel field's, kept for one client release (land
+ * is not for sale: 0 and false).
+ */
+@Serializable data class LandDto(val parcel: Int = LEGACY_PARCEL, val parcels: Int = LEGACY_PARCELS, val nextPrice: Long = 0, val buyable: Boolean = false,
+                                 val maskId: String = "", val regions: List<String> = emptyList(), val locked: List<LockedLandDto> = emptyList())
+/**
+ * A side island not open for building: its region [id], the [zone] sport whose arena opens it, the stadium level that
+ * arena needs; [state] LOCKED (its arena is not open yet: not bought, or still being restored — GET /club/zones has
+ * which). A zone that is OPEN opens its island: it is in [LandDto.regions] then, not here.
+ */
+@Serializable data class LockedLandDto(val id: String, val zone: String?, val requiredStadium: Int, val state: String = "LOCKED")
+
+private const val LEGACY_PARCEL = 12
+private const val LEGACY_PARCELS = 6
+/** The old plot's parcels (cells -9..38 = parcels 1..4 of the 6×6 field), sent unchanged until the client reads the mask. */
+val LEGACY_HOME_PARCELS: List<ParcelDto> = (1..4).flatMap { c -> (1..4).map { r -> ParcelDto(c, r) } }
+
+fun LandSet.toDto(lands: LandMap) = LandDto(maskId = lands.id, regions = ids,
+    locked = lands.locked(this).map { r -> LockedLandDto(r.id, r.lock, r.sport?.let { Zones.spec(it).requiredStadium } ?: 0) })
 /** An obstacle on the plot: [cost]/[seconds] to clear it; [rewardGold] only once it is cleared (READY). */
 @Serializable data class ObstacleDto(val id: String, val kind: String, val x: Int, val y: Int, val w: Int, val h: Int, val state: String, val remainingSeconds: Long,
                                      val cost: Long, val seconds: Long, val speedUpGold: Int, val rewardGold: Int)
@@ -86,11 +107,7 @@ fun Club.adsState(now: Instant): AdsStateDto {
 }
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
-fun BuildingSpec.toDto(): BuildingSpecDto {
-    val plot = ReservedPlots.of(type)
-    return BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium,
-        plotX = plot?.plot?.x ?: 0, plotY = plot?.plot?.y ?: 0, plotW = plot?.plot?.w ?: 0, plotH = plot?.plot?.h ?: 0, courtX = plot?.courtX ?: 0, courtY = plot?.courtY ?: 0)
-}
+fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium)
 
 fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.arenacity.domain.rules.Atmosphere.Bonus = com.arenacity.domain.rules.Atmosphere.Bonus()): BuildingDto {
     val spec = BuildingCatalog.level(type, level)

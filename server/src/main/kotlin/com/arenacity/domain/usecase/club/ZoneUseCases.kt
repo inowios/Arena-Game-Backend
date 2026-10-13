@@ -16,6 +16,13 @@ import com.arenacity.domain.rules.Zones
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * The zone sports whose arena is open now (bought and restored): each opens the side island its sport locks for building
+ * (rules.LandMap.of; ClubService.openZones and GetGroundsUseCase.openZones in DI), so GET /club and GET /club/zones agree.
+ */
+suspend fun openZoneSports(zones: ZoneRepository, clubId: UUID, now: Instant): Set<ZoneSport> =
+    zones.listByClub(clubId).filter { it.stateAt(now) == ZoneState.OPEN }.map { it.sport }.toSet()
+
 /** A zone as the client sees it: the spec, the state now and the seconds the restoration still needs. */
 data class ZoneView(val spec: ZoneSpec, val state: ZoneState, val restoreEndsAt: Instant?, val secondsLeft: Long)
 

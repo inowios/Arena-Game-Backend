@@ -4,8 +4,9 @@ import com.arenacity.common.time.Clock
 import com.arenacity.domain.model.*
 import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
-import com.arenacity.domain.repository.LandRepository
 import com.arenacity.domain.repository.UserRepository
+import com.arenacity.domain.rules.LandMap
+import com.arenacity.domain.rules.Lands
 import com.arenacity.domain.rules.Showcase
 import com.arenacity.domain.rules.Stadium
 import java.util.UUID
@@ -13,14 +14,14 @@ import java.util.UUID
 /**
  * The two showcase friends every player has (rules.Showcase): bot clubs outside every league (tzBucket −1), their cities
  * rebuilt from the layout at start-up whenever the layout changed, so they always show what the current game allows
- * (the 48×48 plot of the archipelago v2 rebuilds the older 24×24 and whole-field towns on the first start).
+ * (a new land mask re-fits both towns into it on the first start; [lands]: that mask).
  */
 class ShowcaseService(
     private val users: UserRepository,
     private val clubs: ClubRepository,
     private val buildings: BuildingRepository,
-    private val land: LandRepository,
     private val clock: Clock,
+    private val lands: LandMap = Lands.MAP,
 ) {
     data class Def(val id: UUID, val name: String, val stadium: Int, val level: Int, val reputation: Int, val primary: String, val secondary: String)
 
@@ -37,19 +38,15 @@ class ShowcaseService(
 
     private suspend fun ensure(d: Def) {
         val now = clock.now()
-        val city = Showcase.city(d.stadium)
+        val city = Showcase.city(d.stadium, lands)
         if (clubs.findById(d.id) == null) {
             val userId = UUID.nameUUIDFromBytes("arenacity-showcase-user-${d.stadium}".toByteArray())
             if (users.findById(userId) == null) users.create(User(userId, AuthProvider.BOT, "showcase-${d.stadium}", null, null, null, true, now, now))
             clubs.create(Club(d.id, userId, d.name, d.primary, d.secondary, null, d.level, d.reputation, 0, 0, "UTC", null, null, now, now,
                 isBot = true, division = 1, tzBucket = BUCKET))
         }
-        // the land: the parcels the layout needs beyond the plot (none since the archipelago: the plot is the sixteen home
-        // parcels, never stored), every other stored row given back — older layouts owned the whole 6×6 field
-        val owned = land.listByClub(d.id).toSet()
-        val need = city.parcels - com.arenacity.domain.rules.Land.HOME
-        for ((c, r) in need - owned) land.add(d.id, c, r, now)
-        for ((c, r) in owned - need) land.remove(d.id, c, r)
+        // the town stands on the current land mask by construction: the land migration has nothing to move here
+        clubs.setLandMask(d.id, lands.id)
         // the buildings: replaced only when the layout differs from what is stored
         val have = buildings.listByClub(d.id)
         val want = city.slots.map { Triple(it.type, it.level, it.x to it.y) }.toSet()

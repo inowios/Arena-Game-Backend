@@ -195,17 +195,23 @@ class HeadToHeadUseCase(private val service: ClubService, private val clubs: Clu
     }
 }
 
-data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>, val parcels: Set<Pair<Int, Int>> = com.arenacity.domain.rules.Land.HOME)
+/** [land]: the visited club's land (the main island, and its side islands once their arenas open them), [lands] its mask. */
+data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>, val land: com.arenacity.domain.rules.LandSet,
+                   val lands: com.arenacity.domain.rules.LandMap)
 
 /** Another club's grounds, read-only (spec §5 "прогресс друга": visit the friend's club). */
-class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService, private val land: com.arenacity.domain.repository.LandRepository? = null) {
+class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService,
+                        private val lands: com.arenacity.domain.rules.LandMap = com.arenacity.domain.rules.Lands.MAP) {
+    /** The zone sports whose arena opens a club's side island (its OPEN zones; DI), as in ClubService. */
+    var openZones: suspend (UUID) -> Set<com.arenacity.domain.model.ZoneSport> = { emptySet() }
+
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        val parcels = com.arenacity.domain.rules.Land.owned(land?.listByClub(club.id) ?: emptyList())
-        // what stands on the club's land: a building left on a parcel that is sea now (bought before the archipelago)
-        // moves onto the plot when its owner next opens the club (ClubService.rehome); until then a visitor does not see it
-        val list = buildings.listByClub(club.id).filter { com.arenacity.domain.rules.Land.fits(com.arenacity.domain.rules.footprint(it.type, it.gridX, it.gridY, it.rotation), parcels) }
-        return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list), parcels)
+        val land = lands.of(openZones(club.id))
+        // what stands on the club's land: a building still off it (its owner has not opened the club since the land
+        // became a mask, or one the land had no room for, parked) is not shown to a visitor
+        val list = buildings.listByClub(club.id).filter { land.fits(com.arenacity.domain.rules.footprint(it.type, it.gridX, it.gridY, it.rotation)) }
+        return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list), land, lands)
     }
 }
 

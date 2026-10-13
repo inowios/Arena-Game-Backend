@@ -36,6 +36,8 @@ class ApiIT {
     private suspend fun ApplicationTestBuilder.guestWithClub(device: String, name: String): String {
         val token = call(HttpMethod.Post, "/auth/guest", body = """{"deviceId":"$device"}""").data.o()["accessToken"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/club", token, """{"name":"$name","primaryColor":"#112233","secondaryColor":"#ffffff","timezone":"UTC"}""", expect = 201)
+        // the land mask as the client fetches it: what freeSpot builds on
+        served = com.arenacity.domain.rules.LandMap.parse(call(HttpMethod.Get, "/catalog/land").data.toString())
         return token
     }
 
@@ -74,28 +76,34 @@ class ApiIT {
         val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
         assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
         val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
-        // both showcases stand on the plot alone (the sixteen home parcels, 48×48 cells) since the archipelago
+        // both showcases stand on the land mask's main island; the grounds carry the visited club's land (and, for one
+        // client release, the old square's sixteen parcels and 48 cells)
         val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
+        assertEquals(served.id, g["land"]!!.o()["maskId"]!!.jsonPrimitive.content)
+        assertEquals(listOf(served.main.id), g["land"]!!.o()["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(16, g["parcels"]!!.jsonArray.size); assertEquals(48, g["gridSize"]!!.jsonPrimitive.int)
         assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
         val types = g["buildings"]!!.jsonArray.map { it.o()["type"]!!.jsonPrimitive.content }
-        assertEquals(com.arenacity.domain.rules.Showcase.city(10).slots.size, types.size)
+        assertEquals(com.arenacity.domain.rules.Showcase.city(10, served).slots.size, types.size)
         assertTrue(types.count { it != "ROAD" && it != "DECOR" } >= 15)
-        // and the land round the plot is not for sale: GET /club shows no price, buying answers a clear error
-        val land = call(HttpMethod.Get, "/club", t).data.o()
-        assertEquals((1..4).flatMap { c -> (1..4).map { r -> c to r } }.toSet(),
-            land["parcels"]!!.jsonArray.map { it.o()["col"]!!.jsonPrimitive.int to it.o()["row"]!!.jsonPrimitive.int }.toSet())
-        assertEquals(48, land["gridSize"]!!.jsonPrimitive.int)
-        assertEquals(0, land["land"]!!.o()["nextPrice"]!!.jsonPrimitive.int); assertEquals(false, land["land"]!!.o()["buyable"]!!.jsonPrimitive.boolean)
+        // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
+        val state = call(HttpMethod.Get, "/club", t).data.o()
+        val land = state["land"]!!.o()
+        assertEquals(served.id, land["maskId"]!!.jsonPrimitive.content)
+        assertEquals(listOf(served.main.id), land["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(served.locked(served.home).map { it.id }, land["locked"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
+        assertEquals(0, land["nextPrice"]!!.jsonPrimitive.int); assertEquals(false, land["buyable"]!!.jsonPrimitive.boolean)
+        val cached = client.request("/api/v1/catalog/land") { header(HttpHeaders.IfNoneMatch, "\"${served.id}\"") }
+        assertEquals(304, cached.status.value)
+        // land is not for sale any more: the old buying route answers a clear error
         val refused = call(HttpMethod.Post, "/club/land/5/2/buy", t, expect = 400, lang = "ru").o()["errors"]!!.jsonArray.single().jsonPrimitive.content
         assertEquals("Земля вокруг твоего участка не продаётся: клуб растёт на островах", refused)
-        assertEquals(16, call(HttpMethod.Get, "/club", t).data.o()["parcels"]!!.jsonArray.size)
-        // the plot's new land is the club's at once: the first free spot lies on a parcel that was not home before v2
-        val (nx, ny) = freeSpot(land, "ACADEMY")
-        assertTrue(ny < 3, "($nx, $ny)")
+        // a free spot on the mask is built on; a cell off it (the sea round the meadow) is refused
+        val (nx, ny) = freeSpot(state, "ACADEMY")
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$nx,"y":$ny}""", expect = 201)
-        // the old field round the plot is sea
-        val sea = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":-12,"y":5}]}""", expect = 400).o()["errors"]!!.jsonArray.single().jsonPrimitive.content
+        val m = served.main
+        val (sx, sy) = (m.x0 - 1..m.x0 + m.w).flatMap { x -> (m.y0 - 1..m.y0 + m.h).map { y -> x to y } }.first { (x, y) -> served.regions.none { it.has(x, y) } }
+        val sea = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$sx,"y":$sy}]}""", expect = 400).o()["errors"]!!.jsonArray.single().jsonPrimitive.content
         assertEquals("That spot is outside your land", sea)
     }
 
@@ -361,13 +369,16 @@ class ApiIT {
     }
 }
 
+/** The land mask GET /catalog/land served (set when a test signs in, see guestWithClub). */
+private lateinit var served: com.arenacity.domain.rules.LandMap
+
 /** A free spot for a building type (its real footprint, unrotated). */
 private fun freeSpot(state: kotlinx.serialization.json.JsonObject, type: String): Pair<Int, Int> {
     val fp = com.arenacity.domain.rules.footprint(com.arenacity.domain.rules.BuildingType.valueOf(type), 0, 0, 0)
     return freeSpot(state, fp.w, fp.h)
 }
 
-/** A free w×h spot on the plot of a GET /club response (buildings and obstacles taken into account). */
+/** A free w×h spot on the club's land (the served mask's main island) of a GET /club response (buildings and obstacles taken into account). */
 private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: Int): Pair<Int, Int> {
     val taken = mutableListOf<com.arenacity.domain.rules.Footprint>()
     for (b in state["buildings"]!!.jsonArray) {
@@ -378,13 +389,11 @@ private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: In
         val o = b.jsonObject
         taken += com.arenacity.domain.rules.Footprint(o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["w"]!!.jsonPrimitive.int, o["h"]!!.jsonPrimitive.int)
     }
-    // the club's own land (the HOME parcels at the start; GET /club lists them as "parcels")
-    val land = com.arenacity.domain.rules.Land
-    val owned = state["parcels"]?.jsonArray?.map { it.jsonObject["col"]!!.jsonPrimitive.int to it.jsonObject["row"]!!.jsonPrimitive.int }?.toSet() ?: land.HOME
-    val lo = land.ORIGIN; val hi = land.ORIGIN + land.CELLS
-    for (y in lo..hi - h) for (x in lo..hi - w) {
+    val regions = state["land"]!!.jsonObject["regions"]!!.jsonArray.map { it.jsonPrimitive.content }.toSet()
+    val land = com.arenacity.domain.rules.LandSet(served.regions.filter { it.id in regions })
+    for ((x, y) in land.cells) {
         val fp = com.arenacity.domain.rules.Footprint(x, y, w, h)
-        if (land.fits(fp, owned) && taken.none { it.overlaps(fp) }) return x to y
+        if (land.fits(fp) && taken.none { it.overlaps(fp) }) return x to y
     }
     error("no free spot")
 }
