@@ -11,6 +11,8 @@ import com.arenacity.domain.repository.AthleteRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.PackRepository
 import com.arenacity.domain.rules.AthleteFactory
+import com.arenacity.domain.rules.DailyOffer
+import com.arenacity.domain.rules.DailyOffers
 import com.arenacity.domain.rules.PackSpec
 import com.arenacity.domain.rules.Packs
 import com.arenacity.domain.rules.PullTier
@@ -23,6 +25,8 @@ import kotlin.random.Random
 data class PackOffer(val spec: PackSpec, val open: Boolean, val freeToday: Boolean)
 data class PackShelf(val offers: List<PackOffer>, val sinceEpic: Int, val sinceLegend: Int, val collection: Int)
 data class PackResult(val open: PackOpen, val athletes: List<Athlete>, val club: Club)
+/** The day's pack offer as a club sees it: whether its level has opened the pack and whether it was bought today. */
+data class DailyOfferView(val offer: DailyOffer, val open: Boolean, val bought: Boolean)
 
 /** The pack shop: what is on the shelf and the opening itself (plan §3b). */
 class PackUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val packs: PackRepository,
@@ -56,13 +60,33 @@ class PackUseCases(private val service: ClubService, private val clubs: ClubRepo
         val club = service.lockedClubOf(userId)
         if (club.level < spec.unlockLevel) throw ValidationException("This pack opens at club level {0}", spec.unlockLevel)
         val history = packs.listByClub(club.id)
+        val free = spec.kind == CardKind.CLASSIC && freeToday(club, history)
+        pull(club, spec, if (free) 0L else spec.coins, if (free) 0 else spec.gold, history, clock.now())
+    }
+
+    /** The day's offer (rules.DailyOffers) for the club. */
+    suspend fun offer(userId: UUID): DailyOfferView {
+        val club = service.clubOf(userId); val now = clock.now()
+        val o = DailyOffers.of(now, club.level)
+        return DailyOfferView(o, club.level >= o.spec.unlockLevel, club.offerDay == o.day)
+    }
+
+    /** Buys the day's offer at its discounted price: once a UTC day per club. */
+    suspend fun buyOffer(userId: UUID): Pair<PackResult, DailyOfferView> = tx {
+        val club = service.lockedClubOf(userId); val now = clock.now()
+        val o = DailyOffers.of(now, club.level)
+        if (club.level < o.spec.unlockLevel) throw ValidationException("This pack opens at club level {0}", o.spec.unlockLevel)
+        if (club.offerDay == o.day) throw ConflictException("Today's offer is already bought")
+        val r = pull(club.copy(offerDay = o.day), o.spec, 0L, o.price, packs.listByClub(club.id), now)
+        r to DailyOfferView(o, true, true)
+    }
+
+    /** One opening of [spec] for [coins] and [gold], the club saved with the price paid. */
+    private suspend fun pull(club: Club, spec: PackSpec, coins: Long, gold: Int, history: List<PackOpen>, now: java.time.Instant): PackResult {
         val squad = athletes.listByClub(club.id)
         if (squad.count { it.retiredAt == null } + Packs.CARDS_PER_PACK > Packs.COLLECTION_MAX) throw ConflictException("The collection is full — release someone first")
-        val free = spec.kind == CardKind.CLASSIC && freeToday(club, history)
-        val coins = if (free) 0L else spec.coins; val gold = if (free) 0 else spec.gold
         if (club.coins < coins) throw ValidationException("Not enough coins")
         if (club.gold < gold) throw ValidationException("Not enough gold")
-        val now = clock.now()
         var (sinceEpic, sinceLegend) = pity(history)
         val r = Random(now.toEpochMilli() xor club.id.leastSignificantBits)
         val tiers = ArrayList<PullTier>(); val pulled = ArrayList<Athlete>()
@@ -75,6 +99,6 @@ class PackUseCases(private val service: ClubService, private val clubs: ClubRepo
         athletes.createAll(pulled)
         val saved = clubs.update(club.copy(coins = club.coins - coins, gold = club.gold - gold, updatedAt = now))
         val open = packs.create(PackOpen(UUID.randomUUID(), club.id, spec.kind, coins, gold, tiers, pulled.map { it.id }, now))
-        PackResult(open, pulled, saved)
+        return PackResult(open, pulled, saved)
     }
 }

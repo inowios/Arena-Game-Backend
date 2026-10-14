@@ -48,6 +48,13 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
         return null
     }
 
+    /** A card match starts: it costs [com.arenacity.domain.rules.Energy.CARD_MATCH] energy (400 when short). */
+    suspend fun start(userId: UUID): com.arenacity.domain.rules.EnergyState = tx {
+        val club = service.lockedClubOf(userId); val now = clock.now()
+        val saved = clubs.update(com.arenacity.domain.usecase.club.EnergyUseCases.spend(club, com.arenacity.domain.rules.Energy.CARD_MATCH, now).copy(updatedAt = now))
+        com.arenacity.domain.rules.Energy.state(saved, now)
+    }
+
     suspend fun report(userId: UUID, r: CardMatchReport): CardMatchOutcome = tx {
         if (r.cards.size > MAX_CARDS) throw ValidationException("Too many cards")
         if (r.goalsFor !in 0..20 || r.goalsAgainst !in 0..20) throw ValidationException("Bad score")

@@ -77,7 +77,18 @@ import java.time.Instant
                                           /** Deprecated, for one client release: the old square plot's parcels (the 4×4 home parcels of the 6×6 field), see [LandDto]. */
                                           val parcels: List<ParcelDto> = emptyList(),
                                           /** The club's land: the land mask's id and regions (see [LandDto]). */
-                                          val land: LandDto? = null)
+                                          val land: LandDto? = null,
+                                          /** The club's energy now (rules.Energy). */
+                                          val energy: EnergyDto? = null)
+/**
+ * Energy (rules.Energy): [current] of [max], +1 every [regenSeconds]; [nextAt] = the next +1, [fullAt] = full again (both
+ * null when full); [refillPrice] = gems to fill it up; [cardMatchCost] / [friendlyCost] = what a card match and a
+ * friendly take (league matches are free).
+ */
+@Serializable data class EnergyDto(val current: Int, val max: Int, val nextAt: String?, val fullAt: String?, val regenSeconds: Long, val refillPrice: Int,
+                                   val cardMatchCost: Int = com.arenacity.domain.rules.Energy.CARD_MATCH, val friendlyCost: Int = com.arenacity.domain.rules.Energy.FRIENDLY)
+@Serializable data class EnergyRefillResponse(val energy: EnergyDto, val club: ClubDto)
+fun com.arenacity.domain.rules.EnergyState.toDto() = EnergyDto(current, max, nextAt?.toString(), fullAt?.toString(), regenSeconds, refillGold)
 @Serializable data class ParcelDto(val col: Int, val row: Int)
 /**
  * The club's land since the owner's picture (13 October, docs/art/PERSPECTIVE-MAP.md §5.5 in the mobile repo): [maskId] =

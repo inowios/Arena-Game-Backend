@@ -121,7 +121,9 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
             opponentClubId == club.id -> throw ValidationException("Cannot play against yourself")
             else -> clubs.findById(opponentClubId) ?: throw NotFoundException("Opponent not found")
         }
-        clubs.update(club.copy(friendliesDate = today, friendliesPlayed = playedToday + 1, updatedAt = now))
+        // a friendly costs energy (league matchday matches do not)
+        val paid = com.arenacity.domain.usecase.club.EnergyUseCases.spend(club, com.arenacity.domain.rules.Energy.FRIENDLY, now)
+        clubs.update(paid.copy(friendliesDate = today, friendliesPlayed = playedToday + 1, updatedAt = now))
         val fixture = Fixture(UUID.randomUUID(), null, FixtureKind.FRIENDLY, 0, 0, now, club.id, opponent.id, FixtureStatus.SCHEDULED, null, null, now.toEpochMilli() xor club.id.leastSignificantBits, null, null, now)
         fixtures.createAll(listOf(fixture))
         val p = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")

@@ -29,6 +29,7 @@ object TestDb {
             maximumPoolSize = 12; isAutoCommit = false; transactionIsolation = "TRANSACTION_READ_COMMITTED"
         })
         Flyway.configure().dataSource(ds).locations("classpath:db/migration").cleanDisabled(false).apply { if (target != null) target(target) }.load().apply { clean(); migrate() }
+        if (target != null) laterColumns(ds)
         // explicit default: earlier test classes' pools are closed by now
         org.jetbrains.exposed.sql.transactions.TransactionManager.defaultDatabase = Database.connect(ds)
         last = ds
@@ -36,7 +37,24 @@ object TestDb {
     }
 
     /** Runs the migrations [fresh] left out (all of them up to the latest). */
-    fun migrate(ds: HikariDataSource, target: String? = null) { Flyway.configure().dataSource(ds).locations("classpath:db/migration").apply { if (target != null) target(target) }.load().migrate() }
+    fun migrate(ds: HikariDataSource, target: String? = null) {
+        Flyway.configure().dataSource(ds).locations("classpath:db/migration").apply { if (target != null) target(target) }.load().migrate()
+        if (target != null) laterColumns(ds)
+    }
+
+    /**
+     * A schema migrated only up to an old version still has to be read by today's repositories (a migration test runs the
+     * current code between the steps): the columns later migrations add with defaults (ADD COLUMN IF NOT EXISTS there, so
+     * running them afterwards changes nothing) are added here.
+     */
+    private fun laterColumns(ds: HikariDataSource) = ds.connection.use { c ->
+        c.createStatement().execute("""
+            ALTER TABLE clubs ADD COLUMN IF NOT EXISTS energy INT NOT NULL DEFAULT 30;
+            ALTER TABLE clubs ADD COLUMN IF NOT EXISTS energy_at TIMESTAMPTZ NULL;
+            ALTER TABLE clubs ADD COLUMN IF NOT EXISTS offer_day DATE NULL;
+        """.trimIndent())
+        c.commit()
+    }
 
     /** Application config for `testApplication { environment { config = TestDb.appConfig() } }` against the same database. */
     fun appConfig(extra: Map<String, String> = emptyMap()) = MapApplicationConfig(

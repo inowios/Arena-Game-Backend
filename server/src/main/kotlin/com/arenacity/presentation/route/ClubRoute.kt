@@ -43,6 +43,7 @@ fun Route.clubRoutes() {
     val readiness: com.arenacity.domain.usecase.live.LiveReadinessUseCase by inject()
     val rest: com.arenacity.domain.usecase.live.RestSquadUseCase by inject()
     val zonesUc: com.arenacity.domain.usecase.club.ZoneUseCases by inject()
+    val energy: EnergyUseCases by inject()
 
     // the names and the «soon» lines in the caller's language
     get("/catalog/buildings") {
@@ -74,7 +75,13 @@ fun Route.clubRoutes() {
                 val active = sections.active(st.club, clubBuildings = st.buildings).map { it.name }
                 val atmosphere = com.arenacity.domain.rules.Atmosphere.of(st.buildings, collections.incomePct(st.club.id), clubService.effects().incomePct - 100)
                 call.respond(ClubStateResponse(st.club.toDto(), st.buildings.map { it.toDto(st.now, st.club.level, atmosphere[it.id] ?: com.arenacity.domain.rules.Atmosphere.Bonus()) }, st.gridSize, st.now.toString(), active, st.club.adsState(st.now), inbox.unread(st.club.id), readiness.of(st.club).toDto(), st.stadium, st.obstacles.map { it.toDto(st.now, st.stadium) },
-                    LEGACY_HOME_PARCELS, st.land.toDto(clubService.lands)).toSuccessResponse())
+                    LEGACY_HOME_PARCELS, st.land.toDto(clubService.lands), com.arenacity.domain.rules.Energy.state(st.club, st.now).toDto()).toSuccessResponse())
+            }
+            // energy (rules.Energy): what the club has now, and filling it up for gems
+            get("/energy") { call.respond(energy.state(call.userId()).toDto().toSuccessResponse()) }
+            post("/energy/refill") {
+                val (club, e) = energy.refill(call.userId())
+                call.respond(EnergyRefillResponse(e.toDto(), club.toDto()).toSuccessResponse())
             }
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             // the old land buying (parcels round the plot): gone since the land is a mask, the route answers so for one client release

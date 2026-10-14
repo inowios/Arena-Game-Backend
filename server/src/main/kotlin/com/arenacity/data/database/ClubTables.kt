@@ -39,6 +39,9 @@ object ClubTable : BaseTable("clubs") {
     val arenaChestWeek = integer("arena_chest_week")
     /** The land mask the buildings were last moved onto (V34); written only by [com.arenacity.domain.repository.ClubRepository.setLandMask] and on insert. */
     val landMask = varchar("land_mask", 40).nullable()
+    val energy = integer("energy")
+    val energyAt = timestamp("energy_at").nullable()
+    val offerDay = date("offer_day").nullable()
 }
 
 object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases") {

@@ -111,6 +111,7 @@ val appModule = module {
     single<com.arenacity.domain.repository.PackRepository> { com.arenacity.data.repository.PackRepositoryImpl() }
     single { PackUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single { CardMatchUseCases(get(), get(), get(), get(), tx = get()) }
+    single { com.arenacity.domain.usecase.club.EnergyUseCases(get(), get(), get(), tx = get()) }
     single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
     single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }

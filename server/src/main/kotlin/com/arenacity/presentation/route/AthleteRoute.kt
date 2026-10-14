@@ -48,6 +48,14 @@ fun Route.athleteRoutes() {
                 val kind = parseEnum<com.arenacity.domain.model.CardKind>(call.parameters["kind"] ?: "", "pack")
                 call.respond(HttpStatusCode.Created, packs.open(call.userId(), kind).toDto(clock.now()).toSuccessResponse(201))
             }
+            // the day's pack offer (the HUD's «−N%» card) and its purchase, once a UTC day
+            get("/offer") { call.respond(packs.offer(call.userId()).toDto().toSuccessResponse()) }
+            post("/offer/buy") {
+                val (r, offer) = packs.buyOffer(call.userId())
+                call.respond(HttpStatusCode.Created, r.toDto(clock.now()).copy(offer = offer.toDto()).toSuccessResponse(201))
+            }
+            // a card match starts: it takes its energy (400 «Not enough energy» when short)
+            post("/cards/start") { call.respond(CardStartResponse(cardMatch.start(call.userId()).toDto()).toSuccessResponse()) }
             get("/cards/opponent") {
                 val o = cardMatch.opponent(call.userId()) ?: throw com.arenacity.domain.exception.NotFoundException("No opponent around")
                 val now = clock.now()

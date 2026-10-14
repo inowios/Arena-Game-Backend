@@ -41,7 +41,18 @@ fun Lineup.toDto() = LineupDto(sport.name, starters.map { it.toString() }, bench
 
 @Serializable data class PackOfferDto(val kind: String, val coins: Long, val gold: Int, val chances: List<Double>, val unlockLevel: Int, val open: Boolean, val freeToday: Boolean, val cards: Int = com.arenacity.domain.rules.Packs.CARDS_PER_PACK)
 @Serializable data class PackShelfDto(val packs: List<PackOfferDto>, val sinceEpic: Int, val sinceLegend: Int, val epicPity: Int, val legendPity: Int, val collection: Int, val collectionMax: Int)
-@Serializable data class PackOpenResponse(val kind: String, val tiers: List<String>, val athletes: List<AthleteDto>, val club: ClubDto)
+@Serializable data class PackOpenResponse(val kind: String, val tiers: List<String>, val athletes: List<AthleteDto>, val club: ClubDto,
+                                         /** Set when the opening was the day's offer (POST /club/offer/buy): the offer, now bought. */
+                                         val offer: DailyOfferDto? = null)
+/**
+ * The day's pack offer (rules.DailyOffers): the pack [packId] (a pack kind) for [price] gems instead of [oldPrice]
+ * ([discountPercent] off) until [endsAt] (the next UTC midnight); [open] = the club's level has opened that pack
+ * ([unlockLevel]), [bought] = the club bought it today (once a day).
+ */
+@Serializable data class DailyOfferDto(val packId: String, val oldPrice: Int, val price: Int, val discountPercent: Int, val endsAt: String, val open: Boolean, val bought: Boolean, val unlockLevel: Int)
+/** A card match started (POST /club/cards/start): the energy left. */
+@Serializable data class CardStartResponse(val energy: EnergyDto)
+fun com.arenacity.domain.usecase.athlete.DailyOfferView.toDto() = DailyOfferDto(offer.spec.kind.name, offer.oldPrice, offer.price, offer.discountPercent, offer.endsAt.toString(), open, bought, offer.spec.unlockLevel)
 
 fun com.arenacity.domain.usecase.athlete.PackShelf.toDto() = PackShelfDto(
     offers.map { PackOfferDto(it.spec.kind.name, it.spec.coins, it.spec.gold, it.spec.chances, it.spec.unlockLevel, it.open, it.freeToday) },

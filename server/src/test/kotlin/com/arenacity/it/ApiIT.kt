@@ -231,6 +231,34 @@ class ApiIT {
     }
 
     @Test
+    fun `energy and the daily pack offer over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val t = guestWithClub("it-device-energy", "Energy FC")
+        val e0 = call(HttpMethod.Get, "/club", t).data.o()["energy"]!!.o()
+        assertEquals(30, e0["current"]!!.jsonPrimitive.int); assertEquals(30, e0["max"]!!.jsonPrimitive.int)
+        assertEquals(JsonNull, e0["nextAt"]); assertEquals(40, e0["refillPrice"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/club/energy/refill", t, expect = 409)   // already full
+        assertEquals(25, call(HttpMethod.Post, "/club/cards/start", t).data.o()["energy"]!!.o()["current"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/friendlies", t, "{}", expect = 201)
+        val e1 = call(HttpMethod.Get, "/club/energy", t).data.o()
+        assertEquals(22, e1["current"]!!.jsonPrimitive.int); assertTrue(e1["nextAt"] !is JsonNull)
+        repeat(4) { call(HttpMethod.Post, "/club/cards/start", t) }
+        val short = call(HttpMethod.Post, "/club/cards/start", t, expect = 400, lang = "uk")
+        assertEquals("Недостатньо енергії — зачекайте, поки вона відновиться, або поповніть її", short.o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
+        val refill = call(HttpMethod.Post, "/club/energy/refill", t).data.o()   // 50 gems at the start
+        assertEquals(30, refill["energy"]!!.o()["current"]!!.jsonPrimitive.int); assertEquals(10, refill["club"]!!.o()["gold"]!!.jsonPrimitive.int)
+        // the day's offer: a new club (level 1) sees the first gem pack, locked until club level 3
+        val offer = call(HttpMethod.Get, "/club/offer", t).data.o()
+        assertEquals("TOURNAMENT", offer["packId"]!!.jsonPrimitive.content)
+        assertTrue(offer["discountPercent"]!!.jsonPrimitive.int in 30..50)
+        assertEquals(60, offer["oldPrice"]!!.jsonPrimitive.int); assertTrue(offer["price"]!!.jsonPrimitive.int < 60)
+        assertEquals(false, offer["open"]!!.jsonPrimitive.boolean); assertEquals(false, offer["bought"]!!.jsonPrimitive.boolean)
+        assertTrue(offer["endsAt"]!!.jsonPrimitive.content.endsWith("T00:00:00Z"))
+        call(HttpMethod.Post, "/club/offer/buy", t, expect = 400)
+    }
+
+    @Test
     fun `leagues, friendlies and economy over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }

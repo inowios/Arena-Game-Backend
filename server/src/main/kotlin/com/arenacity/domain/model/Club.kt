@@ -52,6 +52,11 @@ data class Club(
      * [com.arenacity.domain.repository.ClubRepository.update]: only ClubService.settle moves it on.
      */
     val landMask: String? = null,
+    /** Energy (rules.Energy): the amount at [energyAt], refilling on read; null [energyAt] = full. */
+    val energy: Int = com.arenacity.domain.rules.Energy.MAX,
+    val energyAt: Instant? = null,
+    /** The UTC day the club last bought the daily pack offer (rules.DailyOffers; once a day). */
+    val offerDay: java.time.LocalDate? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

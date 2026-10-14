@@ -50,6 +50,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
         this[ClubTable.scoutSignedDate] = c.scoutSignedDate
         this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.marketSalt] = c.marketSalt; this[ClubTable.arenaChestWeek] = c.arenaChestWeek
+        this[ClubTable.energy] = c.energy; this[ClubTable.energyAt] = c.energyAt; this[ClubTable.offerDay] = c.offerDay
     }
 
 }
@@ -94,6 +95,7 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.scoutSignedDate],
     this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
     this[ClubTable.landMask],
+    this[ClubTable.energy], this[ClubTable.energyAt], this[ClubTable.offerDay],
 )
 
 class ObstacleRepositoryImpl : com.arenacity.domain.repository.ObstacleRepository {

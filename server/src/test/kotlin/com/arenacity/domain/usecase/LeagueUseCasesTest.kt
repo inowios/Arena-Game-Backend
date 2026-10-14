@@ -45,6 +45,21 @@ class LeagueUseCasesTest {
     }
 
     @Test
+    fun `a friendly costs energy and is refused with too little`() = runBlocking<Unit> {
+        val a = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        friendly(u1, null)
+        val after = clubs.rows.getValue(a.id)
+        assertEquals(com.arenacity.domain.rules.Energy.MAX - com.arenacity.domain.rules.Energy.FRIENDLY, com.arenacity.domain.rules.Energy.state(after, clock.now()).current)
+        clubs.update(after.copy(energy = 2, energyAt = clock.now()))
+        val e = assertFailsWith<com.arenacity.domain.exception.ValidationException> { friendly(u1, null) }
+        assertEquals("Not enough energy", e.template)
+        assertEquals(1, clubs.rows.getValue(a.id).friendliesPlayed)   // nothing played, nothing counted
+        clock.advanceSeconds(com.arenacity.domain.rules.Energy.REGEN_SECONDS)
+        friendly(u1, null)
+        assertEquals(0, com.arenacity.domain.rules.Energy.state(clubs.rows.getValue(a.id), clock.now()).current)
+    }
+
+    @Test
     fun `friendlies are capped per day and reward coins without reputation`() = runBlocking<Unit> {
         val a = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val before = clubs.rows.getValue(a.id)
