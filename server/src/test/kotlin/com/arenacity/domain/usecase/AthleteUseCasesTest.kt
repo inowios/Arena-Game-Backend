@@ -34,7 +34,7 @@ class AthleteUseCasesTest {
     private fun setup(vararg types: BuildingType) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3)); buildings.setStadium(clubs.rows.values.first().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, 4 + i * 7, 4, 0); speed(user, b.id) }   // the big footprints: a row along the top edge
+        types.forEachIndexed { i, t -> val b = place(user, t, -5 + i * 10, 2, 0); speed(user, b.id) }   // the big footprints: a row above the stadium
     }
 
     @Test
@@ -89,7 +89,7 @@ class AthleteUseCasesTest {
         setup()
         val a = athletes.rows.values.first()
         assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.ATTACK) }
-        val tc = place(user, BuildingType.TRAINING_CENTER, 4, 20, 0); speed(user, tc.id)
+        val tc = place(user, BuildingType.TRAINING_CENTER, 0, 26, 0); speed(user, tc.id)
         athletes.update(a.copy(fatigue = 90, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { start(user, a.id, AttributeKind.MENTAL) }
         athletes.update(a.copy(fatigue = 0, mental = 68))

@@ -41,7 +41,7 @@ class SectionsTest {
         clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); buildings.setStadium(c.id, 4)
         zones.open(c.id, ZoneSport.BASKETBALL)
         val isle = service.lands.island(ZoneSport.BASKETBALL)!!
-        val (x, y) = isle.cells.first { (x, y) -> isle.fits(com.arenacity.domain.rules.Footprint(x, y, 8, 6)) }
+        val (x, y) = isle.cells.first { (x, y) -> isle.fits(com.arenacity.domain.rules.BuildingCatalog.spec(com.arenacity.domain.rules.BuildingType.BASKETBALL_ARENA).let { s -> com.arenacity.domain.rules.Footprint(x, y, s.width, s.height) }) }
         val court = place(user, BuildingType.BASKETBALL_ARENA, x, y, 0)
         assertEquals(listOf(Sport.FOOTBALL), sections.active(clubs.rows.getValue(c.id)), "an arena under construction is not a section yet")
         speed(user, court.id)
@@ -62,7 +62,7 @@ class SectionsTest {
     @Test
     fun `academy graduates per section, only for open sections`() = runBlocking<Unit> {
         clubWithCourt()
-        place(user, BuildingType.ACADEMY, 13, 21, 0).let { speed(user, it.id) }
+        place(user, BuildingType.ACADEMY, 9, 25, 0).let { speed(user, it.id) }
         val g = academy(user, Sport.BASKETBALL)
         assertEquals(Sport.BASKETBALL, g.sport); assertTrue(g.position in setOf(Position.G, Position.F, Position.C))
         clock.advanceSeconds(9 * 3600)

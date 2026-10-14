@@ -90,11 +90,12 @@ class ProgressRoadsTest {
         assertEquals(0, museum.of(club().id).capacity)
         buildings.setStadium(club().id, 3)
         val now = clock.now()
-        val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.HALL_OF_FAME, 1, 9, 10, 0, BuildingState.IDLE, null, now, now, now))
+        // the hall of fame a lawn row in front of the seeded ticket office (wherever the land's anchor puts it)
+        val office = buildings.listByClub(club().id).first { it.type == BuildingType.TICKET_OFFICE }
+        val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.HALL_OF_FAME, 1, office.gridX, office.gridY + 4, 0, BuildingState.IDLE, null, now, now, now))
         val v = museum.of(club().id)
         assertEquals(1, v.level); assertEquals(6, v.capacity)
         assertTrue(v.exhibits.size <= 6)
-        val office = buildings.listByClub(club().id).first { it.type == BuildingType.TICKET_OFFICE }
         assertEquals(MuseumRules.atmospherePct(1), Atmosphere.of(buildings.listByClub(club().id)).getValue(office.id).museum)
         assertEquals(0, Atmosphere.of(buildings.listByClub(club().id)).getValue(m.id).museum)
     }

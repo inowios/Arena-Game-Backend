@@ -41,14 +41,14 @@ class SportTownMigrationIT {
             sql.append("INSERT INTO buildings (id, club_id, type, level, grid_x, grid_y, created_at) VALUES ('$id', '$c', '$type', $level, $x, $y, TIMESTAMPTZ '2026-10-01 00:00:00+00' + INTERVAL '${minute++} minutes');\n")
         }
         b("pitch", club, "PITCH", 10, 11, 12); b("ticket", club, "TICKET_OFFICE", 3, 9, 9)
-        // the shop (4×3) and the café (3×3) side by side: both 5×4 now, they would overlap; the car park the lowest of the three
-        b("shop", club, "CLUB_SHOP", 5, 20, 20); b("cafe", club, "CAFE", 7, 24, 20); b("parking", club, "PARKING", 3, 20, 26)
-        b("road", club, "ROAD", 1, 22, 23)    // under the grown shop
-        b("museum", club, "MUSEUM", 2, 26, 26)
+        // the shop (4×3) and the café (3×3) side by side: both 7×6 now (5×4 before 14 Oct, pass 2), they would overlap; the car park the lowest of the three
+        b("shop", club, "CLUB_SHOP", 5, 26, 22); b("cafe", club, "CAFE", 7, 30, 22); b("parking", club, "PARKING", 3, 26, 29)
+        b("road", club, "ROAD", 1, 28, 25)    // under the grown shop
+        b("museum", club, "MUSEUM", 2, 32, 30)
         for (i in 1..6) b("park$i", club, "PARK", i, if (i % 2 == 1) 0 else 5, 15 + 5 * ((i - 1) / 2))
         b("basket", club, "BASKETBALL_COURT", 4, 2, 36); b("tennis", club, "TENNIS_COURT", 2, 8, 36)
         b("apartment", club, "APARTMENT", 3, 14, 36); b("office", club, "OFFICE", 1, 20, 34)
-        b("pitch2", other, "PITCH", 3, 11, 12); b("academy2", other, "ACADEMY", 2, 20, 20)
+        b("pitch2", other, "PITCH", 3, 11, 12); b("academy2", other, "ACADEMY", 2, 24, 22)
         // a stadium-1 town laid out before the footprints grew (no old type): its academy now reaches under the stadium
         val crowded = UUID.randomUUID(); val showcase = UUID.randomUUID()
         for ((c, name, bucket) in listOf(Triple(crowded, "Crowded", 0), Triple(showcase, "Show Town", -1))) {
@@ -113,8 +113,8 @@ class SportTownMigrationIT {
         for (i in fps.indices) for (j in i + 1 until fps.size) assertFalse(fps[i].overlaps(fps[j]), "${placed[i].type} overlaps ${placed[j].type}")
         // the shop (older) kept its place, the café moved off it; the road tile under the shop went, refunded
         val byId = list.associateBy { it.id }
-        assertEquals(20 to 20, byId.getValue(ids["shop"]!!).let { it.gridX to it.gridY })
-        assertNotEquals(24 to 20, byId.getValue(ids["cafe"]!!).let { it.gridX to it.gridY })
+        assertEquals(26 to 22, byId.getValue(ids["shop"]!!).let { it.gridX to it.gridY })
+        assertNotEquals(30 to 22, byId.getValue(ids["cafe"]!!).let { it.gridX to it.gridY })
         assertNull(byId[ids["road"]])
         assertEquals(1_000 + refund + BuildingCatalog.level(BuildingType.ROAD, 1).cost, clubs.findById(club)!!.coins)
         // the basketball arena on its island (the zone is open), the tennis arena parked until the player opens its island
@@ -129,16 +129,32 @@ class SportTownMigrationIT {
         // V38: every town but the showcases settles once more — a clean one stays exactly as it is, the crowded one moves
         // its academy off the stadium (V37 before it moves the club's seeded ticket office in front of the stadium)
         TestDb.migrate(ds, target = "37")
-        val before = listOf(club, other).associateWith { c -> buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet() }
-        TestDb.migrate(ds)
+        // V37 put the club's office at 14, 18, under the stadium since it grew to 12×9 (14 October, pass 2): the sweep
+        // moves that one off it; everything else in a clean town stays
+        val office37 = buildings.listByClub(club).single { it.type == BuildingType.TICKET_OFFICE }
+        assertEquals(14 to 18, office37.gridX to office37.gridY)
+        val before = listOf(club, other).associateWith { c -> buildings.listByClub(c).filter { it.id != office37.id }.map { Triple(it.id, it.gridX, it.gridY) }.toSet() }
+        TestDb.migrate(ds, target = "38")
         assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$showcase'") { it.getString(1) })
         assertEquals(3, LandSweep(clubs, service).run { _, e -> throw e })
-        for ((c, was) in before) assertEquals(was, buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet(), "a clean town stays")
+        for ((c, was) in before) assertEquals(was, buildings.listByClub(c).filter { it.id != office37.id }.map { Triple(it.id, it.gridX, it.gridY) }.toSet(), "a clean town stays")
+        val office38 = buildings.findById(office37.id)!!
+        assertFalse(footprint(office38.type, office38.gridX, office38.gridY, office38.rotation).overlaps(footprint(BuildingType.PITCH, 11, 12, 0)), "the office off the stadium")
+        assertTrue(Lands.MAP.main.fits(footprint(office38.type, office38.gridX, office38.gridY, office38.rotation)))
         val town = buildings.listByClub(crowded)
         val pitch3 = town.single { it.type == BuildingType.PITCH }; val academy3 = town.single { it.type == BuildingType.ACADEMY }
         assertEquals(11 to 12, pitch3.gridX to pitch3.gridY, "the stadium keeps its place")
         assertFalse(footprint(academy3.type, academy3.gridX, academy3.gridY, academy3.rotation).overlaps(footprint(pitch3.type, 11, 12, 0)))
         assertTrue(Lands.MAP.allows(Lands.MAP.home, academy3.type, footprint(academy3.type, academy3.gridX, academy3.gridY, academy3.rotation)))
+        assertEquals(0, LandSweep(clubs, service).run())
+
+        // V39 (the footprints grew, 14 October, pass 2): every town but the showcases is marked for the sweep again; the
+        // towns settled under the grown footprints above stay exactly as they are
+        val settled = listOf(club, other, crowded).associateWith { c -> buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet() }
+        TestDb.migrate(ds)
+        assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$showcase'") { it.getString(1) })
+        assertEquals(3, LandSweep(clubs, service).run { _, e -> throw e })
+        for ((c, was) in settled) assertEquals(was, buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet(), "a settled town stays")
         assertEquals(0, LandSweep(clubs, service).run())
     }
 }

@@ -1,6 +1,7 @@
 package com.arenacity.it
 
 import com.arenacity.domain.rules.BuildingType
+import com.arenacity.domain.rules.Footprint
 import com.arenacity.domain.rules.Lands
 import com.arenacity.domain.rules.footprint
 import kotlinx.coroutines.runBlocking
@@ -56,11 +57,14 @@ class TicketFrontMigrationIT {
             val want = when (name) { in moved -> 14 to 18; "Office moved" -> 25 to 25; else -> 9 to 9 }
             assertEquals(want, at[id], name)
         }
-        // the new spot is the land mask's anchor (where a new club's office stands), on the main island, clear of the stadium
-        assertEquals(14 to 18, Lands.MAP.ticket)
-        val office = footprint(BuildingType.TICKET_OFFICE, 14, 18, 0)
+        // V37's spot was the land mask's anchor then; since the 12×9 stadium (14 October, pass 2) a new club's office stands
+        // at 3, 22 — on the main island, beside the stadium on the screen with lawn round it (at 16, 21 it touched the
+        // stadium and its drawing covered the near stand) — and the start-up sweep moves an office V37 left under it
+        assertEquals(3 to 22, Lands.MAP.ticket)
+        val office = footprint(BuildingType.TICKET_OFFICE, 3, 22, 0)
         assertTrue(Lands.MAP.main.fits(office))
-        assertFalse(office.overlaps(footprint(BuildingType.PITCH, 11, 12, 0)))
+        val pitch = footprint(BuildingType.PITCH, 11, 12, 0)
+        assertFalse(Footprint(office.x - 1, office.y - 1, office.w + 2, office.h + 2).overlaps(pitch))
         // logged, so a revert can put them back
         val log = query("SELECT item_id, kind, type, old_x, old_y, new_x, new_y, level FROM rehome_log WHERE mask_id = 'ticket_front'") {
             listOf(it.getString(1), it.getString(2), it.getString(3), it.getInt(4), it.getInt(5), it.getInt(6), it.getInt(7), it.getInt(8))

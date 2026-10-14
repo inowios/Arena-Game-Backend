@@ -48,6 +48,9 @@ data class EventEffects(val buildTimePct: Int = 100, val incomePct: Int = 100, v
  * [lands]: the land mask the club builds on (rules.Lands; tests pass their own); [tx]: the transaction [settle] moves a
  * club in; [moves]: where [settle] logs what it moved (rehome_log).
  */
+/** The land sweep's per-club summary (ClubService.settle). */
+private val SETTLE_LOG = org.slf4j.LoggerFactory.getLogger("Land")
+
 class ClubService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val clock: Clock, private val listeners: List<BuildingListener> = emptyList(),
                   private val obstacles: ObstacleRepository? = null, val lands: LandMap = Lands.MAP, private val tx: Tx = NoTx,
                   private val moves: RehomeLogRepository? = null) {
@@ -197,6 +200,16 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
             }
         }
         moves?.record(log)
+        if (log.isNotEmpty()) {
+            // one line a club, so a sweep that parks or moves too much shows in the server log (rehome_log has every step)
+            val built = log.filter { it.kind == RehomeMove.BUILDING }
+            val parked = built.count { it.newX == null }
+            SETTLE_LOG.info("land: club ${club.id} on mask ${lands.id}: ${built.size - parked} building(s) moved, $parked parked off the land, " +
+                "${log.count { it.kind == RehomeMove.REMOVED }} road/fence tile(s) removed (+$coins coins), " +
+                "${log.count { it.kind == RehomeMove.OBSTACLE }} obstacle(s) cleared (+$gold gold)")
+            if (parked > 0) SETTLE_LOG.warn("land: club ${club.id}: $parked building(s) parked — no room on mask ${lands.id}: " +
+                built.filter { it.newX == null }.joinToString { "${it.type} from ${it.oldX},${it.oldY}" })
+        }
         return gold to coins
     }
 
@@ -283,7 +296,7 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val buildings
             val now = clock.now()
             val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), null, 1, 0, 2_500, 50, timezone, now, null, now, now,
                 landMask = lands.id))
-            // the stadium (8×6) in the middle of the main island's meadow, the ticket office by its corner: the mask's anchors
+            // the stadium (12×9) in the middle of the main island's meadow, the ticket office by its corner: the mask's anchors
             buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, lands.stadium.first, lands.stadium.second, 0, BuildingState.IDLE, null, now, now, now))
             buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, lands.ticket.first, lands.ticket.second, 0, BuildingState.IDLE, null, now, now, now))
             initializers.forEach { it.onClubCreated(club) }

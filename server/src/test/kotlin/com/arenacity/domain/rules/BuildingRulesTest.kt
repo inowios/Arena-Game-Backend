@@ -28,15 +28,15 @@ class BuildingRulesTest {
     fun `the sport town's buildings follow the owner's list`() {
         data class Row(val w: Int, val h: Int, val unlock: Int, val top: Int)
         val list = mapOf(
-            BuildingType.PITCH to Row(8, 6, 1, 1), BuildingType.ACADEMY to Row(5, 4, 1, 1), BuildingType.TRAINING_CENTER to Row(6, 4, 1, 1),
-            BuildingType.MEDICAL_CENTER to Row(4, 4, 2, 1), BuildingType.TICKET_OFFICE to Row(5, 2, 1, 3), BuildingType.HOUSE to Row(3, 3, 1, 30),
-            BuildingType.SHOPPING_CENTER to Row(5, 4, 2, 2), BuildingType.HALL_OF_FAME to Row(4, 5, 3, 1), BuildingType.BACKYARD_COURT to Row(3, 3, 3, 4),
-            BuildingType.FAN_ZONE to Row(4, 4, 2, 1), BuildingType.MEDIA_CENTER to Row(4, 3, 6, 1), BuildingType.SPONSOR_OFFICE to Row(3, 3, 6, 1),
-            BuildingType.HOTEL to Row(4, 4, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(5, 3, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(4, 4, 3, 1),
-            BuildingType.SPORTS_SCIENCE_LAB to Row(4, 4, 4, 1), BuildingType.SCHOOL to Row(4, 4, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 3, 4, 1),
-            BuildingType.SCOUTING_OFFICE to Row(3, 3, 5, 1), BuildingType.RECOVERY_CENTER to Row(4, 4, 5, 1), BuildingType.ANALYTICS_CENTER to Row(3, 3, 7, 1),
-            BuildingType.COACHING_HQ to Row(3, 3, 8, 1), BuildingType.BASKETBALL_ARENA to Row(8, 6, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(8, 6, 5, 1),
-            BuildingType.TENNIS_ARENA to Row(8, 6, 7, 1), BuildingType.PADEL_ARENA to Row(8, 6, 9, 1),
+            BuildingType.PITCH to Row(12, 9, 1, 1), BuildingType.ACADEMY to Row(7, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(9, 6, 1, 1),
+            BuildingType.MEDICAL_CENTER to Row(6, 6, 2, 1), BuildingType.TICKET_OFFICE to Row(7, 3, 1, 3), BuildingType.HOUSE to Row(4, 4, 1, 30),
+            BuildingType.SHOPPING_CENTER to Row(7, 6, 2, 2), BuildingType.HALL_OF_FAME to Row(6, 7, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 4),
+            BuildingType.FAN_ZONE to Row(6, 6, 2, 1), BuildingType.MEDIA_CENTER to Row(6, 4, 6, 1), BuildingType.SPONSOR_OFFICE to Row(4, 4, 6, 1),
+            BuildingType.HOTEL to Row(6, 6, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(7, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 6, 3, 1),
+            BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(6, 4, 4, 1),
+            BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 6, 5, 1), BuildingType.ANALYTICS_CENTER to Row(4, 4, 7, 1),
+            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(11, 8, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(11, 8, 5, 1),
+            BuildingType.TENNIS_ARENA to Row(11, 8, 7, 1), BuildingType.PADEL_ARENA to Row(11, 8, 9, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -125,9 +125,9 @@ class BuildingRulesTest {
 
     @Test
     fun `footprints rotate and overlap`() {
-        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 8x6
-        assertEquals(Footprint(0, 0, 8, 6), a)
-        assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.PITCH, 0, 0, 90))
-        assertTrue(a.overlaps(Footprint(7, 5, 2, 2))); assertFalse(a.overlaps(Footprint(8, 0, 2, 2)))
+        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x9
+        assertEquals(Footprint(0, 0, 12, 9), a)
+        assertEquals(Footprint(0, 0, 9, 12), footprint(BuildingType.PITCH, 0, 0, 90))
+        assertTrue(a.overlaps(Footprint(11, 8, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
     }
 }

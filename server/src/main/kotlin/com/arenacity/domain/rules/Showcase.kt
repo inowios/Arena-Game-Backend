@@ -11,8 +11,8 @@ import kotlin.math.abs
  * island, the arenas on the side islands open at that stadium (the sport town, 14 October):
  *  - the stadium, the town's biggest building, at the mask's anchor, the meadow's middle, on its plaza; a ring avenue
  *    round the plaza, boulevards two cells wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
- *    a short spur, straight or with one turn) and the ring's lines run on to the shore, with another avenue every 12 cells where the meadow reaches
- *    far beyond the ring: blocks of 11 cells between the lines. Only cells on the meadow are streets, and only those that
+ *    a short spur, straight or with one turn) and the ring's lines run on to the shore, with another avenue every 16 cells where the meadow reaches
+ *    far beyond the ring: blocks of 15 cells between the lines. Only cells on the meadow are streets, and only those that
  *    join the ring. The road allowance lays the ring, the plaza's approaches, the boulevards with the spurs and the
  *    avenues in that order (stadium 5: the ring; from stadium 8 the whole grid); a line not laid yet stays lawn;
  *  - every block keeps a pavement cell along its streets and along the shore, where the trees stand; what is left of it
@@ -36,16 +36,21 @@ object Showcase {
     /** [regions]: the land mask's regions the town stands on (the main island and the open side islands); [zones]: the zones open. */
     data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<ZoneSport> = emptySet())
 
-    /** From the stadium's middle to the ring's lines: c − 13 and c + 12 (cells 2 and 27 round the anchor (11, 12)). */
-    private const val RING = 13
-    /** Cells between two parallel lines: an 11-cell block. */
-    private const val BLOCK = 11
+    /**
+     * From the stadium's middle to the ring's lines: c − 17 and c + 16 (cells 0 and 33 across, −1 and 32 down round the
+     * 12×9 stadium's middle c = (17, 16) at the anchor (11, 12); the footprints grew ×1.4–1.5 on 14 October, pass 2, and
+     * the plaza's front lots need room for the 6×7 hall of fame and a 6-wide neighbour). Its 8·RING − 4 = 132 cells are
+     * within the stadium-5 road allowance (BuildingCatalog: 140).
+     */
+    internal const val RING = 17
+    /** Cells between two parallel lines: a 15-cell block. */
+    private const val BLOCK = 15
     /** Another avenue beyond the ring only where the island reaches at least this many cells past it. */
-    private const val OUTER = 8
+    private const val OUTER = 11
     /** Lots a block holds at most: its largest rectangle and what the shore leaves beside it. */
     private const val LOTS = 3
     /** A bridge's foot off the streets is joined to the nearest one by a spur (straight, or with one turn) at most this long. */
-    private const val SPUR = 8
+    private const val SPUR = 11
 
     /** The stadium's own trade on the plaza, facing the stands: the hall of fame, then the earners in turn. */
     private val PLAZA = listOf(BuildingType.HALL_OF_FAME, BuildingType.TICKET_OFFICE, BuildingType.SHOPPING_CENTER, BuildingType.FAN_ZONE)
@@ -57,8 +62,8 @@ object Showcase {
         BuildingType.ANALYTICS_CENTER, BuildingType.SCOUTING_OFFICE)
     /** Downtown along the boulevards: the hotel, the school and the transport hub in turn. */
     private val DOWNTOWN = listOf(BuildingType.HOTEL, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB)
-    /** The suburbs: two houses, then a yard court. */
-    private val HOMES = listOf(BuildingType.HOUSE, BuildingType.HOUSE, BuildingType.BACKYARD_COURT)
+    /** The suburbs: a house, a yard court, a house (the court second: a small meadow's last lot still gets one). */
+    private val HOMES = listOf(BuildingType.HOUSE, BuildingType.BACKYARD_COURT, BuildingType.HOUSE)
 
     /** The side islands open in a showcase at [stadium]: those whose zone that stadium allows (rules.Zones). */
     fun islands(stadium: Int, lands: LandMap = Lands.MAP): List<LandRegion> =
@@ -201,14 +206,14 @@ object Showcase {
         val land = lands.main
         val pitch = BuildingCatalog.spec(BuildingType.PITCH)
         val (px, py) = lands.stadium
-        // the stadium's middle: the cell right of and below it (15, 15 for the anchor 11, 12)
+        // the stadium's middle: the cell right of and below it (17, 16 for the anchor 11, 12)
         val cx = px + pitch.width / 2; val cy = py + pitch.height / 2
         val bx0 = land.x0; val bx1 = land.x0 + land.w; val by0 = land.y0; val by1 = land.y0 + land.h
         fun on(p: Pair<Int, Int>) = land.has(p.first, p.second)
         fun cells(xs: IntRange, ys: IntRange) = xs.flatMap { x -> ys.map { y -> x to y } }.toSet()
         fun around(p: Pair<Int, Int>) = listOf(p.first + 1 to p.second, p.first - 1 to p.second, p.first to p.second + 1, p.first to p.second - 1)
 
-        // the street plan: the ring (c − 13 .. c + 12), the boulevards on the axes (c − 1, c), the avenues
+        // the street plan: the ring (c − RING .. c + RING − 1), the boulevards on the axes (c − 1, c), the avenues
         val xs = lines(cx, bx0, bx1); val ys = lines(cy, by0, by1)
         val xr0 = cx - RING; val xr1 = cx + RING - 1; val yr0 = cy - RING; val yr1 = cy + RING - 1
         val ring = cells(xr0..xr0, yr0..yr1) + cells(xr1..xr1, yr0..yr1) + cells(xr0..xr1, yr0..yr0) + cells(xr0..xr1, yr1..yr1)
@@ -319,8 +324,10 @@ object Showcase {
         val town = (campus + turns(DOWNTOWN) + turns(HOMES)).toMutableList()
         deal(beside.drop(campusLots.size), town)
         deal(outer, town)
-        // and where the campus left room
+        // and where the campus left room, then the plaza (the grown footprints of 14 October fill a smaller meadow's blocks
+        // before the town's first house: the plaza's lots keep room beside the hall of fame and the fan zone)
         deal(campusLots, town)
+        deal(front + ends, town)
 
         var houseFlip = 0
         fun level(t: BuildingType): Int {

@@ -79,19 +79,20 @@ class ShowcaseTest {
             assertTrue(isle in open, "${s.type} on a closed island")
             assertEquals(1, city.slots.count { isle.fits(footprint(it.type, it.x, it.y, 0)) }, "${isle.id} holds its arena only")
         }
-        // the streets: one network on the meadow; the ring round the plaza at every stadium (cells c - 13 .. c + 12 round
+        // the streets: one network on the meadow; the ring round the plaza at every stadium (cells c - RING .. c + RING - 1 round
         // the stadium's middle c), at the top the boulevards on the axes from the ring out to the shore
         val roads = city.slots.filter { it.type == BuildingType.ROAD }.map { it.x to it.y }.toSet()
         val seen = HashSet<Pair<Int, Int>>(); val queue = ArrayDeque(listOf(roads.first())); seen += roads.first()
         while (queue.isNotEmpty()) { val (x, y) = queue.removeFirst(); for (n in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) if (n in roads && seen.add(n)) queue.addLast(n) }
         assertEquals(roads, seen, "the streets are one network at stadium $stadium")
         val cx = pitch.x + ps.width / 2; val cy = pitch.y + ps.height / 2
-        for (i in -13..12) for (p in listOf(cx - 13 to cy + i, cx + 12 to cy + i, cx + i to cy - 13, cx + i to cy + 12))
+        val r = Showcase.RING
+        for (i in -r until r) for (p in listOf(cx - r to cy + i, cx + r - 1 to cy + i, cx + i to cy - r, cx + i to cy + r - 1))
             if (land.has(p.first, p.second)) assertTrue(p in roads, "the ring at $p, stadium $stadium")
         if (stadium >= 8) for ((dx, dy) in listOf(0 to -1, 0 to 1, -1 to 0, 1 to 0)) for (k in listOf(-1, 0)) {
             // from the ring outwards, cell by cell while the meadow lasts
-            var x = if (dx == 0) cx + k else if (dx < 0) cx - 14 else cx + 13
-            var y = if (dy == 0) cy + k else if (dy < 0) cy - 14 else cy + 13
+            var x = if (dx == 0) cx + k else if (dx < 0) cx - r - 1 else cx + r
+            var y = if (dy == 0) cy + k else if (dy < 0) cy - r - 1 else cy + r
             while (land.has(x, y)) { assertTrue(x to y in roads, "the boulevard at $x,$y, stadium $stadium"); x += dx; y += dy }
         }
         // ... and on the shipped mask the streets reach every bridge's foot (where its crossing, painted by the bridge
@@ -109,8 +110,9 @@ class ShowcaseTest {
             } }
         // a whole town at the top, the club and the first streets of the town at stadium 5 (the main island's)
         val built = solid.filter { BuildingCatalog.spec(it.type).island == null }.sumOf { BuildingCatalog.spec(it.type).width * BuildingCatalog.spec(it.type).height }
-        // (the sport town's buildings are smaller than the old towers and offices: a fifth of the meadow at the top)
-        assertTrue(built * 100 / land.area in (if (stadium == Stadium.MAX_LEVEL) 20..45 else 10..30), "$built of ${land.area} cells built at stadium $stadium")
+        // (the sport town's buildings are smaller than the old towers and offices: a fifth of the meadow at the top; their
+        // footprints doubled on 14 October, a third of the meadow then)
+        assertTrue(built * 100 / land.area in (if (stadium == Stadium.MAX_LEVEL) 20..50 else 10..40), "$built of ${land.area} cells built at stadium $stadium")
     }
 
     @Test fun `stadium 5 showcase fits the shipped land`() = check(5, Lands.MAP)

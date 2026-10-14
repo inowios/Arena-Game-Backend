@@ -40,7 +40,7 @@ class LiveOpsTest {
     @Test
     fun `a running event shortens constructions and its goal pays once`() = runBlocking<Unit> {
         setup()
-        val b = place(user, BuildingType.ACADEMY, 11, 21, 0)
+        val b = place(user, BuildingType.ACADEMY, 9, 25, 0)
         val full = BuildingCatalog.level(BuildingType.ACADEMY, 1).buildSeconds
         assertEquals(clock.now().plusSeconds(full * 70 / 100), b.upgradeEndsAt)
         val ev = ops.list(user).first { it.event.key == "builders_day" }
