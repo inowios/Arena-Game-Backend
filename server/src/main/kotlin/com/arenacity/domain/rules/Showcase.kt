@@ -243,16 +243,20 @@ object Showcase {
             return seen
         }
         val streets = joined(planned)
-        // a bridge's foot (where its crossing meets the meadow) off the streets gets a spur to the nearest one: a straight
-        // run or one with a single turn, on the meadow, at most SPUR cells (else the boulevard on its side is the way)
+        // a bridge's foot (where the roads meet its crossing on the meadow) off the streets gets a spur to the nearest one:
+        // a straight run or one with a single turn, on the meadow, at most SPUR cells (else the boulevard on its side is
+        // the way) — to the ring, an approach or a boulevard first (laid at every stadium the roads reach that far), an
+        // avenue (laid last, when the allowance has room) only when none of those is within SPUR
         val spurs = LinkedHashSet<Pair<Int, Int>>()
+        val core = (ring + approaches + boulevards).toSet()
         fun run(a: Int, b: Int) = if (a <= b) a..b else a downTo b
         for ((_, foot) in lands.bridges.entries.sortedBy { it.key }) {
             val b = Math.floorDiv(foot.first, T) to Math.floorDiv(foot.second, T)
             if (!on(b) || b in streets) continue
             var best: List<Pair<Int, Int>>? = null
-            for (s in streets.sortedWith(compareBy({ abs(it.first - b.first) + abs(it.second - b.second) }, { it.first }, { it.second }))) {
-                if (abs(s.first - b.first) + abs(s.second - b.second) > SPUR) break
+            fun dist(s: Pair<Int, Int>) = abs(s.first - b.first) + abs(s.second - b.second)
+            val near = streets.filter { dist(it) <= SPUR }
+            for (s in (near.filter { it in core }.ifEmpty { near }).sortedWith(compareBy({ dist(it) }, { it.first }, { it.second }))) {
                 for (alongX in listOf(true, false)) {
                     // from the foot to the street's cell (left out: a street already), x first or y first
                     val path = if (alongX) run(b.first, s.first).map { it to b.second } + run(b.second, s.second).drop(1).map { s.first to it }
