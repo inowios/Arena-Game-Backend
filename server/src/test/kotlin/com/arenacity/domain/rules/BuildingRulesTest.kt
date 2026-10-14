@@ -52,8 +52,8 @@ class BuildingRulesTest {
             BuildingType.HOTEL to Row(6, 4, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(6, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 4, 3, 1),
             BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
             BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 4, 5, 1), BuildingType.ANALYTICS_CENTER to Row(6, 4, 7, 1),
-            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(10, 10, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(10, 10, 5, 1),
-            BuildingType.TENNIS_ARENA to Row(12, 8, 7, 1), BuildingType.PADEL_ARENA to Row(10, 8, 9, 1),
+            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(12, 12, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(12, 12, 5, 1),
+            BuildingType.TENNIS_ARENA to Row(12, 10, 7, 1), BuildingType.PADEL_ARENA to Row(10, 12, 9, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -144,7 +144,7 @@ class BuildingRulesTest {
     fun `footprints rotate and overlap`() {
         val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x12
         assertEquals(Footprint(0, 0, 12, 12), a)
-        assertEquals(Footprint(0, 0, 8, 12), footprint(BuildingType.TENNIS_ARENA, 0, 0, 90))
+        assertEquals(Footprint(0, 0, 12, 10), footprint(BuildingType.PADEL_ARENA, 0, 0, 90))
         assertTrue(a.overlaps(Footprint(10, 10, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
         // every footprint is whole tiles of the build grid (14 October, pass 3), DECOR, FENCE and ROAD one tile each
         for (t in BuildingType.values()) { val s = BuildingCatalog.spec(t); assertTrue(s.width % Grid.TILE == 0 && s.height % Grid.TILE == 0, "$t ${s.width}x${s.height}") }

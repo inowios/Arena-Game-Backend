@@ -348,7 +348,10 @@ object BuildingCatalog {
     // a tile ([Grid.aligned], the server checks it) — and each footprint's proportions come from its own ChatGPT drawing
     // (art/scripts/cut_sprites.py fits the drawing's ground inside the footprint's diamond and town_sprites.py lists the
     // fill each candidate gets): the ticket office square as drawn, the stadium 12×12 the biggest, the island arenas
-    // 10×10, 10×8 and 12×8 under it; DECOR, FENCE and ROAD one tile each. A stadium-10 town (every type at its count,
+    // as big as their islands allow and no bigger than it (14 October, pass 4: each island's clear centrepiece, with a
+    // lawn cell round it on the island, in its drawing's proportions — the basketball and volleyball arenas 12×12, the
+    // tennis arena 12×10, the padel arena 10×12 on its narrow island; LandMaskTest checks they fit); DECOR, FENCE and ROAD
+    // one tile each. A stadium-10 town (every type at its count,
     // the decor, the fences and the roads at their allowance) covers ~76 % of the main island's tiles (2108 of 2780 cells;
     // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %): the houses 20 at the top (30 of 4×4
     // before), the roads 140 tiles (600 cells before; 180 left no room for the 40 fence tiles, the review of pass 3).
@@ -371,13 +374,13 @@ object BuildingCatalog {
         BuildingSpec(SPONSOR_OFFICE, 4, 4, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
         BuildingSpec(HOTEL, 6, 4, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
         // the arenas open a sport section (a starter squad when the first one is finished), on their own island
-        BuildingSpec(BASKETBALL_ARENA, 10, 10, true, levelTable.getValue(BASKETBALL_ARENA), oneFrom(3), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 10),
+        BuildingSpec(BASKETBALL_ARENA, 12, 12, true, levelTable.getValue(BASKETBALL_ARENA), oneFrom(3), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 10),
             island = ZoneSport.BASKETBALL),
-        BuildingSpec(VOLLEYBALL_ARENA, 10, 10, true, levelTable.getValue(VOLLEYBALL_ARENA), oneFrom(5), capsFrom(5),
+        BuildingSpec(VOLLEYBALL_ARENA, 12, 12, true, levelTable.getValue(VOLLEYBALL_ARENA), oneFrom(5), capsFrom(5),
             island = ZoneSport.VOLLEYBALL, soon = true),
-        BuildingSpec(TENNIS_ARENA, 12, 8, true, levelTable.getValue(TENNIS_ARENA), oneFrom(7), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 10),
+        BuildingSpec(TENNIS_ARENA, 12, 10, true, levelTable.getValue(TENNIS_ARENA), oneFrom(7), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 10),
             island = ZoneSport.TENNIS),
-        BuildingSpec(PADEL_ARENA, 10, 8, true, levelTable.getValue(PADEL_ARENA), oneFrom(9), capsFrom(9),
+        BuildingSpec(PADEL_ARENA, 10, 12, true, levelTable.getValue(PADEL_ARENA), oneFrom(9), capsFrom(9),
             island = ZoneSport.PADEL, soon = true),
     ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = true) })
         .associateBy { it.type }

@@ -34,6 +34,15 @@ class LandMaskTest {
             assertTrue(main.has(b.first, b.second), "the $id bridge's foot is off the main island")
             assertTrue((-2..2).any { dx -> (-2..2).any { dy -> !main.has(b.first + dx, b.second + dy) } }, "the $id bridge's foot is far from the land's edge")
         }
+        // every island arena is its island's centrepiece (14 October, pass 4): it fits its island on the build grid's tiles
+        // with a lawn cell round it, and the stadium stays at least as big as any of them
+        val stadium = BuildingCatalog.spec(BuildingType.PITCH)
+        for (t in BuildingType.values()) {
+            val s = BuildingCatalog.spec(t); val isle = s.island?.let { lands.island(it) } ?: continue
+            assertTrue(isle.cells.any { (x, y) -> Grid.aligned(x, y) && isle.fits(Footprint(x - 1, y - 1, s.width + 2, s.height + 2)) },
+                "$t ${s.width}x${s.height} has no tile on the ${isle.id} island with a lawn cell round it")
+            assertTrue(s.width <= stadium.width && s.height <= stadium.height, "$t ${s.width}x${s.height} is bigger than the stadium")
+        }
         // both showcase towns fit it (ShowcaseTest checks them in full)
         for (stadium in listOf(5, 10)) {
             val ground = LandSet(listOf(main) + Showcase.islands(stadium, lands))   // the arenas on their open islands

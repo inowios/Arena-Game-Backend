@@ -111,7 +111,7 @@ class SportTownTest {
         val tree = at(club.id, BuildingType.DECOR, 26, 24)
         val court = at(club.id, BuildingType.BACKYARD_COURT, 24, 30, level = 4)
         val basket = at(club.id, BuildingType.BASKETBALL_ARENA, 0, 24, level = 4)
-        val tennis = at(club.id, BuildingType.TENNIS_ARENA, 2, 36, level = 2)
+        val tennis = at(club.id, BuildingType.TENNIS_ARENA, 12, 32, level = 2)
         for (b in listOf(shop, sponsor, road, tree, court, basket, tennis)) assertTrue(main.fits(fp(b)), "${b.type} starts on the meadow")
         val bush = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 27, 23, ObstacleState.READY, null, 6, clock.now(), clock.now())
         obstacles.create(bush)
