@@ -1,14 +1,11 @@
 package com.arenacity.presentation.dto
 
-import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.DailyTask
 import com.arenacity.domain.rules.Achievements
-import com.arenacity.domain.rules.Cosmetic
 import com.arenacity.domain.rules.Economy
 import com.arenacity.domain.rules.Reward
 import com.arenacity.domain.rules.TaskKind
 import com.arenacity.domain.usecase.economy.AchievementState
-import com.arenacity.domain.usecase.economy.Inventory
 import com.arenacity.domain.usecase.economy.PassView
 import kotlinx.serialization.Serializable
 
@@ -29,11 +26,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class PushTokenRequest(val token: String, val platform: String = "android")
 @Serializable data class ProductDto(val id: String, val gold: Int, val coins: Long, val premiumPass: Boolean)
 @Serializable data class CoinPackDto(val id: String, val gold: Int, val coins: Long)
-@Serializable data class CosmeticDto(val id: String, val kind: String, val source: String, val gold: Int, val rarity: String, val unlock: String? = null)
-@Serializable data class EquippedDto(val kit: String?, val frame: String?, val celebration: String?)
-@Serializable data class InventoryResponse(val owned: List<String>, val equipped: EquippedDto, val club: ClubDto)
-@Serializable data class EquipRequest(val kind: String, val itemId: String? = null)
-@Serializable data class VariantRequest(val itemId: String)
 @Serializable data class AchievementDto(
     val id: String, val metric: String, val value: Long, val tiers: List<Int>, val gold: List<Int>, val items: Map<Int, String>,
     val claimedTier: Int, val reachedTier: Int,
@@ -49,8 +41,5 @@ fun PassView.toDto() = PassResponse(seasonNumber, pass.xp, level, Economy.XP_PER
             Economy.passItem(l, false)?.id, Economy.passItem(l, true)?.id, l == Economy.ELITE_LEVEL)
     }, ThemeDto(theme.id, theme.accent, theme.accent2, theme.item, com.arenacity.domain.rules.SeasonThemes.ITEM_LEVEL))
 
-fun Cosmetic.toDto() = CosmeticDto(id, kind.name, source.name, gold, rarity.name, unlock)
-fun Club.equipped() = EquippedDto(kit, emblemFrame, celebration)
-fun Inventory.toDto() = InventoryResponse(owned.sorted(), club.equipped(), club.toDto())
 fun AchievementState.toDto() = AchievementDto(achievement.id, achievement.metric.name, value, achievement.tiers, achievement.gold,
     (1..achievement.tiers.size).mapNotNull { t -> Achievements.item(achievement.id, t)?.let { t to it.id } }.toMap(), claimedTier, reachedTier)

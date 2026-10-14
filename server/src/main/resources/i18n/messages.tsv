@@ -32,7 +32,6 @@ Nothing to speed up	Nothing to speed up	No hay nada que acelerar	Nada para acele
 Free speed-up only for timers under 30 minutes	The free speed-up works for timers under 30 minutes	La aceleración gratis es para temporizadores de menos de 30 minutos	A aceleração grátis vale para timers de menos de 30 minutos	Бесплатное ускорение — только для таймеров до 30 минут	Безкоштовне прискорення — лише для таймерів до 30 хвилин
 Free speed-up already used today	You've used today's free speed-up	Ya usaste la aceleración gratis de hoy	Você já usou a aceleração grátis de hoje	Бесплатное ускорение на сегодня уже использовано	Безкоштовне прискорення на сьогодні вже використано
 Double income is on cooldown	Double income isn't available again yet	El doble de ingresos aún no está disponible	A renda dobrada ainda não está disponível	Двойной доход пока недоступен	Подвійний дохід поки недоступний
-Decor looks are chosen per decoration	Decor looks are chosen per decoration	El estilo de la decoración se elige en cada decoración	O visual da decoração é escolhido em cada decoração	Вид декора выбирается для каждого украшения	Вигляд декору обирається для кожної прикраси
 Decor looks are not available	Decor looks are not available	Los estilos de decoración no están disponibles	Os visuais de decoração não estão disponíveis	Стили декора недоступны	Стилі декору недоступні
 Only decorations have looks	Only decorations have looks	Solo las decoraciones tienen estilos	Só decorações têm visuais	Вид меняется только у декора	Вигляд змінюється лише в декору
 Emblem too large	The emblem is too large	El escudo es demasiado grande	O escudo é grande demais	Эмблема слишком большая	Емблема завелика
@@ -100,9 +99,7 @@ Invalid receipt	The purchase couldn't be verified	No se pudo verificar la compra
 Purchase is pending	The payment is still pending	El pago sigue pendiente	O pagamento ainda está pendente	Платёж ещё обрабатывается	Платіж ще обробляється
 Purchase was cancelled	The purchase was cancelled	La compra se canceló	A compra foi cancelada	Покупка отменена	Покупку скасовано
 Purchase was refunded	The purchase was refunded	La compra fue reembolsada	A compra foi reembolsada	За покупку вернули деньги	За покупку повернули гроші
-Already owned	You already own this	Ya lo tienes	Você já tem isso	Уже есть	Уже є
 Unknown item	Unknown item	Artículo desconocido	Item desconhecido	Неизвестный предмет	Невідомий предмет
-This item can't be bought, it is earned	This item can't be bought — it's earned	Este artículo no se compra: se gana	Este item não se compra — se conquista	Этот предмет не продаётся — его можно заслужить	Цей предмет не продається — його можна заслужити
 This item doesn't fit here	This item doesn't fit here	Este artículo no va aquí	Este item não serve aqui	Этот предмет сюда не подходит	Цей предмет сюди не підходить
 You don't own this item yet	You don't own this item yet	Aún no tienes este artículo	Você ainda não tem este item	У вас пока нет этого предмета	У вас поки немає цього предмета
 Unknown coin pack	Unknown coin pack	Paquete de monedas desconocido	Pacote de moedas desconhecido	Неизвестный пакет монет	Невідомий пакет монет

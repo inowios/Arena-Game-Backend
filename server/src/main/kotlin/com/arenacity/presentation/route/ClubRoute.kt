@@ -38,7 +38,6 @@ fun Route.clubRoutes() {
     val speedObstacle: SpeedUpObstacleUseCase by inject()
     val collectObstacle: CollectObstacleUseCase by inject()
     val sections: com.arenacity.domain.usecase.athlete.SectionService by inject()
-    val cosmetics: com.arenacity.domain.usecase.economy.CosmeticsUseCases by inject()
     val inbox: com.arenacity.domain.usecase.account.InboxService by inject()
     val readiness: com.arenacity.domain.usecase.live.LiveReadinessUseCase by inject()
     val rest: com.arenacity.domain.usecase.live.RestSquadUseCase by inject()
@@ -160,12 +159,6 @@ fun Route.clubRoutes() {
                     post("/move") {
                         val r = call.receive<MoveBuildingRequest>()
                         val b = move(call.userId(), call.buildingId(), r.x, r.y, r.rotation)
-                        val st = getClub(call.userId())
-                        call.respond(b.toDto(st.now, st.club.level).toSuccessResponse())
-                    }
-                    post("/variant") {
-                        val r = call.receive<VariantRequest>()
-                        val b = cosmetics.setDecorLook(call.userId(), call.buildingId(), r.itemId)
                         val st = getClub(call.userId())
                         call.respond(b.toDto(st.now, st.club.level).toSuccessResponse())
                     }

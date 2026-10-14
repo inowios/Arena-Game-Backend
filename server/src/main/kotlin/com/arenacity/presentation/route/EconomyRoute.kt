@@ -4,8 +4,6 @@ import com.arenacity.common.response.toSuccessResponse
 import com.arenacity.core.plugins.AUTH_JWT
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.repository.PushTokenRepository
-import com.arenacity.domain.rules.CosmeticKind
-import com.arenacity.domain.rules.Cosmetics
 import com.arenacity.domain.rules.Economy
 import com.arenacity.domain.rules.Store
 import com.arenacity.domain.rules.TaskKind
@@ -27,7 +25,6 @@ fun Route.economyRoutes() {
     val ads: AdRewardUseCase by inject()
     val pushTokens: PushTokenRepository by inject()
     val clubService: com.arenacity.domain.usecase.club.ClubService by inject()
-    val cosmetics: CosmeticsUseCases by inject()
     val coinPacks: BuyCoinPackUseCase by inject()
     val achievements: AchievementUseCases by inject()
     val ssv: com.arenacity.core.store.AdMobSsvVerifier by inject()
@@ -36,7 +33,6 @@ fun Route.economyRoutes() {
 
     get("/catalog/products") { call.respond(Economy.PRODUCTS.values.map { ProductDto(it.id, it.gold, it.coins, it.premiumPass) }.toSuccessResponse()) }
     get("/catalog/coin-packs") { call.respond(Economy.COIN_PACKS.values.map { CoinPackDto(it.id, it.gold, it.coins) }.toSuccessResponse()) }
-    get("/catalog/cosmetics") { call.respond(Cosmetics.ALL.map { it.toDto() }.toSuccessResponse()) }
 
     /**
      * AdMob rewarded-ad server-side verification callback (configure its URL in the AdMob console). The app sets
@@ -65,13 +61,6 @@ fun Route.economyRoutes() {
             val sport = runCatching { call.receive<ClaimLevelsRequest>() }.getOrNull()?.eliteSport?.let { parseEnum<com.arenacity.domain.model.Sport>(it, "sport") } ?: com.arenacity.domain.model.Sport.FOOTBALL
             val r = pass.claimLevels(call.userId(), sport)
             call.respond(ClaimLevelsResponse(r.reward.toDto(), r.view.toDto(), clubService.clubOf(call.userId()).toDto(), r.items, r.elite?.toDto(java.time.Instant.now())).toSuccessResponse())
-        }
-        get("/club/cosmetics") { call.respond(cosmetics.inventory(call.userId()).toDto().toSuccessResponse()) }
-        post("/club/cosmetics/{id}/buy") { call.respond(cosmetics.buy(call.userId(), call.parameters["id"]!!).toDto().toSuccessResponse()) }
-        post("/club/cosmetics/equip") {
-            val r = call.receive<EquipRequest>()
-            cosmetics.equip(call.userId(), parseEnum<CosmeticKind>(r.kind, "kind"), r.itemId)
-            call.respond(cosmetics.inventory(call.userId()).toDto().toSuccessResponse())
         }
         post("/club/shop/coins/{pack}") { call.respond(coinPacks(call.userId(), call.parameters["pack"]!!).toDto().toSuccessResponse()) }
         get("/club/achievements") { call.respond(achievements.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }

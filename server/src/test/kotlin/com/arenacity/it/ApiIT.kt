@@ -174,7 +174,7 @@ class ApiIT {
         assertEquals(0, call(HttpMethod.Get, "/club/mail", a).data.jsonArray.size)
         val offers = call(HttpMethod.Get, "/store/offers", a).data.o()
         assertTrue(offers["starterAvailable"]!!.jsonPrimitive.boolean)
-        assertEquals(3, offers["daily"]!!.jsonArray.size)
+        assertEquals(listOf("COINS", "COINS"), offers["daily"]!!.jsonArray.map { it.o()["kind"]!!.jsonPrimitive.content })   // no cosmetic «LOOK» offer
     }
 
     @Test
@@ -287,38 +287,32 @@ class ApiIT {
     }
 
     @Test
-    fun `cosmetics, coin packs, achievements and ad rewards over HTTP`() = testApplication {
+    fun `decor looks, coin packs, achievements and ad rewards over HTTP`() = testApplication {
         environment { config = TestDb.appConfig(mapOf("ads.clientRewards" to "false")) }
         application { module() }
         val t = guestWithClub("it-device-0201", "Cosmo FC")
-        assertTrue(call(HttpMethod.Get, "/catalog/cosmetics").data.jsonArray.any { it.o()["id"]!!.jsonPrimitive.content == "kit_stripes" })
-        val poor = call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t, expect = 402, lang = "ru-RU,ru;q=0.9")   // 60 gold, 50 owned
+        // the cosmetics shop is gone
+        assertEquals(404, client.get("/api/v1/catalog/cosmetics").status.value)
+        assertEquals(404, client.post("/api/v1/club/cosmetics/kit_stripes/buy") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
+        val poor = call(HttpMethod.Post, "/club/shop/coins/coins_medium", t, expect = 402, lang = "ru-RU,ru;q=0.9")   // 100 gold, 50 owned
         assertEquals("Недостаточно золота", poor.o()["errors"]!!.jsonArray[0].jsonPrimitive.content)
         val me = call(HttpMethod.Patch, "/me", t, """{"locale":"uk-UA"}""").data.o()
         assertEquals("uk", me["user"]!!.o()["locale"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/purchases/verify", t, """{"store":"DEV","productId":"gold_small","token":"dev:it-cos"}""")
-        val inv = call(HttpMethod.Post, "/club/cosmetics/kit_stripes/buy", t).data.o()
-        assertTrue(inv["owned"]!!.jsonArray.any { it.jsonPrimitive.content == "kit_stripes" })
-        assertEquals(90, inv["club"]!!.o()["gold"]!!.jsonPrimitive.int)
-        val eq = call(HttpMethod.Post, "/club/cosmetics/equip", t, """{"kind":"KIT","itemId":"kit_stripes"}""").data.o()
-        assertEquals("kit_stripes", eq["equipped"]!!.o()["kit"]!!.jsonPrimitive.content)
-        call(HttpMethod.Post, "/club/cosmetics/equip", t, """{"kind":"FRAME","itemId":"frame_gold"}""", expect = 409)
         val state = call(HttpMethod.Get, "/club", t).data.o()
-        assertEquals("kit_stripes", state["club"]!!.o()["kit"]!!.jsonPrimitive.content)
         assertTrue(state["ads"]!!.o()["freeSpeedupAvailable"]!!.jsonPrimitive.boolean)
-        // decor looks
+        // decor looks at placement: only owned ones (earned on the pass, roads, achievements…), the default tree always
         val (dx, dy) = freeSpot(state, 2, 2)
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_flowerbed"}""", expect = 409)
-        call(HttpMethod.Post, "/club/cosmetics/decor_flowerbed/buy", t)
-        val (ex, ey) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)   // an obstacle may have turned up meanwhile
-        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$ex,"y":$ey,"variant":"decor_flowerbed"}""", expect = 201).data.o()
-        assertEquals("decor_flowerbed", decor["variant"]!!.jsonPrimitive.content)
-        val tree = call(HttpMethod.Post, "/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant", t, """{"itemId":"decor_tree"}""").data.o()
-        assertTrue(tree["variant"] == null || tree["variant"] is JsonNull)
+        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_tree"}""", expect = 201).data.o()
+        assertTrue(decor["variant"] == null || decor["variant"] is JsonNull)
+        assertEquals(404, client.post("/api/v1/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant") {
+            header(HttpHeaders.Authorization, "Bearer $t"); contentType(ContentType.Application.Json); setBody("""{"itemId":"decor_tree"}""")
+        }.status.value)
         // coins for gold
         val coinsBefore = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["coins"]!!.jsonPrimitive.long
         val afterPack = call(HttpMethod.Post, "/club/shop/coins/coins_small", t).data.o()
-        assertEquals(coinsBefore + 3_000, afterPack["coins"]!!.jsonPrimitive.long); assertEquals(40, afterPack["gold"]!!.jsonPrimitive.int)
+        assertEquals(coinsBefore + 3_000, afterPack["coins"]!!.jsonPrimitive.long); assertEquals(125, afterPack["gold"]!!.jsonPrimitive.int)
         // achievements from real counters (friendly played) and the login streak maximum
         call(HttpMethod.Post, "/friendlies", t, "{}", expect = 201)
         call(HttpMethod.Post, "/club/daily/claim", t)

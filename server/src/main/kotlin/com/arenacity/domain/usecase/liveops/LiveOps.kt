@@ -80,7 +80,7 @@ object EventCalendar {
 }
 
 data class EventView(val event: GameEvent, val progress: EventProgress?, val running: Boolean)
-data class Offer(val id: String, val kind: String, val gold: Int, val coins: Long = 0, val item: String? = null, val oldGold: Int = 0, val bought: Boolean = false)
+data class Offer(val id: String, val kind: String, val gold: Int, val coins: Long = 0, val oldGold: Int = 0, val bought: Boolean = false)
 data class OffersView(val starterAvailable: Boolean, val daily: List<Offer>, val endsAt: Instant)
 
 class LiveOps(
@@ -178,18 +178,14 @@ class LiveOps(
     // ---- offers ----
     private fun dayKey(now: Instant) = now.atZone(ZoneOffset.UTC).toLocalDate().let { it.year * 1000 + it.dayOfYear }
 
-    /** Three offers a day for gold, the same for a club all day: a discounted coin pack (sized by the stadium), a look
-     * at a third off, and a builder's rush (gold for a fixed chunk of coins at the best rate). */
+    /** Two offers a day for gold, the same for a club all day: a discounted coin pack (sized by the stadium) and a
+     * builder's rush (gold for a fixed chunk of coins at the best rate). */
     suspend fun offers(userId: UUID): OffersView {
         val st = service.state(userId); val now = clock.now(); val day = dayKey(now)
-        val rnd = java.util.Random(day.toLong() * 31 + st.club.id.leastSignificantBits)
         val coinsK = Stadium.MAX_LEVEL.let { 1L shl (st.stadium - 1).coerceIn(0, 9) }.coerceAtMost(256)
         val pack = Offer("coins-$day", "COINS", 60, coins = 6_000L * coinsK.coerceAtLeast(1), oldGold = 100)
-        val owned = cosmetics.owned(st.club.id)
-        val shopLooks = Cosmetics.ALL.filter { it.source == CosmeticSource.SHOP && it.id !in owned }
-        val look = shopLooks.takeIf { it.isNotEmpty() }?.let { it[rnd.nextInt(it.size)] }?.let { Offer("look-$day", "LOOK", (it.gold * 2 / 3).coerceAtLeast(10), item = it.id, oldGold = it.gold) }
         val rush = Offer("rush-$day", "COINS", 150, coins = 20_000L * coinsK.coerceAtLeast(1), oldGold = 250)
-        val list = listOfNotNull(pack, look, rush).map { it.copy(bought = repo.offerBought(st.club.id, day, it.id)) }
+        val list = listOf(pack, rush).map { it.copy(bought = repo.offerBought(st.club.id, day, it.id)) }
         val starter = purchases?.invoke(st.club.id, STARTER_PACK) == false
         val tomorrow = now.atZone(ZoneOffset.UTC).toLocalDate().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
         return OffersView(starter, list, tomorrow)
@@ -202,7 +198,6 @@ class LiveOps(
         val club = service.lockedClubOf(userId); val now = clock.now()
         if (club.gold < o.gold) throw InsufficientFundsException("Not enough gold")
         if (!repo.markOffer(club.id, dayKey(now), o.id, now)) throw ConflictException("Already bought")
-        o.item?.let { id -> Cosmetics.find(id)?.let { cosmetics.grant(club.id, it, CosmeticSource.SHOP) } }
         clubs.update(club.copy(gold = club.gold - o.gold, coins = club.coins + o.coins, updatedAt = now))
     }
 

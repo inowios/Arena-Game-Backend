@@ -89,7 +89,8 @@ class LiveOpsTest {
         setup()
         val v = ops.offers(user)
         assertTrue(v.starterAvailable)
-        assertEquals(3, v.daily.size)
+        assertEquals(2, v.daily.size)
+        assertTrue(v.daily.all { it.kind == "COINS" })   // coin offers only, no cosmetic look
         val pack = v.daily.first()
         val gold = club().gold; val coins = club().coins
         ops.buyOffer(user, pack.id)

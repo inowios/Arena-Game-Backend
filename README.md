@@ -64,8 +64,7 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks, 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
 | GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold packs + premium pass. `GOOGLE`: Play purchase token (`purchases.products.get`, order id = idempotency key); `APPLE`: transaction id (App Store Server API, production then sandbox; optional x5c chain check against Apple Root CA G3); `DEV` with `IAP_DEV_MODE=true`, token `dev:<order>` |
 | GET | `/api/v1/catalog/coin-packs`; POST `/club/shop/coins/{pack}` | coins for gold (25 → 3 000, 100 → 13 000, 400 → 60 000) |
-| GET | `/api/v1/catalog/cosmetics`; GET `/club/cosmetics`; POST `/club/cosmetics/{id}/buy`, `/club/cosmetics/equip` `{kind, itemId?}` | kits, emblem frames, goal celebrations, decor looks: shop (gold), season pass or achievements; equipped looks are on `ClubDto`/`ClubRefDto` (`kit`, `emblemFrame`/`frame`, `celebration`) |
-| POST | `/api/v1/club/buildings` `{…, variant?}`, `/club/buildings/{id}/variant` `{itemId}` | decor look at placement / later (owned decor items) |
+| POST | `/api/v1/club/buildings` `{…, variant?}` | decor look at placement (an owned decor item). Cosmetics (kits, emblem frames, celebrations, decor looks) are no longer sold: they come from the season pass, achievements, the roads, events and mail; the looks a club already has stay on `ClubDto`/`ClubRefDto` (`kit`, `emblemFrame`/`frame`, `celebration`) |
 | GET | `/api/v1/club/achievements`; POST `/club/achievements/{id}/claim` | 14 tiered achievements (wins, sections, divisions, titles, builds, streak, invites…): gold per tier, some tiers give cosmetics |
 | POST | `/api/v1/ads/reward` `{placement, buildingId?}` | client-reported reward (development, or `ADS_CLIENT_REWARDS=true`): `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
 | GET | `/api/v1/ads/ssv` | AdMob server-side verification callback (signature checked with Google's keys; `user_id` = user id, `custom_data` = `PLACEMENT[:buildingId]`; idempotent per `transaction_id`) |
@@ -83,7 +82,7 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
-Monetization (spec §6): gold buys speed-ups (buildings, trainings, medical cooldown), the second builder, coin packs and cosmetics;
+Monetization (spec §6): gold buys speed-ups (buildings, trainings, medical cooldown), the second builder and coin packs;
 athletes, attributes, reputation and league places are never sold. `GET /club` carries `ads` (double-income window/cooldown, today's
 free speed-up). Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
 `season_pass` — consumable bought once per season. AdMob SSV callback URL: `https://<host>/api/v1/ads/ssv`.

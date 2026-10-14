@@ -36,7 +36,6 @@ class MonetizationTest {
     private val speedTraining = SpeedUpTrainingUseCase(service, squads, trainings, clock)
     private val speedMedical = SpeedUpMedicalUseCase(service, clubs, clock)
     private val heal = HealAthleteUseCase(service, squads, clubs, athletes, clock)
-    private val shop = CosmeticsUseCases(service, clubs, buildings, cosmetics, clock)
     private val coinPacks = BuyCoinPackUseCase(service, clubs, clock)
     private val achievementService = AchievementService(achievementsRepo, buildings, seasons)
     private val achievements = AchievementUseCases(service, clubs, achievementsRepo, achievementService, cosmetics, clock)
@@ -55,46 +54,13 @@ class MonetizationTest {
     }
 
     @Test
-    fun `shop cosmetics cost gold once, earned ones can't be bought`() = runBlocking<Unit> {
-        setup(gold = 100)
-        val inv = shop.buy(user, "kit_stripes")
-        assertTrue("kit_stripes" in inv.owned); assertEquals(40, inv.club.gold)
-        assertFailsWith<ConflictException> { shop.buy(user, "kit_stripes") }
-        assertFailsWith<ValidationException> { shop.buy(user, "frame_gold") }            // season pass item
-        assertFailsWith<ValidationException> { shop.buy(user, "frame_laurel") }          // achievement item
-        assertFailsWith<NotFoundException> { shop.buy(user, "kit_nope") }
-        assertFailsWith<InsufficientFundsException> { shop.buy(user, "decor_fountain") }
-        assertEquals(40, club().gold)
-        Unit
-    }
-
-    @Test
-    fun `equip owned looks, reset to default, refuse what is not owned`() = runBlocking<Unit> {
-        setup()
-        assertFailsWith<ConflictException> { shop.equip(user, CosmeticKind.KIT, "kit_hoops") }
-        shop.buy(user, "kit_hoops"); shop.buy(user, "frame_silver")
-        assertEquals("kit_hoops", shop.equip(user, CosmeticKind.KIT, "kit_hoops").kit)
-        assertEquals("frame_silver", shop.equip(user, CosmeticKind.FRAME, "frame_silver").emblemFrame)
-        assertFailsWith<ValidationException> { shop.equip(user, CosmeticKind.FRAME, "kit_hoops") }
-        assertNull(shop.equip(user, CosmeticKind.KIT, "kit_plain").kit)                 // default kit = null
-        assertNull(shop.equip(user, CosmeticKind.FRAME, null).emblemFrame)
-        assertEquals("cel_fist", shop.inventory(user).owned.first { it.startsWith("cel_") })
-        Unit
-    }
-
-    @Test
-    fun `decor looks at placement and later`() = runBlocking<Unit> {
+    fun `decor looks at placement need an owned decor item`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain") }
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 8, 36, 0, "decor_tree") }
-        shop.buy(user, "decor_fountain")
+        cosmetics.grant(club().id, Cosmetics.find("decor_fountain")!!, CosmeticSource.ROAD)   // earned, e.g. on the club road
         val d = place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain")
         assertEquals("decor_fountain", d.variant)
-        val tree = shop.setDecorLook(user, d.id, "decor_tree")
-        assertNull(tree.variant)
-        assertFailsWith<ConflictException> { shop.setDecorLook(user, d.id, "decor_statue") }
-        val pitch = buildings.rows.values.first { it.type == BuildingType.PITCH }
-        assertFailsWith<ValidationException> { shop.setDecorLook(user, pitch.id, "decor_fountain") }
         Unit
     }
 
@@ -133,7 +99,7 @@ class MonetizationTest {
         seasons.createTrophy(Trophy(UUID.randomUUID(), club().id, TrophyKind.LEAGUE_TITLE, 1, 1, clock.now()))
         val c = achievements.claim(user, "champion")
         assertEquals(listOf("frame_laurel"), c.items); assertEquals(50, c.gold)
-        assertTrue("frame_laurel" in shop.inventory(user).owned)
+        assertTrue("frame_laurel" in cosmetics.owned(club().id))
         // promoted:1 gives kit_retro; owning it already turns into gold
         inventory.add(ClubItem(club().id, "kit_retro", "SHOP", clock.now()))
         seasons.createTrophy(Trophy(UUID.randomUUID(), club().id, TrophyKind.PROMOTION, 2, 1, clock.now()))

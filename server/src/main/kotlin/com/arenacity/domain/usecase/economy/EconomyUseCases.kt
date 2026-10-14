@@ -133,8 +133,7 @@ class DevReceiptVerifier : ReceiptVerifier {
 
 data class PurchaseResult(val status: String, val gold: Int, val coins: Long, val club: Club)
 
-class VerifyPurchaseUseCase(private val service: ClubService, private val clubs: ClubRepository, private val repo: EconomyRepository, private val pass: SeasonPassUseCases, private val verifiers: Map<Store, ReceiptVerifier>, private val clock: Clock, private val tx: Tx = NoTx,
-                            private val cosmetics: CosmeticsService? = null) {
+class VerifyPurchaseUseCase(private val service: ClubService, private val clubs: ClubRepository, private val repo: EconomyRepository, private val pass: SeasonPassUseCases, private val verifiers: Map<Store, ReceiptVerifier>, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID, store: Store, productId: String, token: String): PurchaseResult {
         val product = Economy.PRODUCTS[productId] ?: throw ValidationException("Unknown product")
         val verifier = verifiers[store] ?: throw ValidationException("Store not supported")
@@ -147,7 +146,6 @@ class VerifyPurchaseUseCase(private val service: ClubService, private val clubs:
                 repo.createPurchase(Purchase(UUID.randomUUID(), club.id, store.name, productId, externalId, "GRANTED", product.gold, product.coins, now))
                 val updated = clubs.update(club.copy(gold = club.gold + product.gold, coins = club.coins + product.coins, updatedAt = now))
                 if (product.premiumPass) pass.unlockPremium(updated)
-                product.item?.let { id -> Cosmetics.find(id)?.let { c -> cosmetics?.grant(club.id, c, CosmeticSource.SHOP) } }
                 PurchaseResult("GRANTED", product.gold, product.coins, updated)
             }
         }

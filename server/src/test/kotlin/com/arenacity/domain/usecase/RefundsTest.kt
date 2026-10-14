@@ -25,9 +25,8 @@ class RefundsTest {
     private val economy = EconomyService(repo, leagues, clock)
     private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val pass = SeasonPassUseCases(clubService, clubs, repo, economy, clock)
-    private val cosmetics = CosmeticsService(inventory, clock)
-    private val purchase = VerifyPurchaseUseCase(clubService, clubs, repo, pass, mapOf(Store.DEV to DevReceiptVerifier()), clock, cosmetics = cosmetics)
-    private val refund = RefundUseCase(clubs, repo, inventory, clock, inbox = InboxService(inboxRepo, clock))
+    private val purchase = VerifyPurchaseUseCase(clubService, clubs, repo, pass, mapOf(Store.DEV to DevReceiptVerifier()), clock)
+    private val refund = RefundUseCase(clubs, repo, clock, inbox = InboxService(inboxRepo, clock))
     private val user = UUID.randomUUID()
 
     private suspend fun club() = clubService.clubOf(user)
@@ -72,22 +71,18 @@ class RefundsTest {
     }
 
     @Test
-    fun `the starter pack refund removes its item and lets the club buy it again`() = runBlocking<Unit> {
+    fun `the starter pack gives no item, and its refund lets the club buy it again`() = runBlocking<Unit> {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val c0 = club()
         buy("starter_pack", "o3")
-        assertTrue(inventory.items(c0.id).any { it.itemId == "decor_fountain" })
+        assertTrue(inventory.items(c0.id).isEmpty())
+        assertEquals(c0.gold + 500, club().gold); assertEquals(c0.coins + 20_000, club().coins)
         assertEquals("ALREADY_OWNED", purchase(user, Store.DEV, "starter_pack", "dev:o4").status)
 
         assertEquals(RefundOutcome.APPLIED, refund(RefundAction.REFUND, listOf(key("starter_pack", "o3"))))
-        assertFalse(inventory.items(c0.id).any { it.itemId == "decor_fountain" })
         assertEquals(c0.gold, club().gold); assertEquals(c0.coins, club().coins)
         assertEquals("GRANTED", purchase(user, Store.DEV, "starter_pack", "dev:o4").status)
-        assertTrue(inventory.items(c0.id).any { it.itemId == "decor_fountain" })
-
-        // reversing the first refund while the second purchase stands does not duplicate the item
-        refund(RefundAction.RESTORE, listOf(key("starter_pack", "o3")))
-        assertEquals(1, inventory.items(c0.id).count { it.itemId == "decor_fountain" })
+        assertTrue(inventory.items(c0.id).isEmpty())
     }
 
     @Test

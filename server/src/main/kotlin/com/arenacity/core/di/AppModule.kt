@@ -152,8 +152,8 @@ val appModule = module {
             log.info("Receipt verifiers: ${keys.joinToString()}${if (dev) " (dev receipts accepted)" else ""}")
         }
     }
-    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get(), cosmetics = get()) }
-    single { com.arenacity.domain.usecase.economy.RefundUseCase(get(), get(), get(), get(), tx = get(), inbox = get(), events = get()) }
+    single { VerifyPurchaseUseCase(get(), get(), get(), get(), get(), get(), tx = get()) }
+    single { com.arenacity.domain.usecase.economy.RefundUseCase(get(), get(), get(), tx = get(), inbox = get(), events = get()) }
     single {
         val c = get<Application>().environment.config
         fun prop(k: String) = c.propertyOrNull(k)?.getString()?.trim().orEmpty()
@@ -173,7 +173,6 @@ val appModule = module {
     single<InventoryRepository> { InventoryRepositoryImpl() }
     single<AchievementRepository> { AchievementRepositoryImpl() }
     single { CosmeticsService(get(), get()) }
-    single { CosmeticsUseCases(get(), get(), get(), get(), get(), tx = get()) }
     single { BuyCoinPackUseCase(get(), get(), get(), tx = get()) }
     single { AchievementService(get(), get(), get(), get()) }
     single { AchievementUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
