@@ -23,6 +23,7 @@ class ShowcaseTest {
         val cells = HashMap<Pair<Int, Int>, BuildingType>()
         for (s in city.slots) {
             val spec = BuildingCatalog.spec(s.type)
+            assertTrue(Grid.aligned(s.x, s.y), "${s.type} at ${s.x},${s.y} is off the build grid's tiles")
             assertTrue(s.level in 1..spec.capAt(stadium).coerceAtLeast(1), "${s.type} level ${s.level} over the cap at stadium $stadium")
             // an arena on its own open island, everything else on the main island
             if (spec.island != null) assertTrue(lands.allows(ground, s.type, Footprint(s.x, s.y, spec.width, spec.height)), "${s.type} at ${s.x},${s.y} is off its island")
@@ -59,7 +60,7 @@ class ShowcaseTest {
         for (a in solid) for (b in solid) if (a !== b) {
             val sa = BuildingCatalog.spec(a.type); val sb = BuildingCatalog.spec(b.type)
             val gapX = maxOf(b.x - (a.x + sa.width), a.x - (b.x + sb.width)); val gapY = maxOf(b.y - (a.y + sa.height), a.y - (b.y + sb.height))
-            assertTrue(maxOf(gapX, gapY) >= 1, "${a.type} at ${a.x},${a.y} touches ${b.type} at ${b.x},${b.y}")
+            assertTrue(maxOf(gapX, gapY) >= Grid.TILE, "${a.type} at ${a.x},${a.y} touches ${b.type} at ${b.x},${b.y}")
         }
         assertEquals(stadium, Stadium.level(city.slots.map { com.arenacity.domain.model.Building(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), it.type, it.level, it.x, it.y, 0,
             com.arenacity.domain.model.BuildingState.IDLE, null, java.time.Instant.EPOCH, java.time.Instant.EPOCH, java.time.Instant.EPOCH) }))
@@ -79,34 +80,41 @@ class ShowcaseTest {
             assertTrue(isle in open, "${s.type} on a closed island")
             assertEquals(1, city.slots.count { isle.fits(footprint(it.type, it.x, it.y, 0)) }, "${isle.id} holds its arena only")
         }
-        // the streets: one network on the meadow; the ring round the plaza at every stadium (cells c - RING .. c + RING - 1 round
-        // the stadium's middle c), at the top the boulevards on the axes from the ring out to the shore
-        val roads = city.slots.filter { it.type == BuildingType.ROAD }.map { it.x to it.y }.toSet()
+        // the streets: one network on the meadow; the ring round the plaza at every stadium (tiles c - RING .. c + RING - 1
+        // round the stadium's middle tile c), at the top the boulevards on the axes from the ring out to the shore — all in
+        // tiles of the build grid (Grid.TILE cells), the meadow's whole tiles
+        val T = Grid.TILE
+        val tland = land.tiles()
+        val roads = city.slots.filter { it.type == BuildingType.ROAD }.map { it.x / T to it.y / T }.toSet()
         val seen = HashSet<Pair<Int, Int>>(); val queue = ArrayDeque(listOf(roads.first())); seen += roads.first()
         while (queue.isNotEmpty()) { val (x, y) = queue.removeFirst(); for (n in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) if (n in roads && seen.add(n)) queue.addLast(n) }
         assertEquals(roads, seen, "the streets are one network at stadium $stadium")
-        val cx = pitch.x + ps.width / 2; val cy = pitch.y + ps.height / 2
+        val cx = pitch.x / T + ps.width / T / 2; val cy = pitch.y / T + ps.height / T / 2
         val r = Showcase.RING
         for (i in -r until r) for (p in listOf(cx - r to cy + i, cx + r - 1 to cy + i, cx + i to cy - r, cx + i to cy + r - 1))
-            if (land.has(p.first, p.second)) assertTrue(p in roads, "the ring at $p, stadium $stadium")
-        if (stadium >= 8) for ((dx, dy) in listOf(0 to -1, 0 to 1, -1 to 0, 1 to 0)) for (k in listOf(-1, 0)) {
+            if (tland.has(p.first, p.second)) assertTrue(p in roads, "the ring at tile $p, stadium $stadium")
+        if (stadium >= 8) for ((dx, dy) in listOf(0 to -1, 0 to 1, -1 to 0, 1 to 0)) for (k in listOf(0)) {
             // from the ring outwards, cell by cell while the meadow lasts
             var x = if (dx == 0) cx + k else if (dx < 0) cx - r - 1 else cx + r
             var y = if (dy == 0) cy + k else if (dy < 0) cy - r - 1 else cy + r
-            while (land.has(x, y)) { assertTrue(x to y in roads, "the boulevard at $x,$y, stadium $stadium"); x += dx; y += dy }
+            while (tland.has(x, y)) { assertTrue(x to y in roads, "the boulevard at tile $x,$y, stadium $stadium"); x += dx; y += dy }
         }
         // ... and on the shipped mask the streets reach every bridge's foot (where its crossing, painted by the bridge
         // building, meets the meadow: land_mask.json anchors.bridges)
-        if (stadium >= 8 && lands === Lands.MAP) for ((id, f) in lands.bridges) assertTrue(f in roads, "no road reaches the $id bridge's foot $f, stadium $stadium")
+        // (its tile, or the tile next to it where the foot's own tile is not wholly meadow)
+        if (stadium >= 8 && lands === Lands.MAP) for ((id, f) in lands.bridges) {
+            val fx = Math.floorDiv(f.first, T); val fy = Math.floorDiv(f.second, T)
+            assertTrue((fx - 1..fx + 1).any { x -> (fy - 1..fy + 1).any { y -> x to y in roads } }, "no road reaches the $id bridge's foot $f, stadium $stadium")
+        }
         // every tree the stadium allows stands on a kerb or the shore
         assertEquals(BuildingCatalog.spec(BuildingType.DECOR).countAt(stadium), counts[BuildingType.DECOR] ?: 0, "trees at stadium $stadium")
-        // a pavement cell between every building and the streets (the street trees stand there), and along the shore (an
-        // arena's lawn on its island)
-        for (s in solid) { val sp = BuildingCatalog.spec(s.type); val own = sp.island?.let { lands.island(it)!! } ?: land
-            for (x in s.x until s.x + sp.width) for (y in s.y until s.y + sp.height)
+        // a lawn tile along the shore round every building (an arena's lawn on its island); on tiles a building may front
+        // the street (14 October, pass 3: a 20 m pavement took too much of the meadow)
+        for (s in solid) { val sp = BuildingCatalog.spec(s.type); val own = (sp.island?.let { lands.island(it)!! } ?: land).tiles()
+            for (x in s.x / T until (s.x + sp.width) / T) for (y in s.y / T until (s.y + sp.height) / T)
             for (n in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) {
-                assertTrue(n !in roads, "${s.type} at ${s.x},${s.y} fronts the street at $n")
-                if (s.type != BuildingType.PITCH) assertTrue(own.has(n.first, n.second), "${s.type} at ${s.x},${s.y} stands on the shore at $n")
+                // (an island arena takes its island's middle, with a lawn round it where the island has room for one)
+                if (s.type != BuildingType.PITCH && sp.island == null) assertTrue(own.has(n.first, n.second), "${s.type} at ${s.x},${s.y} stands on the shore at $n")
             } }
         // a whole town at the top, the club and the first streets of the town at stadium 5 (the main island's)
         val built = solid.filter { BuildingCatalog.spec(it.type).island == null }.sumOf { BuildingCatalog.spec(it.type).width * BuildingCatalog.spec(it.type).height }

@@ -32,22 +32,23 @@ class FenceLayoutTest {
     @Test
     fun `a dragged line of fence is built at once, paid together, without a builder`() = runBlocking<Unit> {
         newClub()
-        val line = (11..16).map { it to 23 }
+        val line = (0 until 4).map { 8 + 2 * it to 24 }   // one tile (2×2 cells) each, on tile corners
         val placed = fences(user, line)
-        assertEquals(6, placed.size)
+        assertEquals(4, placed.size)
         assertTrue(placed.all { it.type == BuildingType.FENCE && it.state == BuildingState.IDLE && it.level == 1 })
-        assertEquals(100_000 - 6 * 30L, coins)
+        assertEquals(100_000 - 4 * 30L, coins)
         assertEquals(0, get(user).busyBuilders)
     }
 
     @Test
     fun `fence cells are checked like placements and limited by the stadium`() = runBlocking<Unit> {
         newClub()
-        assertFailsWith<ConflictException> { fences(user, listOf(9 to 9)) }          // the ticket office
-        assertFailsWith<ValidationException> { fences(user, listOf(39 to 31)) }      // outside the plot (cells -9..38)
-        assertFailsWith<ValidationException> { fences(user, listOf(10 to 20, 10 to 20)) }
+        assertFailsWith<ConflictException> { fences(user, listOf(4 to 22)) }         // the ticket office
+        assertFailsWith<ValidationException> { fences(user, listOf(40 to 30)) }      // outside the plot (cells -9..38)
+        assertFailsWith<ValidationException> { fences(user, listOf(24 to 24, 24 to 24)) }
+        assertEquals("Off the build grid", assertFailsWith<ValidationException> { fences(user, listOf(25 to 24)) }.template)   // off a tile corner
         val limit = Stadium.fenceCount(1)
-        val tooMany = (0 until limit + 1).map { 9 + it % 12 to 19 + it / 12 }
+        val tooMany = (0 until limit + 1).map { 24 + 2 * (it % 6) to 24 + 2 * (it / 6) }
         val e = assertFailsWith<ValidationException> { fences(user, tooMany) }
         assertEquals(listOf<Any>(2), e.args.toList())
         assertEquals(100_000, coins, "nothing charged on a refused line")
@@ -56,7 +57,7 @@ class FenceLayoutTest {
     @Test
     fun `fences upgrade together and instantly up to the stadium's cap`() = runBlocking<Unit> {
         newClub()
-        val ids = fences(user, listOf(11 to 23, 12 to 23, 13 to 23)).map { it.id }
+        val ids = fences(user, listOf(8 to 24, 10 to 24, 12 to 24)).map { it.id }
         assertFailsWith<ValidationException> { upFences(user, ids) }   // level 2 needs stadium 2
         buildings.setStadium(clubs.rows.values.first().id, 3)
         val before = coins
@@ -74,41 +75,42 @@ class FenceLayoutTest {
     @Test
     fun `a fence line next to an income building adds a little atmosphere`() = runBlocking<Unit> {
         newClub()
-        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (9,9) 7x3
+        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (4,22) 4x4
         val before = Atmosphere.of(get(user).buildings).getValue(office.id)
-        fences(user, listOf(9 to 8, 10 to 8, 11 to 8, 9 to 7))
+        fences(user, listOf(4 to 20, 6 to 20, 8 to 22, 8 to 24))
         val after = Atmosphere.of(get(user).buildings).getValue(office.id)
-        assertEquals(4, after.fence)                                  // three touching, (9,7) one cell away
+        assertEquals(4, after.fence)                                  // all four touching it
         assertEquals(before.total + 4, after.total)
     }
 
     @Test
     fun `edit mode swaps two buildings in one go and refuses overlaps`() = runBlocking<Unit> {
         newClub()
-        val a = fences(user, listOf(9 to 20)).single(); val b = fences(user, listOf(10 to 20)).single()
-        applyLayout(user, listOf(Placement(a.id, 10, 20, 0), Placement(b.id, 9, 20, 0)))
+        val a = fences(user, listOf(24 to 24)).single(); val b = fences(user, listOf(26 to 24)).single()
+        applyLayout(user, listOf(Placement(a.id, 26, 24, 0), Placement(b.id, 24, 24, 0)))
         val st = get(user)
-        assertEquals(10, st.buildings.first { it.id == a.id }.gridX)
-        assertEquals(9, st.buildings.first { it.id == b.id }.gridX)
-        assertFailsWith<ConflictException> { applyLayout(user, listOf(Placement(a.id, 9, 20, 0))) }   // onto b
+        assertEquals(26, st.buildings.first { it.id == a.id }.gridX)
+        assertEquals(24, st.buildings.first { it.id == b.id }.gridX)
+        assertFailsWith<ConflictException> { applyLayout(user, listOf(Placement(a.id, 24, 24, 0))) }   // onto b
         val office = st.buildings.first { it.type == BuildingType.TICKET_OFFICE }
-        assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(office.id, 35, 9, 0))) }   // 7 wide: off the plot's edge (cell 38)
+        assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(office.id, 36, 10, 0))) }   // 4 wide: off the plot's edge (cell 38)
+        assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(office.id, 25, 28, 0))) }   // off a tile corner
     }
 
     @Test
     fun `a saved layout brings the club back the way it was`() = runBlocking<Unit> {
         newClub()
-        val f = fences(user, listOf(14 to 23)).single()
+        val f = fences(user, listOf(24 to 24)).single()
         layouts.save(user, 1, "Matchday")
-        applyLayout(user, listOf(Placement(f.id, 18, 23, 0)))
-        assertEquals(18, get(user).buildings.first { it.id == f.id }.gridX)
+        applyLayout(user, listOf(Placement(f.id, 28, 24, 0)))
+        assertEquals(28, get(user).buildings.first { it.id == f.id }.gridX)
         layouts.applySlot(user, 1)
-        assertEquals(14, get(user).buildings.first { it.id == f.id }.gridX)
+        assertEquals(24, get(user).buildings.first { it.id == f.id }.gridX)
         assertEquals(listOf("Matchday"), layouts.list(user).map { it.name })
         assertFailsWith<ValidationException> { layouts.save(user, 4, "x") }
         // a building put since on the saved spot makes the layout refuse, kindly
-        val g = fences(user, listOf(18 to 23)).single()
-        applyLayout(user, listOf(Placement(f.id, 19, 23, 0), Placement(g.id, 14, 23, 0)))
+        val g = fences(user, listOf(28 to 24)).single()
+        applyLayout(user, listOf(Placement(f.id, 30, 24, 0), Placement(g.id, 24, 24, 0)))
         assertFailsWith<ConflictException> { layouts.applySlot(user, 1) }
     }
 }

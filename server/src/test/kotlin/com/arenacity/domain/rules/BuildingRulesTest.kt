@@ -23,20 +23,37 @@ class BuildingRulesTest {
         assertEquals(2, BuildingCatalog.spec(BuildingType.SHOPPING_CENTER).unlockStadium)
     }
 
+    /**
+     * The whole town fits (the review of 14 October, pass 3): at every stadium level every main-island type at its count,
+     * the decor, the fences and the roads at their allowance take at most 80 % of the main island's whole tiles (the
+     * shipped land mask), so a full town leaves room for lawns and odd corners; the island arenas stand on their own islands.
+     */
+    @Test
+    fun `a full town at every stadium level fits the main island`() {
+        val main = Lands.MAP.main
+        val tiles = main.tiles().cells.size * Grid.TILE * Grid.TILE
+        for (stadium in 1..Stadium.MAX_LEVEL) {
+            val cells = BuildingType.values().map { BuildingCatalog.spec(it) }.filter { it.enabled && it.island == null }
+                .sumOf { it.countAt(stadium) * it.width * it.height }
+            assertTrue(cells <= 0.8 * tiles, "stadium $stadium: $cells of $tiles cells")
+        }
+    }
+
     /** The sport town's list (the owner, 14 October 2026): footprint, the stadium that opens it, copies at the top stadium. */
     @Test
     fun `the sport town's buildings follow the owner's list`() {
         data class Row(val w: Int, val h: Int, val unlock: Int, val top: Int)
+        // the footprints from each building's own drawing on the build grid's 20 m tiles (14 October, pass 3): whole tiles
         val list = mapOf(
-            BuildingType.PITCH to Row(12, 9, 1, 1), BuildingType.ACADEMY to Row(7, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(9, 6, 1, 1),
-            BuildingType.MEDICAL_CENTER to Row(6, 6, 2, 1), BuildingType.TICKET_OFFICE to Row(7, 3, 1, 3), BuildingType.HOUSE to Row(4, 4, 1, 30),
-            BuildingType.SHOPPING_CENTER to Row(7, 6, 2, 2), BuildingType.HALL_OF_FAME to Row(6, 7, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 4),
+            BuildingType.PITCH to Row(12, 12, 1, 1), BuildingType.ACADEMY to Row(8, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(10, 6, 1, 1),
+            BuildingType.MEDICAL_CENTER to Row(6, 4, 2, 1), BuildingType.TICKET_OFFICE to Row(4, 4, 1, 3), BuildingType.HOUSE to Row(6, 4, 1, 20),
+            BuildingType.SHOPPING_CENTER to Row(6, 6, 2, 2), BuildingType.HALL_OF_FAME to Row(6, 6, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 4),
             BuildingType.FAN_ZONE to Row(6, 6, 2, 1), BuildingType.MEDIA_CENTER to Row(6, 4, 6, 1), BuildingType.SPONSOR_OFFICE to Row(4, 4, 6, 1),
-            BuildingType.HOTEL to Row(6, 6, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(7, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 6, 3, 1),
-            BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(6, 4, 4, 1),
-            BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 6, 5, 1), BuildingType.ANALYTICS_CENTER to Row(4, 4, 7, 1),
-            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(11, 8, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(11, 8, 5, 1),
-            BuildingType.TENNIS_ARENA to Row(11, 8, 7, 1), BuildingType.PADEL_ARENA to Row(11, 8, 9, 1),
+            BuildingType.HOTEL to Row(6, 4, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(6, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 4, 3, 1),
+            BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
+            BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 4, 5, 1), BuildingType.ANALYTICS_CENTER to Row(6, 4, 7, 1),
+            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(10, 10, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(10, 10, 5, 1),
+            BuildingType.TENNIS_ARENA to Row(12, 8, 7, 1), BuildingType.PADEL_ARENA to Row(10, 8, 9, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -125,9 +142,13 @@ class BuildingRulesTest {
 
     @Test
     fun `footprints rotate and overlap`() {
-        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x9
-        assertEquals(Footprint(0, 0, 12, 9), a)
-        assertEquals(Footprint(0, 0, 9, 12), footprint(BuildingType.PITCH, 0, 0, 90))
-        assertTrue(a.overlaps(Footprint(11, 8, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
+        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x12
+        assertEquals(Footprint(0, 0, 12, 12), a)
+        assertEquals(Footprint(0, 0, 8, 12), footprint(BuildingType.TENNIS_ARENA, 0, 0, 90))
+        assertTrue(a.overlaps(Footprint(10, 10, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
+        // every footprint is whole tiles of the build grid (14 October, pass 3), DECOR, FENCE and ROAD one tile each
+        for (t in BuildingType.values()) { val s = BuildingCatalog.spec(t); assertTrue(s.width % Grid.TILE == 0 && s.height % Grid.TILE == 0, "$t ${s.width}x${s.height}") }
+        for (t in Stadium.COSMETIC) assertEquals(Grid.TILE to Grid.TILE, BuildingCatalog.spec(t).let { it.width to it.height }, "$t")
+        assertTrue(Grid.aligned(0, -4) && Grid.aligned(-10_000, -10_010)); assertFalse(Grid.aligned(1, 0)); assertFalse(Grid.aligned(0, -3))
     }
 }

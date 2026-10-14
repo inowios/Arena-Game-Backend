@@ -37,6 +37,21 @@ class LandRegion(val id: String, val lock: String?, val x0: Int, val y0: Int, va
 
     fun overlapsBox(o: LandRegion) = x0 < o.x0 + o.w && o.x0 < x0 + w && y0 < o.y0 + o.h && o.y0 < y0 + h
 
+    /**
+     * This region in build-grid tiles of [t]×[t] cells (14 October, pass 3: [Grid.TILE]): tile (i, j) covers cells
+     * [t·i, t·i + t) × [t·j, t·j + t) and is set when every one of them is (a tile is buildable only whole).
+     */
+    fun tiles(t: Int = Grid.TILE): LandRegion {
+        val tx0 = Math.floorDiv(x0, t); val ty0 = Math.floorDiv(y0, t)
+        val tw = Math.floorDiv(x0 + w - 1, t) - tx0 + 1; val th = Math.floorDiv(y0 + h - 1, t) - ty0 + 1
+        val out = BitSet(tw * th)
+        for (j in 0 until th) for (i in 0 until tw) {
+            val cx = (tx0 + i) * t; val cy = (ty0 + j) * t
+            if ((0 until t).all { a -> (0 until t).all { b -> has(cx + a, cy + b) } }) out.set(j * tw + i)
+        }
+        return LandRegion(id, lock, tx0, ty0, tw, th, out)
+    }
+
     companion object {
         fun of(id: String, lock: String?, x0: Int, y0: Int, rows: List<String>): LandRegion {
             require(rows.isNotEmpty() && rows[0].isNotEmpty()) { "land mask: region $id is empty" }
@@ -193,7 +208,7 @@ object Lands {
     const val MIN_CLIENT = "0.2.0"
 
     /** The old plot (cells -9..38 on both axes, the archipelago v2) as one region: the land until the art pipeline installs its mask. */
-    val SQUARE: LandMap by lazy { LandMap.of(listOf(LandRegion.of("main", null, -9, -9, List(48) { "#".repeat(48) })), 11 to 12, 9 to 9) }
+    val SQUARE: LandMap by lazy { LandMap.of(listOf(LandRegion.of("main", null, -9, -9, List(48) { "#".repeat(48) })), 10 to 10, 4 to 22) }
 
     val MAP: LandMap by lazy { load(RESOURCE) ?: SQUARE }
     val ID: String get() = MAP.id

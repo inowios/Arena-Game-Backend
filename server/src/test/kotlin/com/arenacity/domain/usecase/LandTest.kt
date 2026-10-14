@@ -57,7 +57,7 @@ class LandTest {
         assertEquals("1e44def402bb7ea46824db0f63392afed4b4ace7", LandMap.sha1(listOf(main, isle)))
         // the organic fixture's id was computed by its Python generator
         assertEquals(TestLand.ORGANIC.id, TestLand.ORGANIC.computedId)
-        assertEquals(2304, Lands.SQUARE.main.area); assertEquals(11 to 12, Lands.SQUARE.stadium); assertEquals(9 to 9, Lands.SQUARE.ticket)
+        assertEquals(2304, Lands.SQUARE.main.area); assertEquals(10 to 10, Lands.SQUARE.stadium); assertEquals(4 to 22, Lands.SQUARE.ticket)
         // the served text parses back to the same mask
         for (m in listOf(Lands.SQUARE, TestLand.NOTCHED, TestLand.ORGANIC)) {
             val back = LandMap.parse(m.json)
@@ -67,8 +67,8 @@ class LandTest {
 
     @Test
     fun `a broken mask is refused when it loads`() {
-        fun file(rows: String, stadium: String = "[11, 12]", more: String = "") =
-            """{"version": 1, "id": "x", "cell": 10, "anchors": {"stadium": $stadium, "ticket": [9, 9]}, "regions": [{"id": "main", "lock": null, "x0": 0, "y0": 0, "w": 30, "h": 30, "rows": $rows}$more]}"""
+        fun file(rows: String, stadium: String = "[10, 10]", more: String = "") =
+            """{"version": 1, "id": "x", "cell": 10, "anchors": {"stadium": $stadium, "ticket": [2, 24]}, "regions": [{"id": "main", "lock": null, "x0": 0, "y0": 0, "w": 30, "h": 30, "rows": $rows}$more]}"""
         val full = (0 until 30).joinToString(",", "[", "]") { "\"${"#".repeat(30)}\"" }
         LandMap.parse(file(full))
         assertFailsWith<IllegalArgumentException> { LandMap.parse(file((0 until 30).joinToString(",", "[", "]") { "\"${"#".repeat(if (it == 3) 29 else 30)}\"" })) }   // a short row
@@ -94,20 +94,23 @@ class LandTest {
         val st = get(user)
         assertEquals(listOf("main"), st.land.ids)
         assertEquals(listOf("tennis"), notched.lands.locked(st.land).map { it.id })
-        // the academy (7×6) would reach into the sea of the cut corner (x >= 30, y <= 0); a step left it stands on the meadow
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 26, -3, 0) }.template)
-        val academy = place(user, BuildingType.ACADEMY, 22, -3, 0)
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { move(user, academy.id, 24, -3, 0) }.template)
-        move(user, academy.id, 23, -3, 0)
-        // roads and fences cell by cell
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { draw(user, listOf(28 to 3, 30 to 0), BuildingType.ROAD) }.template)
-        assertEquals(1, draw(user, listOf(29 to 3), BuildingType.ROAD).size)
+        // the academy (8×6) would reach into the sea of the cut corner (x >= 30, y <= 0); a tile left it stands on the meadow
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 24, -4, 0) }.template)
+        // on the build grid's tiles only (14 October, pass 3): a top-left cell even both ways
+        assertEquals("Off the build grid", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 21, -4, 0) }.template)
+        val academy = place(user, BuildingType.ACADEMY, 22, -4, 0)
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { move(user, academy.id, 24, -4, 0) }.template)
+        assertEquals("Off the build grid", assertFailsWith<ValidationException> { move(user, academy.id, 20, -3, 0) }.template)
+        move(user, academy.id, 20, -4, 0)
+        // roads and fences tile by tile
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { draw(user, listOf(28 to 2, 30 to 0), BuildingType.ROAD) }.template)
+        assertEquals(1, draw(user, listOf(28 to 2), BuildingType.ROAD).size)
         // the tennis island is land, but locked until its arena opens it
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 52, 3, 0) }.template)
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { draw(user, listOf(55 to 5), BuildingType.ROAD) }.template)
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 45, 3, 0) }.template)   // the strait
+        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 52, 2, 0) }.template)
+        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { draw(user, listOf(54 to 4), BuildingType.ROAD) }.template)
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 44, 2, 0) }.template)   // the strait
         // edit mode checks the moved buildings the same way
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(academy.id, 31, -8, 0))) }.template)
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(academy.id, 30, -8, 0))) }.template)
     }
 
     @Test
@@ -123,37 +126,39 @@ class LandTest {
         // bought, still being restored: the island stays locked
         zones.upsert(com.arenacity.domain.model.ClubZone(club.id, com.arenacity.domain.model.ZoneSport.TENNIS, com.arenacity.domain.model.ZoneState.RESTORING, clock.now(), clock.now().plusSeconds(60)))
         assertEquals(listOf("main"), opened.state(user).land.ids)
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { placeThere(user, BuildingType.DECOR, 52, 3, 0) }.template)
+        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { placeThere(user, BuildingType.DECOR, 52, 2, 0) }.template)
         // restored (the zone OPEN once its time is up): the island is the club's land, no longer locked, and visitors see it
         clock.advanceSeconds(61)
         val st = opened.state(user)
         assertEquals(listOf("main", "tennis"), st.land.ids)
         assertTrue(TestLand.NOTCHED.locked(st.land).isEmpty())
-        assertEquals(52, placeThere(user, BuildingType.DECOR, 52, 3, 0).gridX)
+        assertEquals(52, placeThere(user, BuildingType.DECOR, 52, 2, 0).gridX)
         val grounds = GetGroundsUseCase(clubs, buildings, com.arenacity.domain.usecase.athlete.SectionService(buildings, FakeAthleteRepository()), TestLand.NOTCHED)
             .apply { openZones = { id -> openZoneSports(zones, id, clock.now()) } }(club.id)
         assertEquals(listOf("main", "tennis"), grounds.land.ids)
-        assertTrue(grounds.buildings.any { it.gridX == 52 && it.gridY == 3 })
+        assertTrue(grounds.buildings.any { it.gridX == 52 && it.gridY == 2 })
     }
 
     @Test
     fun `an older club moves onto the new mask once, what stood in the sea to the nearest free spot, biggest first`() = runBlocking<Unit> {
         val club = newClub()
-        // built on the old square: in the corner that is sea now an academy, a road and a tree; a sponsor office (4×4)
-        // straddling the new shore whose top-left cell (27, -5) is on the meadow, and beside it a ticket office (3×7,
-        // turned) that the nearest spot puts exactly on that cell — moved first (it is bigger), it would hit the
-        // (club, x, y) uniqueness unless everything lost is parked first
-        val academy = at(club.id, BuildingType.ACADEMY, 34, -3, level = 3)
-        val court = at(club.id, BuildingType.SPONSOR_OFFICE, 27, -5)
-        val office = at(club.id, BuildingType.TICKET_OFFICE, 32, -5, rotation = 90)
-        val road = at(club.id, BuildingType.ROAD, 31, -7)
-        val fence = at(club.id, BuildingType.FENCE, 30, -8, level = 3)
-        val tree = at(club.id, BuildingType.DECOR, 37, -6)
-        val stays = at(club.id, BuildingType.FAN_ZONE, 20, 25)
+        // built on the old square: in the corner that is sea now an academy, a road, a fence and a tree; a sponsor office
+        // (4×4) straddling the new shore whose top-left cell (28, -6) is on the meadow, and beside it a ticket office in the
+        // sea that moves to the nearest free spot — everything lost is parked first, so none ever lands on the top-left cell
+        // of another still waiting (the (club, x, y) uniqueness); and a house on the meadow but off the build grid's tiles
+        // (14 October, pass 3: every building on a tile), which moves onto the nearest one
+        val academy = at(club.id, BuildingType.ACADEMY, 34, -4, level = 3)
+        val court = at(club.id, BuildingType.SPONSOR_OFFICE, 28, -6)
+        val office = at(club.id, BuildingType.TICKET_OFFICE, 32, -6, rotation = 90)
+        val road = at(club.id, BuildingType.ROAD, 30, -8)
+        val fence = at(club.id, BuildingType.FENCE, 32, -8, level = 3)
+        val tree = at(club.id, BuildingType.DECOR, 36, -6)
+        val stays = at(club.id, BuildingType.FAN_ZONE, 20, 26)
+        val house = at(club.id, BuildingType.HOUSE, 1, 31)
         // obstacles out there go: the gold of a cleared one is the club's, an untouched one simply goes
         val ready = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.ROCK, 34, -4, ObstacleState.READY, null, 7, clock.now(), clock.now())
         val idle = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 36, -8, ObstacleState.IDLE, null, 5, clock.now(), clock.now())
-        val kept = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 0, 30, ObstacleState.IDLE, null, 5, clock.now(), clock.now())
+        val kept = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 0, 36, ObstacleState.IDLE, null, 5, clock.now(), clock.now())
         listOf(ready, idle, kept).forEach { obstacles.create(it) }
         val gold = clubs.rows.getValue(club.id).gold
         val coins = clubs.rows.getValue(club.id).coins
@@ -162,38 +167,39 @@ class LandTest {
         assertEquals(TestLand.NOTCHED.id, clubs.rows.getValue(club.id).landMask)
         val list = st.buildings.associateBy { it.id }
         assertTrue(list.values.all { st.land.fits(fp(it)) }, "everything stands on the meadow: ${list.values.filter { !st.land.fits(fp(it)) }}")
+        assertTrue(list.values.all { Grid.aligned(it.gridX, it.gridY) }, "everything on a tile: ${list.values.filter { !Grid.aligned(it.gridX, it.gridY) }}")
         for (i in list.values.indices) for (j in i + 1 until list.size) assertFalse(fp(list.values.elementAt(i)).overlaps(fp(list.values.elementAt(j))))
-        assertEquals(27 to -5, list.getValue(office.id).let { it.gridX to it.gridY }, "the office took the nearest spot, the court's corner")
         assertEquals(90, list.getValue(office.id).rotation)
-        assertNotEquals(27 to -5, list.getValue(court.id).let { it.gridX to it.gridY })
+        assertNotEquals(28 to -6, list.getValue(court.id).let { it.gridX to it.gridY })
         assertEquals(3, list.getValue(academy.id).level)
-        assertEquals(32 to 1, list.getValue(academy.id).let { it.gridX to it.gridY }, "the academy just below the cut corner, the nearest free spot")
+        assertEquals(30 to 2, list.getValue(academy.id).let { it.gridX to it.gridY }, "the academy just below the cut corner, the nearest free spot")
+        assertEquals(0 to 30, list.getValue(house.id).let { it.gridX to it.gridY }, "the house onto the nearest tile")
         assertTrue(tree.id in list, "decor moves too")
         // the road and fence tiles in the sea go, refunded at what their levels cost (not left as stray tiles at the shore)
         assertTrue(road.id !in list && fence.id !in list)
         assertEquals(coins + 40 + (30 + 150 + 600), clubs.rows.getValue(club.id).coins)
-        assertEquals(20 to 25, list.getValue(stays.id).let { it.gridX to it.gridY })
+        assertEquals(20 to 26, list.getValue(stays.id).let { it.gridX to it.gridY })
         // the obstacles
         assertEquals(listOf(kept.id), obstacles.listByClub(club.id).map { it.id })
         assertEquals(gold + 7, clubs.rows.getValue(club.id).gold)
         // the log has every move, for a revert
         val moves = log.rows.associateBy { it.itemId }
-        assertEquals(setOf(academy.id, court.id, office.id, road.id, fence.id, tree.id, ready.id, idle.id), moves.keys)
-        assertEquals(34 to -3, moves.getValue(academy.id).let { it.oldX to it.oldY })
+        assertEquals(setOf(academy.id, court.id, office.id, road.id, fence.id, tree.id, house.id, ready.id, idle.id), moves.keys)
+        assertEquals(34 to -4, moves.getValue(academy.id).let { it.oldX to it.oldY })
         assertEquals(7, moves.getValue(ready.id).gold); assertEquals(RehomeMove.OBSTACLE, moves.getValue(ready.id).kind)
-        moves.getValue(fence.id).let { assertEquals(RehomeMove.REMOVED, it.kind); assertNull(it.newX); assertEquals(3, it.level); assertEquals(780L, it.coins); assertEquals(30 to -8, it.oldX to it.oldY) }
+        moves.getValue(fence.id).let { assertEquals(RehomeMove.REMOVED, it.kind); assertNull(it.newX); assertEquals(3, it.level); assertEquals(780L, it.coins); assertEquals(32 to -8, it.oldX to it.oldY) }
         assertEquals(40L, moves.getValue(road.id).coins)
         assertTrue(log.rows.all { it.maskId == TestLand.NOTCHED.id })
         // once: the next read moves nothing
         assertEquals(st.buildings.map { it.gridX to it.gridY }, get(user).buildings.map { it.gridX to it.gridY })
-        assertEquals(8, log.rows.size)
+        assertEquals(9, log.rows.size)
         assertNull(notched.settle(UUID.randomUUID()))
     }
 
     @Test
     fun `a building the land has no room for waits parked, listed, never in the way of an edit, hidden from visitors`() = runBlocking<Unit> {
         // a tiny meadow: the stadium, the ticket office and a few strips of lawn round them, nowhere 6 cells deep
-        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 9, 9, List(13) { "#".repeat(15) })), 11 to 12, 9 to 9)
+        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 8, 8, List(18) { "#".repeat(18) })), 10 to 10, 22 to 8)
         val small = service(tiny)
         val club = newClub()
         val training = at(club.id, BuildingType.TRAINING_CENTER, 22, 30)
@@ -201,13 +207,15 @@ class LandTest {
         val st = small.state(user)
         val parked = st.buildings.filter { Lands.isParked(it.gridY) }.associateBy { it.id }
         assertEquals(setOf(training.id, academy.id), parked.keys)
-        assertEquals(Lands.parked(0), parked.getValue(training.id).let { it.gridX to it.gridY }, "the bigger one parked first")
-        assertEquals(Lands.parked(1), parked.getValue(academy.id).let { it.gridX to it.gridY })
+        // each on its own parking cell, in the order they were found lost (the seeded ticket office, off the tiny meadow,
+        // was parked first for a moment and then found room)
+        assertEquals(setOf(Lands.parked(1), Lands.parked(2)), parked.values.map { it.gridX to it.gridY }.toSet())
+        assertFalse(Lands.isParked(st.buildings.single { it.type == BuildingType.TICKET_OFFICE }.gridY))
         assertEquals(2, log.rows.count { it.newX == null })
         // an edit that does not move them saves (they used to make every save fail), one onto the sea does not
         val office = st.buildings.single { it.type == BuildingType.TICKET_OFFICE }
-        ApplyLayoutUseCase(small, buildings, clock)(user, listOf(Placement(office.id, 14, 9, 0)))
-        assertEquals(14, buildings.findById(office.id)!!.gridX)
+        ApplyLayoutUseCase(small, buildings, clock)(user, listOf(Placement(office.id, 22, 14, 0)))
+        assertEquals(14, buildings.findById(office.id)!!.gridY)
         assertEquals("Outside your land", assertFailsWith<ValidationException> { MoveBuildingUseCase(small, buildings, clock)(user, academy.id, 30, 30, 0) }.template)
         // a visitor sees the stadium and the office only, and the land they stand on
         val g = GetGroundsUseCase(clubs, buildings, com.arenacity.domain.usecase.athlete.SectionService(buildings, FakeAthleteRepository()), tiny)(club.id)
@@ -223,22 +231,22 @@ class LandTest {
         val club = newClub()
         val square = service(Lands.SQUARE)
         val layouts = FakeLayoutRepository()
-        val tree = at(club.id, BuildingType.DECOR, 35, -5)
-        val bench = at(club.id, BuildingType.DECOR, 5, 25)
+        val tree = at(club.id, BuildingType.DECOR, 34, -6)
+        val bench = at(club.id, BuildingType.DECOR, 4, 26)
         LayoutUseCases(square, layouts, ApplyLayoutUseCase(square, buildings, clock), clock).save(user, 1, "Old")
-        ApplyLayoutUseCase(square, buildings, clock)(user, listOf(Placement(bench.id, 6, 25, 0)))
+        ApplyLayoutUseCase(square, buildings, clock)(user, listOf(Placement(bench.id, 6, 26, 0)))
         // the land becomes the notched mask: the tree moves out of the sea; the old layout puts the bench back, the tree stays
         val moved = get(user).buildings.single { it.id == tree.id }
         assertTrue(TestLand.NOTCHED.main.fits(fp(moved)))
         LayoutUseCases(notched, layouts, applyLayout, clock).applySlot(user, 1)
-        assertEquals(5, buildings.findById(bench.id)!!.gridX)
+        assertEquals(4, buildings.findById(bench.id)!!.gridX)
         assertEquals(moved.gridX to moved.gridY, buildings.findById(tree.id)!!.let { it.gridX to it.gridY })
     }
 
     @Test
     fun `the start-up sweep settles every club not on the mask, once`() = runBlocking<Unit> {
         val a = newClub(); val b = newClub(UUID.randomUUID(), "Blue Lions")
-        at(a.id, BuildingType.ACADEMY, 31, -8)
+        at(a.id, BuildingType.ACADEMY, 30, -8)
         val sweep = LandSweep(clubs, notched)
         assertEquals(2, sweep.run())
         assertTrue(listOf(a.id, b.id).all { clubs.rows.getValue(it).landMask == TestLand.NOTCHED.id })

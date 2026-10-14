@@ -108,7 +108,7 @@ class ApiIT {
         val (nx, ny) = freeSpot(state, "ACADEMY")
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$nx,"y":$ny}""", expect = 201)
         val m = served.main
-        val (sx, sy) = (m.x0 - 1..m.x0 + m.w).flatMap { x -> (m.y0 - 1..m.y0 + m.h).map { y -> x to y } }.first { (x, y) -> served.regions.none { it.has(x, y) } }
+        val (sx, sy) = (m.x0 - 1..m.x0 + m.w).flatMap { x -> (m.y0 - 1..m.y0 + m.h).map { y -> x to y } }.first { (x, y) -> com.arenacity.domain.rules.Grid.aligned(x, y) && served.regions.none { it.has(x, y) } }
         val sea = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$sx,"y":$sy}]}""", expect = 400).o()["errors"]!!.jsonArray.single().jsonPrimitive.content
         assertEquals("That spot is outside your land", sea)
     }
@@ -118,9 +118,9 @@ class ApiIT {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-fence", "Fence FC")
-        val (ax, ay) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 1, 1)
+        val (ax, ay) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
         val a = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$ax,"y":$ay}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
-        val (bx, by) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 1, 1)
+        val (bx, by) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
         val b = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$bx,"y":$by}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/club/fences/upgrade", t, """{"ids":["$a","$b"]}""", expect = 400)   // level 2 needs stadium 2
         call(HttpMethod.Put, "/club/layouts/1", t, """{"name":"Home"}""")
@@ -273,10 +273,10 @@ class ApiIT {
         assertEquals("kit_stripes", state["club"]!!.o()["kit"]!!.jsonPrimitive.content)
         assertTrue(state["ads"]!!.o()["freeSpeedupAvailable"]!!.jsonPrimitive.boolean)
         // decor looks
-        val (dx, dy) = freeSpot(state, 1, 1)
+        val (dx, dy) = freeSpot(state, 2, 2)
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_flowerbed"}""", expect = 409)
         call(HttpMethod.Post, "/club/cosmetics/decor_flowerbed/buy", t)
-        val (ex, ey) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 1, 1)   // an obstacle may have turned up meanwhile
+        val (ex, ey) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)   // an obstacle may have turned up meanwhile
         val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$ex,"y":$ey,"variant":"decor_flowerbed"}""", expect = 201).data.o()
         assertEquals("decor_flowerbed", decor["variant"]!!.jsonPrimitive.content)
         val tree = call(HttpMethod.Post, "/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant", t, """{"itemId":"decor_tree"}""").data.o()
@@ -398,6 +398,7 @@ private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: In
     val regions = state["land"]!!.jsonObject["regions"]!!.jsonArray.map { it.jsonPrimitive.content }.toSet()
     val land = com.arenacity.domain.rules.LandSet(served.regions.filter { it.id in regions })
     for ((x, y) in land.cells) {
+        if (!com.arenacity.domain.rules.Grid.aligned(x, y)) continue   // on the build grid's tiles (14 October, pass 3)
         val fp = com.arenacity.domain.rules.Footprint(x, y, w, h)
         if (land.fits(fp) && taken.none { it.overlaps(fp) }) return x to y
     }

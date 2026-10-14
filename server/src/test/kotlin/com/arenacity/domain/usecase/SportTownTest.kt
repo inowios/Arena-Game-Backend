@@ -44,8 +44,8 @@ class SportTownTest {
         clubs.rows.getValue(c.id)
     }
     private fun isle(sport: ZoneSport) = lands.island(sport)!!
-    /** A spot on [region] where an 11×8 arena fits. */
-    private fun spot(region: LandRegion) = region.cells.first { (x, y) -> region.fits(Footprint(x, y, 11, 8)) }
+    /** A spot on a tile of [region] where any arena (12×10 at most) fits. */
+    private fun spot(region: LandRegion) = region.cells.first { (x, y) -> Grid.aligned(x, y) && region.fits(Footprint(x, y, 12, 10)) }
     private fun at(clubId: UUID, type: BuildingType, x: Int, y: Int, level: Int = 1) = runBlocking {
         clock.advanceSeconds(60)   // created one after another: the older keeps its place
         buildings.create(Building(UUID.randomUUID(), clubId, type, level, x, y, 0, BuildingState.IDLE, null, clock.now(), clock.now(), clock.now()))
@@ -60,13 +60,13 @@ class SportTownTest {
         // the island still locked: the zone is not bought
         assertEquals("Open this island first", assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_ARENA, bx, by, 0) }.template)
         // on the main island, or on another sport's island (even an open one), it is never built
-        val (mx, my) = lands.main.cells.first { (x, y) -> lands.main.fits(Footprint(x, y, 11, 8)) && buildings.listByClub(club.id).none { fp(it).overlaps(Footprint(x, y, 11, 8)) } }
+        val (mx, my) = lands.main.cells.first { (x, y) -> Grid.aligned(x, y) && lands.main.fits(Footprint(x, y, 10, 10)) && buildings.listByClub(club.id).none { fp(it).overlaps(Footprint(x, y, 10, 10)) } }
         assertEquals("This arena is built on its own island", assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_ARENA, mx, my, 0) }.template)
         zones.open(club.id, ZoneSport.TENNIS)
         val (tx, ty) = spot(tennis)
         assertEquals("This arena is built on its own island", assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_ARENA, tx, ty, 0) }.template)
         // half off its island
-        assertEquals("This arena is built on its own island", assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_ARENA, basket.x0 + basket.w - 4, by, 0) }.template)
+        assertEquals("This arena is built on its own island", assertFailsWith<ValidationException> { place(user, BuildingType.BASKETBALL_ARENA, Math.floorDiv(basket.x0 + basket.w - 4, 2) * 2, by, 0) }.template)
         // the zone open: built there, and only there
         zones.open(club.id, ZoneSport.BASKETBALL)
         val arena = place(user, BuildingType.BASKETBALL_ARENA, bx, by, 0).let { speed(user, it.id) }
@@ -75,7 +75,7 @@ class SportTownTest {
         assertEquals("This arena is built on its own island", assertFailsWith<ValidationException> { layout(user, listOf(Placement(arena.id, tx, ty, 0))) }.template)
         // the tennis arena on its island; any other building may still stand on an open island
         assertTrue(tennis.fits(fp(place(user, BuildingType.TENNIS_ARENA, tx, ty, 0).let { speed(user, it.id) })))
-        val hut = tennis.cells.first { (x, y) -> tennis.fits(Footprint(x, y, 4, 4)) && buildings.listByClub(club.id).none { fp(it).overlaps(Footprint(x - 1, y - 1, 6, 6)) } }
+        val hut = tennis.cells.first { (x, y) -> Grid.aligned(x, y) && tennis.fits(Footprint(x, y, 4, 4)) && buildings.listByClub(club.id).none { fp(it).overlaps(Footprint(x - 1, y - 1, 6, 6)) } }
         place(user, BuildingType.SCOUTING_OFFICE, hut.first, hut.second, 0)
         // the stadium still caps it: padel opens at stadium 9
         buildings.setStadium(club.id, 8); zones.open(club.id, ZoneSport.PADEL)
@@ -105,13 +105,13 @@ class SportTownTest {
         val main = lands.main
         // what the migration leaves (V36): a shopping centre that grew onto a sponsor office, a road tile and a tree, and a
         // bush beside it; two old courts turned arenas standing on the main island — basketball's zone open, tennis' not
-        val shop = at(club.id, BuildingType.SHOPPING_CENTER, 25, 22, level = 6)
-        val sponsor = at(club.id, BuildingType.SPONSOR_OFFICE, 29, 24, level = 2)
-        val road = at(club.id, BuildingType.ROAD, 25, 25)
+        val shop = at(club.id, BuildingType.SHOPPING_CENTER, 24, 22, level = 6)
+        val sponsor = at(club.id, BuildingType.SPONSOR_OFFICE, 28, 24, level = 2)
+        val road = at(club.id, BuildingType.ROAD, 24, 26)
         val tree = at(club.id, BuildingType.DECOR, 26, 24)
-        val court = at(club.id, BuildingType.BACKYARD_COURT, 25, 29, level = 4)
-        val basket = at(club.id, BuildingType.BASKETBALL_ARENA, 0, 25, level = 4)
-        val tennis = at(club.id, BuildingType.TENNIS_ARENA, 0, 34, level = 2)
+        val court = at(club.id, BuildingType.BACKYARD_COURT, 24, 30, level = 4)
+        val basket = at(club.id, BuildingType.BASKETBALL_ARENA, 0, 24, level = 4)
+        val tennis = at(club.id, BuildingType.TENNIS_ARENA, 2, 36, level = 2)
         for (b in listOf(shop, sponsor, road, tree, court, basket, tennis)) assertTrue(main.fits(fp(b)), "${b.type} starts on the meadow")
         val bush = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 27, 23, ObstacleState.READY, null, 6, clock.now(), clock.now())
         obstacles.create(bush)
@@ -126,13 +126,13 @@ class SportTownTest {
         for (i in placed.indices) for (j in i + 1 until placed.size) assertFalse(fp(placed[i]).overlaps(fp(placed[j])), "${placed[i].type} overlaps ${placed[j].type}")
         // the bigger shop keeps its place, the sponsor office moves at its level; the road tile under the shop goes,
         // refunded; the tree moves; the bush under the shop goes, its gold the club's
-        assertEquals(25 to 22, byId.getValue(shop.id).let { it.gridX to it.gridY })
-        assertNotEquals(29 to 24, byId.getValue(sponsor.id).let { it.gridX to it.gridY }); assertEquals(2, byId.getValue(sponsor.id).level)
+        assertEquals(24 to 22, byId.getValue(shop.id).let { it.gridX to it.gridY })
+        assertNotEquals(28 to 24, byId.getValue(sponsor.id).let { it.gridX to it.gridY }); assertEquals(2, byId.getValue(sponsor.id).level)
         assertNull(byId[road.id])
         assertEquals(coins + BuildingCatalog.level(BuildingType.ROAD, 1).cost, clubs.rows.getValue(club.id).coins)
         assertFalse(fp(byId.getValue(tree.id)).overlaps(fp(byId.getValue(shop.id))))
         assertTrue(obstacles.rows.isEmpty()); assertEquals(gold + 6, clubs.rows.getValue(club.id).gold)
-        assertEquals(25 to 29, byId.getValue(court.id).let { it.gridX to it.gridY })
+        assertEquals(24 to 30, byId.getValue(court.id).let { it.gridX to it.gridY })
         // the basketball arena on its island at its level; the tennis arena parked off the land (its island closed), its
         // section still open
         assertTrue(isle(ZoneSport.BASKETBALL).fits(fp(byId.getValue(basket.id)))); assertEquals(4, byId.getValue(basket.id).level)

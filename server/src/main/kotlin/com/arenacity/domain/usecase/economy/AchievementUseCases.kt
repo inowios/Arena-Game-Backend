@@ -54,7 +54,9 @@ class AchievementService(
     suspend fun list(club: Club): List<AchievementState> {
         val values = values(club)
         val claimed = repo.claimed(club.id)
-        return Achievements.ALL.map { AchievementState(it, values[it.metric] ?: 0L, claimed[it.id] ?: 0) }
+        // the obstacles' achievement only where it was begun while obstacles turned up (off since 14 October, pass 3)
+        return Achievements.ALL.filter { it.metric != Metric.OBSTACLES_CLEARED || com.arenacity.domain.rules.Obstacles.ENABLED || (values[it.metric] ?: 0L) > 0 }
+            .map { AchievementState(it, values[it.metric] ?: 0L, claimed[it.id] ?: 0) }
     }
 }
 

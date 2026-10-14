@@ -85,10 +85,10 @@ class MonetizationTest {
     @Test
     fun `decor looks at placement and later`() = runBlocking<Unit> {
         setup()
-        assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 5, 36, 0, "decor_fountain") }
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 9, 36, 0, "decor_tree") }
+        assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain") }
+        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 8, 36, 0, "decor_tree") }
         shop.buy(user, "decor_fountain")
-        val d = place(user, BuildingType.DECOR, 5, 36, 0, "decor_fountain")
+        val d = place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain")
         assertEquals("decor_fountain", d.variant)
         val tree = shop.setDecorLook(user, d.id, "decor_tree")
         assertNull(tree.variant)

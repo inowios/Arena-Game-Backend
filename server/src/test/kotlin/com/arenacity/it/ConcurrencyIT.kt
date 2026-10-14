@@ -58,7 +58,7 @@ class ConcurrencyIT {
     @Test
     fun `parallel purchases never overspend`() {
         runBlocking { clubs.update(clubs.findByUserId(userId)!!.copy(coins = 1_000)) }
-        val results = parallel(10) { i -> place(userId, BuildingType.DECOR, 9 + i, 25, 0) }   // decor costs 200 and is instant
+        val results = parallel(10) { i -> place(userId, BuildingType.DECOR, 8 + 2 * i, 26, 0) }   // decor costs 200 and is instant
         assertEquals(5, results.count { it.isSuccess }, "results: $results")
         assertEquals(5, results.count { it.exceptionOrNull() is DomainException })
         assertEquals(0L, runBlocking { clubs.findByUserId(userId)!!.coins })

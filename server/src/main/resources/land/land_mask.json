@@ -5,11 +5,11 @@
   "frame": "cell (x,y) = world x in [10x,10x+10), z in [10y,10y+10), y = 0",
   "anchors": {
     "stadium": [
-      11,
-      12
+      10,
+      10
     ],
     "ticket": [
-      3,
+      4,
       22
     ],
     "bridges": {

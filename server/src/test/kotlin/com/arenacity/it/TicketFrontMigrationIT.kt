@@ -60,10 +60,11 @@ class TicketFrontMigrationIT {
         // V37's spot was the land mask's anchor then; since the 12×9 stadium (14 October, pass 2) a new club's office stands
         // at 3, 22 — on the main island, beside the stadium on the screen with lawn round it (at 16, 21 it touched the
         // stadium and its drawing covered the near stand) — and the start-up sweep moves an office V37 left under it
-        assertEquals(3 to 22, Lands.MAP.ticket)
-        val office = footprint(BuildingType.TICKET_OFFICE, 3, 22, 0)
+        // (on the build grid's tiles since 14 October, pass 3: the office 4×4 at 4, 22, the 12×12 stadium at 10, 10)
+        assertEquals(4 to 22, Lands.MAP.ticket)
+        val office = footprint(BuildingType.TICKET_OFFICE, 4, 22, 0)
         assertTrue(Lands.MAP.main.fits(office))
-        val pitch = footprint(BuildingType.PITCH, 11, 12, 0)
+        val pitch = footprint(BuildingType.PITCH, Lands.MAP.stadium.first, Lands.MAP.stadium.second, 0)
         assertFalse(Footprint(office.x - 1, office.y - 1, office.w + 2, office.h + 2).overlaps(pitch))
         // logged, so a revert can put them back
         val log = query("SELECT item_id, kind, type, old_x, old_y, new_x, new_y, level FROM rehome_log WHERE mask_id = 'ticket_front'") {

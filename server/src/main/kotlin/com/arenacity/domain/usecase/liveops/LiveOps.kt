@@ -63,11 +63,13 @@ object EventCalendar {
                 out += GameEvent("weekend-$d", "city_weekend", day(d), day(d.plusDays(2)), incomePct = 150,
                     goal = ProgressEvent.INCOME_COLLECTED, goalTarget = 10, rewardCoins = 1_000, rewardGold = 10)
             if (d.dayOfWeek == DayOfWeek.WEDNESDAY)
+                // the goals that were obstacles to clear (none turn up since 14 October, pass 3, Obstacles.ENABLED): collections
                 out += GameEvent("builders-$d", "builders_day", day(d), day(d.plusDays(1)), buildTimePct = 70,
-                    goal = ProgressEvent.OBSTACLE_CLEARED, goalTarget = 3, rewardGold = 15)
+                    goal = if (Obstacles.ENABLED) ProgressEvent.OBSTACLE_CLEARED else ProgressEvent.INCOME_COLLECTED, goalTarget = if (Obstacles.ENABLED) 3 else 6, rewardGold = 15)
             if (d.monthValue == 10 && d.dayOfMonth == 24)
                 out += GameEvent("halloween-${d.year}", "halloween", day(d), day(d.plusDays(10)), obstacleGoldPct = 200,
-                    goal = ProgressEvent.OBSTACLE_CLEARED, goalTarget = 5, rewardGold = 30, rewardItem = "decor_pumpkins")
+                    goal = if (Obstacles.ENABLED) ProgressEvent.OBSTACLE_CLEARED else ProgressEvent.INCOME_COLLECTED, goalTarget = if (Obstacles.ENABLED) 5 else 15,
+                    rewardGold = 30, rewardItem = "decor_pumpkins")
             if (d.monthValue == 12 && d.dayOfMonth == 24)
                 out += GameEvent("newyear-${d.year}", "new_year", day(d), day(d.plusDays(15)), incomePct = 125,
                     goal = ProgressEvent.LIVE_WON, goalTarget = 10, rewardGold = 50, rewardItem = "decor_snow_tree")

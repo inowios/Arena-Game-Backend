@@ -34,7 +34,7 @@ class AthleteUseCasesTest {
     private fun setup(vararg types: BuildingType) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3)); buildings.setStadium(clubs.rows.values.first().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, -5 + i * 10, 2, 0); speed(user, b.id) }   // the big footprints: a row above the stadium
+        types.forEachIndexed { i, t -> val b = place(user, t, -6 + i * 10, 2, 0); speed(user, b.id) }   // the big footprints: a row above the stadium
     }
 
     @Test

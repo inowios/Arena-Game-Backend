@@ -93,7 +93,7 @@ class CareerTest {
     fun `scouting needs an academy and signs one player a day`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ValidationException> { scouting.report(user) }
-        place(user, BuildingType.ACADEMY, 9, 25, 0).let { speed(user, it.id) }
+        place(user, BuildingType.ACADEMY, 8, 26, 0).let { speed(user, it.id) }
         val r = scouting.report(user)
         assertEquals(listOf("PROSPECT", "PRIME", "VETERAN"), r.offers.map { it.kind })
         assertTrue(r.offers[0].athlete.age in 17..19 && r.offers[2].athlete.age in 30..32)
@@ -114,7 +114,7 @@ class CareerTest {
     @Test
     fun `training stops at potential`() = runBlocking<Unit> {
         setup()
-        place(user, BuildingType.TRAINING_CENTER, 9, 25, 0).let { speed(user, it.id) }
+        place(user, BuildingType.TRAINING_CENTER, 8, 26, 0).let { speed(user, it.id) }
         val a = squad().first { it.position == Position.MID && it.attack < 58 }
         athletes.update(a.copy(potential = a.attributeAverage))
         assertFailsWith<ValidationException> { train(user, a.id, AttributeKind.ATTACK) }

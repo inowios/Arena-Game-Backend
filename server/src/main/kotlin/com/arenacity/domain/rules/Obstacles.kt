@@ -17,6 +17,11 @@ enum class ObstacleKind(val width: Int, val height: Int, val baseCost: Long, val
  * (more at a bigger stadium) and pays its gold, decided when it appeared.
  */
 object Obstacles {
+    /**
+     * Whether obstacles turn up at all: off since the owner's 14 October (pass 3: «прибери камни и т.д., которые случайно
+     * появляются — уберём пока этот функционал»); V40 took away every club's, the clients hide them. The rules stay for later.
+     */
+    const val ENABLED = false
     const val MAX = 10
     const val START = 6
     const val SPAWN_SECONDS = 6 * 3600L

@@ -12,7 +12,7 @@ object TestLand {
     val NOTCHED: LandMap by lazy {
         val main = LandRegion.of("main", null, -9, -9, (-9..38).map { y -> (-9..38).joinToString("") { x -> if (x >= 30 && y <= 0) "." else "#" } })
         val tennis = LandRegion.of("tennis", "TENNIS", 50, 0, List(12) { "#".repeat(14) })
-        LandMap.of(listOf(main, tennis), 11 to 12, 9 to 9, mapOf("tennis" to (38 to 5)))
+        LandMap.of(listOf(main, tennis), 10 to 10, 4 to 22, mapOf("tennis" to (38 to 5)))
     }
 
     /**

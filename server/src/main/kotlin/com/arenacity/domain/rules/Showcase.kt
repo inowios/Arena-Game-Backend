@@ -10,12 +10,13 @@ import kotlin.math.abs
  * the land follows the painted meadow, an organic shape), laid out as a planned town round the stadium on the main
  * island, the arenas on the side islands open at that stadium (the sport town, 14 October):
  *  - the stadium, the town's biggest building, at the mask's anchor, the meadow's middle, on its plaza; a ring avenue
- *    round the plaza, boulevards two cells wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
+ *    round the plaza, boulevards one tile (20 m) wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
  *    a short spur, straight or with one turn) and the ring's lines run on to the shore, with another avenue every 16 cells where the meadow reaches
  *    far beyond the ring: blocks of 15 cells between the lines. Only cells on the meadow are streets, and only those that
  *    join the ring. The road allowance lays the ring, the plaza's approaches, the boulevards with the spurs and the
  *    avenues in that order (stadium 5: the ring; from stadium 8 the whole grid); a line not laid yet stays lawn;
- *  - every block keeps a pavement cell along its streets and along the shore, where the trees stand; what is left of it
+ *  - every block keeps a lawn tile along the shore (on tiles its buildings front the streets: a 20 m pavement took too much
+ *    of the meadow); what is left of it
  *    on the meadow holds one lot, its largest rectangle (a block the shore cuts below 3×2 stays meadow); the lot's
  *    buildings stand in rows with a lawn cell at least between them, the spare lawn spread evenly over the lot;
  *  - the club round the stadium: the hall of fame, ticket offices, shopping centres and the fan zone on the plaza facing
@@ -30,6 +31,10 @@ import kotlin.math.abs
  * Within the game's limits (no type over its count or level cap at that stadium); the town takes as many copies as fit
  * with that spacing (at the top fewer houses and yard courts than allowed, so it stays spacious). Pure: the same mask and
  * catalogue always give the same city.
+ *
+ * Laid out on the build grid's tiles (14 October, pass 3: [Grid.TILE] = 2×2 cells, a tile of the meadow only where all its
+ * cells are, [LandRegion.tiles]): every distance below — the ring, the blocks, the pavement, the lawn between buildings,
+ * a street, a tree — is in tiles, and the slots come out in cells, every one on a tile.
  */
 object Showcase {
     data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int)
@@ -37,20 +42,25 @@ object Showcase {
     data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<ZoneSport> = emptySet())
 
     /**
-     * From the stadium's middle to the ring's lines: c − 17 and c + 16 (cells 0 and 33 across, −1 and 32 down round the
-     * 12×9 stadium's middle c = (17, 16) at the anchor (11, 12); the footprints grew ×1.4–1.5 on 14 October, pass 2, and
-     * the plaza's front lots need room for the 6×7 hall of fame and a 6-wide neighbour). Its 8·RING − 4 = 132 cells are
-     * within the stadium-5 road allowance (BuildingCatalog: 140).
+     * Tiles from the stadium's middle to the ring's lines: c − 8 and c + 7 (tiles 0 and 15 round the 6×6-tile stadium's
+     * middle c = (8, 8) at the anchor cell (10, 10); the plaza's lots between the ring and the stands, a lawn tile off the
+     * stadium, are 3 tiles deep: the 3×3-tile hall of fame and shopping centre fit; a ring further out left the outer
+     * blocks too thin for the campus on the 26 × 33-tile meadow). Its 8·RING − 4 = 60 tiles are within the stadium-5 road
+     * allowance (BuildingCatalog: 80).
      */
-    internal const val RING = 17
-    /** Cells between two parallel lines: a 15-cell block. */
-    private const val BLOCK = 15
-    /** Another avenue beyond the ring only where the island reaches at least this many cells past it. */
-    private const val OUTER = 11
+    internal const val RING = 8
+    /** Tiles between two parallel lines: a 9-tile block (180 m: a 20 m road takes twice a 10 m one's meadow). */
+    private const val BLOCK = 9
+    /** Another avenue beyond the ring only where the island reaches at least this many tiles past it. */
+    private const val OUTER = 5
     /** Lots a block holds at most: its largest rectangle and what the shore leaves beside it. */
     private const val LOTS = 3
-    /** A bridge's foot off the streets is joined to the nearest one by a spur (straight, or with one turn) at most this long. */
-    private const val SPUR = 11
+    /** A bridge's foot off the streets is joined to the nearest one by a spur (straight, or with one turn) at most this many tiles. */
+    private const val SPUR = 6
+    private const val T = Grid.TILE
+
+    /** A building's footprint in tiles (w, h): every footprint is whole tiles since 14 October, pass 3. */
+    private fun size(type: BuildingType) = BuildingCatalog.spec(type).let { it.width / T to it.height / T }
 
     /** The stadium's own trade on the plaza, facing the stands: the hall of fame, then the earners in turn. */
     private val PLAZA = listOf(BuildingType.HALL_OF_FAME, BuildingType.TICKET_OFFICE, BuildingType.SHOPPING_CENTER, BuildingType.FAN_ZONE)
@@ -74,13 +84,13 @@ object Showcase {
      * island (on one too small for that, without); null when it does not fit at all.
      */
     private fun arenaSpot(type: BuildingType, isle: LandRegion): Pair<Int, Int>? {
-        val spec = BuildingCatalog.spec(type)
+        val (sw, sh) = size(type)
         val mx = isle.cells.sumOf { it.first + 0.5 } / isle.area; val my = isle.cells.sumOf { it.second + 0.5 } / isle.area
         var best: Pair<Int, Int>? = null; var bestD = Double.MAX_VALUE; var bestLawn = false
         for ((x, y) in isle.cells) {
-            if (!isle.fits(Footprint(x, y, spec.width, spec.height))) continue
-            val lawn = isle.fits(Footprint(x - 1, y - 1, spec.width + 2, spec.height + 2))
-            val d = Math.hypot(x + spec.width / 2.0 - mx, y + spec.height / 2.0 - my)
+            if (!isle.fits(Footprint(x, y, sw, sh))) continue
+            val lawn = isle.fits(Footprint(x - 1, y - 1, sw + 2, sh + 2))
+            val d = Math.hypot(x + sw / 2.0 - mx, y + sh / 2.0 - my)
             if ((lawn && !bestLawn) || (lawn == bestLawn && d < bestD)) { best = x to y; bestD = d; bestLawn = lawn }
         }
         return best
@@ -120,9 +130,9 @@ object Showcase {
         val alongX = lot.x1 - lot.x0 >= lot.y1 - lot.y0
         val len = if (alongX) lot.x1 - lot.x0 else lot.y1 - lot.y0
         val deep = if (alongX) lot.y1 - lot.y0 else lot.x1 - lot.x0
-        val specs = types.map { BuildingCatalog.spec(it) }
-        val along = specs.map { if (alongX) it.width else it.height }
-        val across = specs.map { if (alongX) it.height else it.width }
+        val sizes = types.map { size(it) }
+        val along = sizes.map { if (alongX) it.first else it.second }
+        val across = sizes.map { if (alongX) it.second else it.first }
         val rows = mutableListOf<MutableList<Int>>()
         for (i in types.indices) {
             if (along[i] > len) return null
@@ -138,8 +148,8 @@ object Showcase {
                 val a = starts[j]; val b = rowAt[k] + (depths[k] - across[i]) / 2
                 // from the lot's corner nearest the stadium: u along x, v along y
                 val u = if (alongX) a else b; val v = if (alongX) b else a
-                val x = if (lot.highX) lot.x1 - u - specs[i].width else lot.x0 + u
-                val y = if (lot.highY) lot.y1 - v - specs[i].height else lot.y0 + v
+                val x = if (lot.highX) lot.x1 - u - sizes[i].first else lot.x0 + u
+                val y = if (lot.highY) lot.y1 - v - sizes[i].second else lot.y0 + v
                 at[i] = x to y
             }
         }
@@ -162,7 +172,7 @@ object Showcase {
 
     /**
      * The largest rectangle [x0, x1) × [y0, y1) whose every cell is [ok] (the first found on a tie), as (x0, x1, y0, y1);
-     * null when it is smaller than 3×2 either way.
+     * null when it is smaller than 2×2 (tiles).
      */
     private fun largest(x0: Int, x1: Int, y0: Int, y1: Int, ok: (Int, Int) -> Boolean): IntArray? {
         val w = x1 - x0
@@ -185,12 +195,12 @@ object Showcase {
         }
         val b = best ?: return null
         val bw = b[1] - b[0]; val bh = b[3] - b[2]
-        return b.takeIf { (bw >= 3 && bh >= 2) || (bw >= 2 && bh >= 3) }
+        return b.takeIf { bw >= 2 && bh >= 2 }
     }
 
     /** The lines along one axis through the stadium's middle [c]: the ring's, the boulevard's pair, and avenues beyond the ring while the island [lo, hi) reaches far enough. */
     private fun lines(c: Int, lo: Int, hi: Int): List<Int> {
-        val out = mutableListOf(c - RING, c - 1, c, c + RING - 1)
+        val out = mutableListOf(c - RING, c, c + RING - 1)
         var l = c - RING - (BLOCK + 1)
         while (l - lo >= OUTER) { out += l; l -= BLOCK + 1 }
         l = c + RING - 1 + BLOCK + 1
@@ -203,24 +213,25 @@ object Showcase {
         (listOf(lo - 1) + lines + listOf(hi)).zipWithNext().map { (a, b) -> a + 1 until b }.filter { !it.isEmpty() }
 
     fun city(stadium: Int, lands: LandMap = Lands.MAP): City {
-        val land = lands.main
-        val pitch = BuildingCatalog.spec(BuildingType.PITCH)
-        val (px, py) = lands.stadium
-        // the stadium's middle: the cell right of and below it (17, 16 for the anchor 11, 12)
-        val cx = px + pitch.width / 2; val cy = py + pitch.height / 2
+        // in tiles from here on (the meadow's whole tiles), the slots in cells at the end
+        val land = lands.main.tiles()
+        val (pw, ph) = size(BuildingType.PITCH)
+        val px = Math.floorDiv(lands.stadium.first, T); val py = Math.floorDiv(lands.stadium.second, T)
+        // the stadium's middle: the tile right of and below it (8, 8 for the anchor cell 10, 10)
+        val cx = px + pw / 2; val cy = py + ph / 2
         val bx0 = land.x0; val bx1 = land.x0 + land.w; val by0 = land.y0; val by1 = land.y0 + land.h
         fun on(p: Pair<Int, Int>) = land.has(p.first, p.second)
         fun cells(xs: IntRange, ys: IntRange) = xs.flatMap { x -> ys.map { y -> x to y } }.toSet()
         fun around(p: Pair<Int, Int>) = listOf(p.first + 1 to p.second, p.first - 1 to p.second, p.first to p.second + 1, p.first to p.second - 1)
 
-        // the street plan: the ring (c − RING .. c + RING − 1), the boulevards on the axes (c − 1, c), the avenues
+        // the street plan: the ring (c − RING .. c + RING − 1), the boulevards on the axes (c), the avenues
         val xs = lines(cx, bx0, bx1); val ys = lines(cy, by0, by1)
         val xr0 = cx - RING; val xr1 = cx + RING - 1; val yr0 = cy - RING; val yr1 = cy + RING - 1
         val ring = cells(xr0..xr0, yr0..yr1) + cells(xr1..xr1, yr0..yr1) + cells(xr0..xr1, yr0..yr0) + cells(xr0..xr1, yr1..yr1)
         // the plaza's approaches: from the ring to the stadium's lawn
-        val approaches = cells(cx - 1..cx, yr0 + 1 until py - 1) + cells(cx - 1..cx, py + pitch.height + 1 until yr1) +
-            cells(xr0 + 1 until px - 1, cy - 1..cy) + cells(px + pitch.width + 1 until xr1, cy - 1..cy)
-        val boulevards = cells(cx - 1..cx, by0 until yr0) + cells(cx - 1..cx, yr1 + 1 until by1) + cells(bx0 until xr0, cy - 1..cy) + cells(xr1 + 1 until bx1, cy - 1..cy)
+        val approaches = cells(cx..cx, yr0 + 1 until py - 1) + cells(cx..cx, py + ph + 1 until yr1) +
+            cells(xr0 + 1 until px - 1, cy..cy) + cells(px + pw + 1 until xr1, cy..cy)
+        val boulevards = cells(cx..cx, by0 until yr0) + cells(cx..cx, yr1 + 1 until by1) + cells(bx0 until xr0, cy..cy) + cells(xr1 + 1 until bx1, cy..cy)
         val avenues = xs.filter { it <= xr0 || it >= xr1 }.flatMap { x -> if (x == xr0 || x == xr1) cells(x..x, by0 until yr0) + cells(x..x, yr1 + 1 until by1) else cells(x..x, by0 until by1) } +
             ys.filter { it <= yr0 || it >= yr1 }.flatMap { y -> if (y == yr0 || y == yr1) cells(bx0 until xr0, y..y) + cells(xr1 + 1 until bx1, y..y) else cells(bx0 until bx1, y..y) }
         // a street is a cell on the meadow joined to the ring through other streets (a line the shore cuts off is no street)
@@ -236,7 +247,8 @@ object Showcase {
         // run or one with a single turn, on the meadow, at most SPUR cells (else the boulevard on its side is the way)
         val spurs = LinkedHashSet<Pair<Int, Int>>()
         fun run(a: Int, b: Int) = if (a <= b) a..b else a downTo b
-        for ((_, b) in lands.bridges.entries.sortedBy { it.key }) {
+        for ((_, foot) in lands.bridges.entries.sortedBy { it.key }) {
+            val b = Math.floorDiv(foot.first, T) to Math.floorDiv(foot.second, T)
             if (!on(b) || b in streets) continue
             var best: List<Pair<Int, Int>>? = null
             for (s in streets.sortedWith(compareBy({ abs(it.first - b.first) + abs(it.second - b.second) }, { it.first }, { it.second }))) {
@@ -259,20 +271,21 @@ object Showcase {
             if (roads.size + add.size <= allowance) roads += add
         }
 
-        // the lots: the blocks between the lines, a pavement cell off every street, spur and the shore
+        // the lots: the blocks between the lines up to the streets, a lawn tile off every spur and the shore
         val nearSpur = spurs.flatMap { around(it) + it }.toSet()
-        fun lotCell(x: Int, y: Int) = (x - 1..x + 1).all { i -> (y - 1..y + 1).all { j -> land.has(i, j) } } && (x to y) !in nearSpur
+        // a lot's tile: on the meadow with its four neighbours (a lawn tile off the shore along the axes), off the spurs
+        fun lotCell(x: Int, y: Int) = land.has(x, y) && around(x to y).all { land.has(it.first, it.second) } && (x to y) !in nearSpur
         fun lot(x0: Int, x1: Int, y0: Int, y1: Int): Lot? = largest(x0, x1, y0, y1, ::lotCell)?.let { Lot(it[0], it[1], it[2], it[3], cx, cy) }
         /**
          * A block's lots: its largest rectangle on the meadow, then — where the shore cuts the block into an odd shape —
          * the largest of what is left (a lawn cell off the lots before), while one of 3×3 or more is left.
          */
         fun block(sx: IntRange, sy: IntRange): List<Lot> {
-            val x0 = sx.first + 1; val x1 = sx.last; val y0 = sy.first + 1; val y1 = sy.last
+            val x0 = sx.first; val x1 = sx.last + 1; val y0 = sy.first; val y1 = sy.last + 1   // up to the streets (tiles: no pavement)
             val out = mutableListOf<Lot>()
             while (out.size < LOTS) {
                 val r = largest(x0, x1, y0, y1) { x, y -> lotCell(x, y) && out.none { x >= it.x0 - 1 && x <= it.x1 && y >= it.y0 - 1 && y <= it.y1 } } ?: break
-                if (out.isNotEmpty() && (r[1] - r[0] < 3 || r[3] - r[2] < 3)) break
+                if (out.isNotEmpty() && (r[1] - r[0] < 2 || r[3] - r[2] < 2)) break
                 out += Lot(r[0], r[1], r[2], r[3], cx, cy)
             }
             return out
@@ -283,12 +296,12 @@ object Showcase {
         val quadrants = listOf(0 to 0, 1 to 0, 1 to 1, 0 to 1)
         val front = quadrants.mapNotNull { (i, j) ->
             val qx = plazaX[i]; val qy = plazaY[j]
-            if (j == 0) lot(qx.first + 1, qx.last, qy.first + 1, py - 2) else lot(qx.first + 1, qx.last, py + pitch.height + 2, qy.last)
+            if (j == 0) lot(qx.first, qx.last + 1, qy.first, py - 1) else lot(qx.first, qx.last + 1, py + ph + 1, qy.last + 1)
         }
         val ends = quadrants.mapNotNull { (i, j) ->
             val qx = plazaX[i]; val qy = plazaY[j]
-            lot(if (i == 0) qx.first + 1 else px + pitch.width + 1, if (i == 0) px - 1 else qx.last,
-                if (j == 0) py - 1 else qy.first + 1, if (j == 0) qy.last else py + pitch.height + 1)
+            lot(if (i == 0) qx.first else px + pw + 1, if (i == 0) px - 1 else qx.last + 1,
+                if (j == 0) py else qy.first, if (j == 0) qy.last + 1 else py + ph)   // a lawn tile off the front lots
         }
         // the blocks round the plaza going clockwise from the top, every other one first (a pinwheel), then the outer ones
         // ring by ring, each ring clockwise from the top-left corner
@@ -338,10 +351,10 @@ object Showcase {
         val slots = mutableListOf(Slot(BuildingType.PITCH, stadium, px, py))
         for (lot in front + ends + beside + outer) arrange(lot, lot.types)?.forEachIndexed { k, (x, y) -> slots += Slot(lot.types[k], level(lot.types[k]), x, y) }
         val solid = HashSet<Pair<Int, Int>>()
-        for (s in slots) { val sp = BuildingCatalog.spec(s.type); for (i in s.x until s.x + sp.width) for (j in s.y until s.y + sp.height) solid += i to j }
-        val pitchCells = cells(px until px + pitch.width, py until py + pitch.height)
+        for (s in slots) { val (sw, sh) = size(s.type); for (i in s.x until s.x + sw) for (j in s.y until s.y + sh) solid += i to j }
+        val pitchCells = cells(px until px + pw, py until py + ph)
 
-        // street trees on the pavement (never on a lot — a lot leaves the pavement out), every third cell: along the axes
+        // street trees on the kerbs left free (never on a building), every third tile: along the axes
         // from the stadium towards the bridges first (the approaches, boulevards and spurs laid), then the ring and the
         // avenues, nearest the stadium first; then the shore, where the town meets the beach
         val decor = BuildingCatalog.spec(BuildingType.DECOR)
@@ -367,10 +380,11 @@ object Showcase {
             val arena = BuildingType.values().firstOrNull { BuildingCatalog.spec(it).island == isle.sport } ?: continue
             val spec = BuildingCatalog.spec(arena)
             if (spec.countAt(stadium) == 0) continue
-            arenaSpot(arena, isle)?.let { (x, y) -> slots += Slot(arena, spec.capAt(stadium), x, y) }
+            arenaSpot(arena, isle.tiles())?.let { (x, y) -> slots += Slot(arena, spec.capAt(stadium), x, y) }
         }
-        val ground = LandSet(listOf(land) + open)
-        check(slots.all { s -> lands.allows(ground, s.type, footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off its island" }
-        return City(stadium, ground.ids.toSet(), slots, open.mapNotNull { it.sport }.toSet())
+        val ground = LandSet(listOf(lands.main) + open)
+        val cells = slots.map { it.copy(x = it.x * T, y = it.y * T) }
+        check(cells.all { s -> Grid.aligned(s.x, s.y) && lands.allows(ground, s.type, footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off its island" }
+        return City(stadium, ground.ids.toSet(), cells, open.mapNotNull { it.sport }.toSet())
     }
 }

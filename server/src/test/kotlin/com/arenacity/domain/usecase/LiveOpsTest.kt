@@ -40,14 +40,16 @@ class LiveOpsTest {
     @Test
     fun `a running event shortens constructions and its goal pays once`() = runBlocking<Unit> {
         setup()
-        val b = place(user, BuildingType.ACADEMY, 9, 25, 0)
+        val b = place(user, BuildingType.ACADEMY, 8, 26, 0)
         val full = BuildingCatalog.level(BuildingType.ACADEMY, 1).buildSeconds
         assertEquals(clock.now().plusSeconds(full * 70 / 100), b.upgradeEndsAt)
         val ev = ops.list(user).first { it.event.key == "builders_day" }
         assertTrue(ev.running)
         assertFailsWith<ValidationException> { ops.claim(user, ev.event.id) }
-        repeat(5) { ops.record(club().id, ProgressEvent.OBSTACLE_CLEARED) }
-        assertEquals(3, ops.list(user).first { it.event.id == ev.event.id }.progress!!.count)   // capped at the target
+        // collections since obstacles are off (14 October, pass 3): six to collect
+        assertEquals(ProgressEvent.INCOME_COLLECTED, ev.event.goal)
+        repeat(8) { ops.record(club().id, ProgressEvent.INCOME_COLLECTED) }
+        assertEquals(6, ops.list(user).first { it.event.id == ev.event.id }.progress!!.count)   // capped at the target
         val gold = club().gold
         assertEquals(15, ops.claim(user, ev.event.id).gold)
         assertEquals(gold + 15, club().gold)
