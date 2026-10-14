@@ -34,6 +34,7 @@ class ClubRepositoryImpl : ClubRepository {
     override suspend fun create(club: Club) = dbQuery { ClubTable.insert { it.fill(club); it[id] = club.id; it[userId] = club.userId; it[createdAt] = club.createdAt; it[landMask] = club.landMask }; club }
     override suspend fun update(club: Club) = dbQuery { ClubTable.update({ ClubTable.id eq club.id }) { it.fill(club) }; club }
     override suspend fun setLandMask(id: UUID, mask: String) { dbQuery { ClubTable.update({ ClubTable.id eq id }) { it[landMask] = mask } } }
+    override suspend fun touchSeen(userId: UUID, at: java.time.Instant) = dbQuery { ClubTable.update({ ClubTable.userId eq userId }) { it[lastSeenAt] = at } > 0 }
     override suspend fun staleLand(mask: String) = dbQuery { ClubTable.select(ClubTable.id).where { ClubTable.landMask.isNull() or (ClubTable.landMask neq mask) }.map { it[ClubTable.id] } }
 
     private fun UpdateBuilder<*>.fill(c: Club) {
@@ -96,6 +97,7 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
     this[ClubTable.landMask],
     this[ClubTable.energy], this[ClubTable.energyAt], this[ClubTable.offerDay],
+    this[ClubTable.lastSeenAt],
 )
 
 class ObstacleRepositoryImpl : com.arenacity.domain.repository.ObstacleRepository {

@@ -57,6 +57,11 @@ data class Club(
     val energyAt: Instant? = null,
     /** The UTC day the club last bought the daily pack offer (rules.DailyOffers; once a day). */
     val offerDay: java.time.LocalDate? = null,
+    /**
+     * When the owner was last seen (an authenticated request; usecase.club.PresenceTracker, at most once a minute); null =
+     * not since V42. Read-only in [com.arenacity.domain.repository.ClubRepository.update]: only touchSeen writes it.
+     */
+    val lastSeenAt: Instant? = null,
 )
 
 enum class BuildingState { IDLE, UPGRADING }

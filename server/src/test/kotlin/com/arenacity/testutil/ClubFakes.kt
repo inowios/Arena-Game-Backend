@@ -17,9 +17,11 @@ class FakeClubRepository : ClubRepository {
     override suspend fun lockById(id: UUID) = findById(id)
     override suspend fun create(club: Club): Club { rows[club.id] = club; return club }
     /** Like the real one: never writes the land mask (a stale copy keeps the stored one). */
-    override suspend fun update(club: Club): Club { rows[club.id] = club.copy(landMask = rows[club.id]?.landMask ?: club.landMask); return rows.getValue(club.id) }
+    override suspend fun update(club: Club): Club { rows[club.id] = club.copy(landMask = rows[club.id]?.landMask ?: club.landMask, lastSeenAt = rows[club.id]?.lastSeenAt ?: club.lastSeenAt); return rows.getValue(club.id) }
     override suspend fun setLandMask(id: UUID, mask: String) { rows[id]?.let { rows[id] = it.copy(landMask = mask) } }
     override suspend fun staleLand(mask: String) = rows.values.filter { it.landMask != mask }.map { it.id }
+    var touches = 0
+    override suspend fun touchSeen(userId: UUID, at: java.time.Instant): Boolean { touches++; val mine = rows.values.filter { it.userId == userId }; mine.forEach { rows[it.id] = it.copy(lastSeenAt = at) }; return mine.isNotEmpty() }
 }
 
 /** Keeps the table's UNIQUE (club_id, grid_x, grid_y): a create or move onto another building's top-left cell fails like the database. */

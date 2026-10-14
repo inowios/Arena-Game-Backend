@@ -16,6 +16,7 @@ fun Application.configureSecurity() {
     val issuer = cfg.property("jwt.issuer").getString()
     val secret = cfg.property("jwt.secret").getString()
     val activity: com.arenacity.domain.usecase.analytics.ActivityTracker by inject()
+    val presence: com.arenacity.domain.usecase.club.PresenceTracker by inject()
     install(Authentication) {
         jwt(AUTH_JWT) {
             realm = cfg.property("jwt.realm").getString()
@@ -23,7 +24,8 @@ fun Application.configureSecurity() {
             validate { credential ->
                 if (!credential.payload.audience.contains(audience)) return@validate null
                 // one row per user and UTC day (retention, DAU, cup entry); cached in memory, never fails the request
-                credential.payload.subject?.let { runCatching { UUID.fromString(it) }.getOrNull() }?.let { activity.seen(it) }
+                // and the club's last-seen time (the alliance's online dots), at most once a minute per user
+                credential.payload.subject?.let { runCatching { UUID.fromString(it) }.getOrNull() }?.let { activity.seen(it); presence.seen(it) }
                 JWTPrincipal(credential.payload)
             }
         }

@@ -233,6 +233,7 @@ val appModule = module {
     single { com.arenacity.domain.usecase.account.DeleteAccountUseCase(get(), get(), get(), get(), get(), get(), tx = get(), analytics = get(), events = get()) }
     single<AnalyticsRepository> { AnalyticsRepositoryImpl() }
     single { com.arenacity.domain.usecase.analytics.ActivityTracker(get(), get()) }
+    single { com.arenacity.domain.usecase.club.PresenceTracker(get(), get()) }
     single { com.arenacity.domain.usecase.analytics.EventLog(get(), get()) }
     single { com.arenacity.domain.usecase.analytics.TrackEventsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.analytics.MetricsReportUseCase(get(), get()) }

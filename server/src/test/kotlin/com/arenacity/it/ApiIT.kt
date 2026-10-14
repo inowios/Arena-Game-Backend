@@ -153,7 +153,13 @@ class ApiIT {
         java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE buildings SET level = 2 WHERE type = 'PITCH'") }
         val id = call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 201).data.o()["alliance"]!!.o()["id"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/alliances/$id/join", b)
-        assertEquals(2, call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray.size)
+        val members = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray
+        assertEquals(2, members.size)
+        // presence: both made authenticated requests just now (clubs.last_seen_at, V42)
+        assertTrue(members.all { it.o()["online"]!!.jsonPrimitive.boolean && it.o()["lastSeenAt"]!!.jsonPrimitive.content.isNotEmpty() }, members.toString())
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET last_seen_at = now() - interval '20 minutes' WHERE name = 'Ally Two'") }
+        val two = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray.first { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content == "Ally Two" }.o()
+        assertEquals(false, two["online"]!!.jsonPrimitive.boolean)
         call(HttpMethod.Post, "/club/alliance/messages", b, """{"text":"hello allies"}""", expect = 201)
         assertEquals("hello allies", call(HttpMethod.Get, "/club/alliance/messages", a).data.jsonArray.last().o()["text"]!!.jsonPrimitive.content)
         call(HttpMethod.Get, "/alliances/tournament", a)

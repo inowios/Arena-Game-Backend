@@ -15,12 +15,14 @@ interface ClubRepository {
     suspend fun lockByUserId(userId: UUID): Club?
     suspend fun lockById(id: UUID): Club?
     suspend fun create(club: Club): Club
-    /** Writes the club's fields; never [Club.landMask] (a stale copy must not move the club back onto an older land mask). */
+    /** Writes the club's fields; never [Club.landMask] nor [Club.lastSeenAt] (a stale copy must not move the club back onto an older land mask). */
     suspend fun update(club: Club): Club
     /** The club's buildings now stand on the land mask [mask] (ClubService.settle). */
     suspend fun setLandMask(id: UUID, mask: String)
     /** Clubs whose buildings were last moved onto another land mask than [mask], or never (the start-up sweep). */
     suspend fun staleLand(mask: String): List<UUID>
+    /** The club of user [userId] was seen at [at] (presence; [Club.lastSeenAt]); false when the user has no club yet. */
+    suspend fun touchSeen(userId: UUID, at: java.time.Instant): Boolean
 }
 
 interface BuildingRepository {

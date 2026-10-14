@@ -106,7 +106,8 @@ object AllianceRules {
     fun lastWeekend(now: Instant): Int = if (weekendNow(now) != null) week(now.minusSeconds(7 * 86_400)) else week(now.minusSeconds(now.atZone(ZoneOffset.UTC).dayOfWeek.value * 86_400L))
 }
 
-data class AllianceView(val alliance: Alliance, val members: List<Pair<AllianceMember, Club>>, val requests: List<Pair<JoinRequest, Club>>, val helps: List<HelpView>, val me: AllianceMember?)
+/** [now]: when it was read (the members' online state, club.Presence). */
+data class AllianceView(val alliance: Alliance, val members: List<Pair<AllianceMember, Club>>, val requests: List<Pair<JoinRequest, Club>>, val helps: List<HelpView>, val me: AllianceMember?, val now: java.time.Instant = java.time.Instant.EPOCH)
 data class HelpView(val help: HelpRequest, val club: Club, val helpedByMe: Boolean, val remainingSeconds: Long)
 data class AllianceSummary(val alliance: Alliance, val members: Int)
 data class TournamentRow(val alliance: Alliance, val wins: Int, val place: Int)
@@ -172,7 +173,7 @@ class AllianceUseCases(
             else byId[h.clubId]?.let { HelpView(h, it, me.id in repo.helpersOf(h.id), b.upgradeEndsAt.epochSecond - now.epochSecond) }
         } else emptyList()
         return AllianceView(a, members.sortedWith(compareByDescending<AllianceMember> { it.role.rank }.thenBy { byId[it.clubId]?.trophies?.unaryMinus() ?: 0 }).mapNotNull { m -> byId[m.clubId]?.let { m to it } },
-            reqs.mapNotNull { r -> reqClubs[r.clubId]?.let { r to it } }, helps, mine)
+            reqs.mapNotNull { r -> reqClubs[r.clubId]?.let { r to it } }, helps, mine, now)
     }
 
     /** Joins an open alliance (or asks to join a closed one; returns null then). */

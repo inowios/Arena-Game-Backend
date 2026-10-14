@@ -52,6 +52,7 @@ object TestDb {
             ALTER TABLE clubs ADD COLUMN IF NOT EXISTS energy INT NOT NULL DEFAULT 30;
             ALTER TABLE clubs ADD COLUMN IF NOT EXISTS energy_at TIMESTAMPTZ NULL;
             ALTER TABLE clubs ADD COLUMN IF NOT EXISTS offer_day DATE NULL;
+            ALTER TABLE clubs ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NULL;
         """.trimIndent())
         c.commit()
     }

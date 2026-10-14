@@ -42,6 +42,8 @@ object ClubTable : BaseTable("clubs") {
     val energy = integer("energy")
     val energyAt = timestamp("energy_at").nullable()
     val offerDay = date("offer_day").nullable()
+    /** When the owner was last seen (V42); written only by [com.arenacity.domain.repository.ClubRepository.touchSeen]. */
+    val lastSeenAt = timestamp("last_seen_at").nullable()
 }
 
 object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases") {
