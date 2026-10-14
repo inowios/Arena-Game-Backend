@@ -224,6 +224,7 @@ days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..1
 days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90
 Needs stadium level {0}	Needs stadium level {0}	Necesita el estadio de nivel {0}	Precisa do estádio de nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
 The zone is already yours	The zone is already yours	La zona ya es tuya	A zona já é sua	Эта зона уже ваша	Ця зона вже ваша
+This zone has no island yet	This zone has no island yet: it opens later	Esta zona aún no tiene isla: se abrirá más adelante	Esta zona ainda não tem ilha: abre mais tarde	У этой зоны пока нет острова: она откроется позже	У цієї зони поки немає острова: вона відкриється пізніше
 Unknown zone	Unknown zone	Zona desconocida	Zona desconhecida	Неизвестная зона	Невідома зона
 # --- land (a mask since the owner's picture, 13 October)
 Outside your land	That spot is outside your land	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами твоей земли	Це місце за межами твоєї землі
@@ -231,3 +232,47 @@ The island opens with its arena	This island opens with its arena	Esta isla se ab
 Land is not for sale	The land round your plot is not for sale: your club grows on the islands	El terreno alrededor de tu parcela no está a la venta: tu club crece en las islas	O terreno ao redor do seu lote não está à venda: seu clube cresce nas ilhas	Земля вокруг твоего участка не продаётся: клуб растёт на островах	Земля навколо твоєї ділянки не продається: клуб росте на островах
 Only fences and roads are drawn	Only roads can be drawn	Solo se pueden dibujar calles	Só ruas podem ser desenhadas	Рисовать можно только дороги	Малювати можна лише дороги
 Unknown type	Unknown building type	Tipo de edificio desconocido	Tipo de prédio desconhecido	Неизвестный тип здания	Невідомий тип будівлі
+# --- the sport town (14 October 2026): the island arenas, the buildings' names (GET /catalog/buildings), what the ones with no mechanic yet will do
+This arena is built on its own island	This arena is built on its own island	Esta arena se construye en su propia isla	Esta arena é construída na sua própria ilha	Эта арена строится на своём острове	Ця арена будується на своєму острові
+Open this island first	Open this island first: buy and restore its zone	Primero abre esta isla: compra y restaura su zona	Primeiro abra esta ilha: compre e restaure a sua zona	Сначала открой этот остров: купи и восстанови его зону	Спершу відкрий цей острів: купи й віднови його зону
+building.soon	Soon	Pronto	Em breve	Скоро	Незабаром
+building.PITCH	Stadium	Estadio	Estádio	Стадион	Стадіон
+building.ACADEMY	Academy	Academia	Academia	Академия	Академія
+building.TRAINING_CENTER	Training Center	Centro de entrenamiento	Centro de treinamento	Тренировочный центр	Тренувальний центр
+building.MEDICAL_CENTER	Medical Center	Centro médico	Centro médico	Медцентр	Медцентр
+building.TICKET_OFFICE	Ticket Office	Taquilla	Bilheteria	Касса	Каса
+building.DECOR	Decoration	Decoración	Decoração	Декор	Декор
+building.FENCE	Fence	Valla	Cerca	Забор	Паркан
+building.HOUSE	House	Casa	Casa	Дом	Будинок
+building.ROAD	Road	Calle	Rua	Дорога	Дорога
+building.SHOPPING_CENTER	Shopping Center	Centro comercial	Shopping center	Торговый центр	Торговий центр
+building.HALL_OF_FAME	Hall of Fame	Salón de la Fama	Hall da Fama	Зал славы	Зала слави
+building.BACKYARD_COURT	Backyard Court	Cancha de barrio	Quadra de bairro	Дворовая площадка	Дворовий майданчик
+building.FAN_ZONE	Fan Zone	Zona de aficionados	Zona da torcida	Фан-зона	Фан-зона
+building.MEDIA_CENTER	Media Center	Centro de prensa	Centro de mídia	Медиацентр	Медіацентр
+building.SPONSOR_OFFICE	Sponsor Office	Oficina de patrocinadores	Escritório de patrocinadores	Спонсорский офис	Спонсорський офіс
+building.HOTEL	Hotel	Hotel	Hotel	Отель	Готель
+building.ATHLETES_RESIDENCE	Athletes' Residence	Residencia de atletas	Residência dos atletas	Резиденция спортсменов	Резиденція спортсменів
+building.YOUTH_SPORTS_SCHOOL	Youth Sports School	Escuela deportiva infantil	Escolinha de esportes	Детская спортшкола	Дитяча спортшкола
+building.SPORTS_SCIENCE_LAB	Sports Science Lab	Laboratorio de ciencias del deporte	Laboratório de ciência do esporte	Лаборатория спортнауки	Лабораторія спортивної науки
+building.SCHOOL	School	Escuela	Escola	Школа	Школа
+building.TRANSPORT_HUB	Transport Hub	Intercambiador	Terminal de transportes	Транспортный узел	Транспортний вузол
+building.SCOUTING_OFFICE	Scouting Office	Oficina de ojeadores	Central de olheiros	Скаутский центр	Скаутський центр
+building.RECOVERY_CENTER	Recovery Center	Centro de recuperación	Centro de recuperação	Центр восстановления	Центр відновлення
+building.ANALYTICS_CENTER	Analytics Center	Centro de análisis	Centro de análise	Аналитический центр	Аналітичний центр
+building.COACHING_HQ	Coaching HQ	Sede técnica	Sede técnica	Тренерский штаб	Тренерський штаб
+building.BASKETBALL_ARENA	Basketball Arena	Arena de baloncesto	Arena de basquete	Баскетбольная арена	Баскетбольна арена
+building.VOLLEYBALL_ARENA	Volleyball Arena	Arena de voleibol	Arena de vôlei	Волейбольная арена	Волейбольна арена
+building.TENNIS_ARENA	Tennis Arena	Arena de tenis	Arena de tênis	Теннисная арена	Тенісна арена
+building.PADEL_ARENA	Padel Arena	Arena de pádel	Arena de padel	Падел-арена	Падел-арена
+building.ATHLETES_RESIDENCE.about	Your athletes will live here between matches.	Aquí vivirán tus atletas entre partidos.	Seus atletas vão morar aqui entre as partidas.	Здесь будут жить ваши спортсмены между матчами.	Тут житимуть ваші спортсмени між матчами.
+building.YOUTH_SPORTS_SCHOOL.about	Will bring up young athletes for every section.	Formará a jóvenes atletas para cada sección.	Vai formar jovens atletas para cada seção.	Будет растить юных спортсменов для всех секций.	Ростиме юних спортсменів для всіх секцій.
+building.SPORTS_SCIENCE_LAB.about	Will study your athletes to make training pay off more.	Estudiará a tus atletas para que los entrenamientos rindan más.	Vai estudar seus atletas para que os treinos rendam mais.	Будет изучать спортсменов, чтобы тренировки давали больше.	Вивчатиме спортсменів, щоб тренування давали більше.
+building.SCHOOL.about	Will teach the town's children and draw new families to the town.	Educará a los niños del pueblo y atraerá nuevas familias.	Vai ensinar as crianças da cidade e atrair novas famílias.	Будет учить детей города и привлекать в него новые семьи.	Навчатиме дітей міста й приваблюватиме нові родини.
+building.TRANSPORT_HUB.about	Will bring fans to your matches from all over the island.	Traerá aficionados a tus partidos desde toda la isla.	Vai trazer torcedores de toda a ilha para suas partidas.	Будет привозить болельщиков на матчи со всего острова.	Привозитиме вболівальників на матчі з усього острова.
+building.SCOUTING_OFFICE.about	Will search the world for talented players for your club.	Buscará por el mundo jugadores con talento para tu club.	Vai procurar pelo mundo jogadores talentosos para o seu clube.	Будет искать по миру талантливых игроков для клуба.	Шукатиме по світу талановитих гравців для клубу.
+building.RECOVERY_CENTER.about	Will help your athletes recover after matches and training.	Ayudará a tus atletas a recuperarse tras partidos y entrenamientos.	Vai ajudar seus atletas a se recuperar depois de jogos e treinos.	Поможет спортсменам восстанавливаться после матчей и тренировок.	Допомагатиме спортсменам відновлюватися після матчів і тренувань.
+building.ANALYTICS_CENTER.about	Will study your rivals before every match.	Analizará a tus rivales antes de cada partido.	Vai analisar seus adversários antes de cada partida.	Будет разбирать соперников перед каждым матчем.	Розбиратиме суперників перед кожним матчем.
+building.COACHING_HQ.about	Will bring in coaches to sharpen your tactics.	Traerá entrenadores que afinarán tu táctica.	Vai trazer técnicos para afiar a sua tática.	Будет приглашать тренеров, которые отточат вашу тактику.	Запрошуватиме тренерів, які відточать вашу тактику.
+building.VOLLEYBALL_ARENA.about	Will open the volleyball section.	Abrirá la sección de voleibol.	Vai abrir a seção de vôlei.	Откроет волейбольную секцию.	Відкриє волейбольну секцію.
+building.PADEL_ARENA.about	Will open the padel section.	Abrirá la sección de pádel.	Vai abrir a seção de padel.	Откроет секцию падела.	Відкриє секцію падела.

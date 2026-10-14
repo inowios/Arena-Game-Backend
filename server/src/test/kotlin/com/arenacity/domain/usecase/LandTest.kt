@@ -139,17 +139,17 @@ class LandTest {
     @Test
     fun `an older club moves onto the new mask once, what stood in the sea to the nearest free spot, biggest first`() = runBlocking<Unit> {
         val club = newClub()
-        // built on the old square: in the corner that is sea now an academy, a road and a tree; a tennis court straddling
-        // the new shore whose top-left cell (28, -5) is on the meadow, and beside it a ticket office (2×5, turned) that the
-        // nearest spot puts exactly on that cell — moved first (it is bigger), it would hit the (club, x, y) uniqueness
-        // unless everything lost is parked first
+        // built on the old square: in the corner that is sea now an academy, a road and a tree; a sponsor office (3×3)
+        // straddling the new shore whose top-left cell (28, -5) is on the meadow, and beside it a ticket office (2×5,
+        // turned) that the nearest spot puts exactly on that cell — moved first (it is bigger), it would hit the
+        // (club, x, y) uniqueness unless everything lost is parked first
         val academy = at(club.id, BuildingType.ACADEMY, 34, -3, level = 3)
-        val court = at(club.id, BuildingType.TENNIS_COURT, 28, -5)
+        val court = at(club.id, BuildingType.SPONSOR_OFFICE, 28, -5)
         val office = at(club.id, BuildingType.TICKET_OFFICE, 32, -5, rotation = 90)
         val road = at(club.id, BuildingType.ROAD, 31, -7)
         val fence = at(club.id, BuildingType.FENCE, 30, -8, level = 3)
         val tree = at(club.id, BuildingType.DECOR, 37, -6)
-        val stays = at(club.id, BuildingType.CAFE, 20, 25)
+        val stays = at(club.id, BuildingType.FAN_ZONE, 20, 25)
         // obstacles out there go: the gold of a cleared one is the club's, an untouched one simply goes
         val ready = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.ROCK, 34, -4, ObstacleState.READY, null, 7, clock.now(), clock.now())
         val idle = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.BUSH, 36, -8, ObstacleState.IDLE, null, 5, clock.now(), clock.now())

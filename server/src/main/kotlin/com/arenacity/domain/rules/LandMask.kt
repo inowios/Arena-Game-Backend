@@ -99,6 +99,26 @@ class LandMap(
     /** The regions not in [land]: the side islands still locked. */
     fun locked(land: LandSet): List<LandRegion> = regions.filter { r -> land.regions.none { it === r } }
 
+    /** The side island [sport]'s zone opens (null when this mask has none). */
+    fun island(sport: ZoneSport): LandRegion? = regions.firstOrNull { it !== main && it.sport == sport }
+
+    /**
+     * A [type] may stand at [fp] on [land]: an island arena (BuildingSpec.island) on its own side island only, and only
+     * once [land] holds it (its zone open); anything else anywhere on [land].
+     */
+    fun allows(land: LandSet, type: BuildingType, fp: Footprint): Boolean {
+        val sport = BuildingCatalog.spec(type).island ?: return land.fits(fp)
+        val isle = island(sport) ?: return false
+        return land.regions.any { it === isle } && isle.fits(fp)
+    }
+
+    /** The cells a [type] may stand on in [land]: its own island's for an island arena (none while it is locked), else the land's. */
+    fun cellsFor(land: LandSet, type: BuildingType): List<Pair<Int, Int>> {
+        val sport = BuildingCatalog.spec(type).island ?: return land.cells
+        val isle = island(sport)?.takeIf { i -> land.regions.any { it === i } } ?: return emptyList()
+        return isle.cells
+    }
+
     /** The sha1 of the canonical text ([canonical]); equals [id] for a well-formed file. */
     val computedId: String get() = sha1(regions)
 

@@ -46,7 +46,28 @@ class ZoneUseCasesTest {
         clock.advanceSeconds(2 * 3600)
         assertEquals(com.arenacity.domain.model.ZoneState.OPEN, zones.list(user).first { it.spec.sport == com.arenacity.domain.model.ZoneSport.BASKETBALL }.state)
         assertEquals(setOf(com.arenacity.domain.model.Sport.BASKETBALL), zones.openSports(get(user).club.id))
-        assertFailsWith<ValidationException> { zones.buy(user, com.arenacity.domain.model.ZoneSport.TENNIS) }   // stadium 3 < 4
+        assertFailsWith<ValidationException> { zones.buy(user, com.arenacity.domain.model.ZoneSport.TENNIS) }   // stadium 3 < 7
         Unit
+    }
+
+    @Test
+    fun `an island opens with its arena, earlier for a club that already has the arena, never without an island`() = runBlocking<Unit> {
+        val club = create(user, "Red Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv")
+        clubs.update(clubs.rows.values.first().copy(coins = 10_000_000, trophies = 100_000))
+        buildings.setStadium(club.id, 6)
+        // stadium 6: tennis (7) and padel (9) are not sold yet, the card says so
+        val tennis = com.arenacity.domain.model.ZoneSport.TENNIS
+        assertEquals(7, zones.list(user).first { it.spec.sport == tennis }.requiredStadium)
+        assertEquals("Needs stadium level {0}", assertFailsWith<ValidationException> { zones.buy(user, tennis) }.template)
+        assertEquals("Needs stadium level {0}", assertFailsWith<ValidationException> { zones.buy(user, com.arenacity.domain.model.ZoneSport.PADEL) }.template)
+        // hockey has no island on the map: never sold
+        buildings.setStadium(club.id, 10)
+        assertEquals("This zone has no island yet", assertFailsWith<ValidationException> { zones.buy(user, com.arenacity.domain.model.ZoneSport.HOCKEY) }.template)
+        // a club whose old court became a tennis arena (V36): from the stadium the arena's first level needs (4)
+        buildings.setStadium(club.id, 4)
+        val now = clock.now(); val (px, py) = Lands.parked(0)   // parked off the land: its island was closed
+        buildings.create(com.arenacity.domain.model.Building(UUID.randomUUID(), club.id, BuildingType.TENNIS_ARENA, 2, px, py, 0, BuildingState.IDLE, null, now, now, now))
+        assertEquals(4, zones.list(user).first { it.spec.sport == tennis }.requiredStadium)
+        assertEquals(com.arenacity.domain.model.ZoneState.RESTORING, zones.buy(user, tennis).state)
     }
 }

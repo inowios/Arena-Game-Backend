@@ -1,15 +1,16 @@
 package com.arenacity.domain.rules
 
+import com.arenacity.domain.model.ZoneSport
 import kotlin.math.abs
 
 /**
  * Showcase cities (the owner, 12 October: «every player gets two friends whose cities are built — one with a level-5
  * stadium, one built to the maximum — so players see what their city can become»; then «a beautiful city, not buildings
- * on top of each other»). Two bot clubs shared by everyone, on the main island of the land mask ([Lands]; the owner's
- * picture, 13 October: the land follows the painted meadow, an organic shape), laid out as a planned town round the
- * stadium:
- *  - the stadium at the mask's anchor, the meadow's middle, on its plaza; a ring avenue round the plaza, boulevards two
- *    cells wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
+ * on top of each other»). Two bot clubs shared by everyone, on the land mask ([Lands]; the owner's picture, 13 October:
+ * the land follows the painted meadow, an organic shape), laid out as a planned town round the stadium on the main
+ * island, the arenas on the side islands open at that stadium (the sport town, 14 October):
+ *  - the stadium, the town's biggest building, at the mask's anchor, the meadow's middle, on its plaza; a ring avenue
+ *    round the plaza, boulevards two cells wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
  *    a short spur, straight or with one turn) and the ring's lines run on to the shore, with another avenue every 12 cells where the meadow reaches
  *    far beyond the ring: blocks of 11 cells between the lines. Only cells on the meadow are streets, and only those that
  *    join the ring. The road allowance lays the ring, the plaza's approaches, the boulevards with the spurs and the
@@ -17,19 +18,23 @@ import kotlin.math.abs
  *  - every block keeps a pavement cell along its streets and along the shore, where the trees stand; what is left of it
  *    on the meadow holds one lot, its largest rectangle (a block the shore cuts below 3×2 stays meadow); the lot's
  *    buildings stand in rows with a lawn cell at least between them, the spare lawn spread evenly over the lot;
- *  - the club round the stadium: the museum, ticket offices, shops and cafés on the plaza facing the stands, the courts at
- *    its ends, the academy, training and medical centres and the parking in the blocks next to it (every other block going
- *    round); the town outwards — offices and towers in the other blocks along the boulevards, houses and parks in the
- *    outer blocks once those are full;
- *  - trees along the boulevards and the plaza's approaches first, then the ring, the avenues and the shore.
+ *  - the club round the stadium: the hall of fame, ticket offices, shopping centres and the fan zone on the plaza facing
+ *    the stands, the media centre and the sponsors at its ends, the campus (training, academy, medical, recovery, the
+ *    athletes' residence, the science lab, the youth school, the coaches, the analysts, the scouts) in the blocks next to
+ *    it (every other block going round); the
+ *    town outwards — the hotel, the school and the transport hub in the other blocks along the boulevards, houses and
+ *    yard courts in the outer blocks once those are full;
+ *  - trees along the boulevards and the plaza's approaches first, then the ring, the avenues and the shore;
+ *  - the side islands whose zone the stadium allows are open ([islands]); each holds its arena in its middle once the
+ *    stadium allows the arena.
  * Within the game's limits (no type over its count or level cap at that stadium); the town takes as many copies as fit
- * with that spacing (at the top fewer houses and parks than allowed, so it stays spacious). Pure: the same mask and
+ * with that spacing (at the top fewer houses and yard courts than allowed, so it stays spacious). Pure: the same mask and
  * catalogue always give the same city.
  */
 object Showcase {
     data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int)
-    /** [regions]: the land mask's regions the town stands on (the main island). */
-    data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>)
+    /** [regions]: the land mask's regions the town stands on (the main island and the open side islands); [zones]: the zones open. */
+    data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<ZoneSport> = emptySet())
 
     /** From the stadium's middle to the ring's lines: c − 13 and c + 12 (cells 2 and 27 round the anchor (11, 12)). */
     private const val RING = 13
@@ -42,16 +47,39 @@ object Showcase {
     /** A bridge's foot off the streets is joined to the nearest one by a spur (straight, or with one turn) at most this long. */
     private const val SPUR = 8
 
-    /** The stadium's own trade on the plaza, facing the stands: the museum, then the earners in turn. */
-    private val PLAZA = listOf(BuildingType.MUSEUM, BuildingType.TICKET_OFFICE, BuildingType.CLUB_SHOP, BuildingType.CAFE)
-    /** The courts at the stadium's ends. */
-    private val COURTS = listOf(BuildingType.BASKETBALL_COURT, BuildingType.TENNIS_COURT)
+    /** The stadium's own trade on the plaza, facing the stands: the hall of fame, then the earners in turn. */
+    private val PLAZA = listOf(BuildingType.HALL_OF_FAME, BuildingType.TICKET_OFFICE, BuildingType.SHOPPING_CENTER, BuildingType.FAN_ZONE)
+    /** The press and the sponsors at the stadium's ends. */
+    private val ENDS = listOf(BuildingType.MEDIA_CENTER, BuildingType.SPONSOR_OFFICE)
     /** The club's campus in the blocks next to the plaza. */
-    private val CAMPUS = listOf(BuildingType.TRAINING_CENTER, BuildingType.ACADEMY, BuildingType.MEDICAL_CENTER, BuildingType.PARKING)
-    /** Downtown along the boulevards: offices and towers in turn. */
-    private val TOWERS = listOf(BuildingType.OFFICE, BuildingType.APARTMENT)
-    /** The suburbs: two houses, then a park. */
-    private val HOMES = listOf(BuildingType.HOUSE, BuildingType.HOUSE, BuildingType.PARK)
+    private val CAMPUS = listOf(BuildingType.TRAINING_CENTER, BuildingType.ACADEMY, BuildingType.MEDICAL_CENTER, BuildingType.RECOVERY_CENTER,
+        BuildingType.ATHLETES_RESIDENCE, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.YOUTH_SPORTS_SCHOOL, BuildingType.COACHING_HQ,
+        BuildingType.ANALYTICS_CENTER, BuildingType.SCOUTING_OFFICE)
+    /** Downtown along the boulevards: the hotel, the school and the transport hub in turn. */
+    private val DOWNTOWN = listOf(BuildingType.HOTEL, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB)
+    /** The suburbs: two houses, then a yard court. */
+    private val HOMES = listOf(BuildingType.HOUSE, BuildingType.HOUSE, BuildingType.BACKYARD_COURT)
+
+    /** The side islands open in a showcase at [stadium]: those whose zone that stadium allows (rules.Zones). */
+    fun islands(stadium: Int, lands: LandMap = Lands.MAP): List<LandRegion> =
+        lands.regions.filter { r -> r !== lands.main && r.sport?.let { Zones.spec(it).requiredStadium <= stadium } == true }
+
+    /**
+     * Where an island's arena of [type] stands: the spot nearest the island's middle with a lawn cell round it on the
+     * island (on one too small for that, without); null when it does not fit at all.
+     */
+    private fun arenaSpot(type: BuildingType, isle: LandRegion): Pair<Int, Int>? {
+        val spec = BuildingCatalog.spec(type)
+        val mx = isle.cells.sumOf { it.first + 0.5 } / isle.area; val my = isle.cells.sumOf { it.second + 0.5 } / isle.area
+        var best: Pair<Int, Int>? = null; var bestD = Double.MAX_VALUE; var bestLawn = false
+        for ((x, y) in isle.cells) {
+            if (!isle.fits(Footprint(x, y, spec.width, spec.height))) continue
+            val lawn = isle.fits(Footprint(x - 1, y - 1, spec.width + 2, spec.height + 2))
+            val d = Math.hypot(x + spec.width / 2.0 - mx, y + spec.height / 2.0 - my)
+            if ((lawn && !bestLawn) || (lawn == bestLawn && d < bestD)) { best = x to y; bestD = d; bestLawn = lawn }
+        }
+        return best
+    }
 
     /**
      * The cells [x0, x1) × [y0, y1) a block's buildings stand on (its pavement already left out) and what stands there;
@@ -282,13 +310,13 @@ object Showcase {
         }
         val plaza = turns(PLAZA)
         deal(front, plaza)
-        val courts = turns(COURTS).apply { addAll(plaza) }
-        deal(ends, courts)
+        val press = turns(ENDS).apply { addAll(plaza) }
+        deal(ends, press)
         // the campus takes as few blocks as hold two each, the town the other blocks beside the plaza, then the outer ones
-        val campus = turns(CAMPUS).apply { addAll(courts) }
+        val campus = turns(CAMPUS).apply { addAll(press) }
         val campusLots = beside.take(minOf(beside.size, (campus.size + 1) / 2))
         deal(campusLots, campus)
-        val town = (campus + turns(TOWERS) + turns(HOMES)).toMutableList()
+        val town = (campus + turns(DOWNTOWN) + turns(HOMES)).toMutableList()
         deal(beside.drop(campusLots.size), town)
         deal(outer, town)
         // and where the campus left room
@@ -297,8 +325,8 @@ object Showcase {
         var houseFlip = 0
         fun level(t: BuildingType): Int {
             val cap = BuildingCatalog.spec(t).capAt(stadium)
-            // houses and towers alternate a level so the town shows different facades
-            return if (t == BuildingType.HOUSE || t == BuildingType.APARTMENT) (cap - (houseFlip++ % 2)).coerceAtLeast(1) else cap
+            // houses alternate a level so the town shows different facades
+            return if (t == BuildingType.HOUSE) (cap - (houseFlip++ % 2)).coerceAtLeast(1) else cap
         }
         val slots = mutableListOf(Slot(BuildingType.PITCH, stadium, px, py))
         for (lot in front + ends + beside + outer) arrange(lot, lot.types)?.forEachIndexed { k, (x, y) -> slots += Slot(lot.types[k], level(lot.types[k]), x, y) }
@@ -325,7 +353,17 @@ object Showcase {
         }
         val roadLevel = BuildingCatalog.spec(BuildingType.ROAD).capAt(stadium).coerceAtLeast(1)
         for ((x, y) in roads) slots += Slot(BuildingType.ROAD, roadLevel, x, y)
-        check(slots.all { s -> land.fits(footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off the island" }
-        return City(stadium, setOf(land.id), slots)
+
+        // the side islands open at this stadium, each with its arena in its middle once the stadium allows it
+        val open = islands(stadium, lands)
+        for (isle in open) {
+            val arena = BuildingType.values().firstOrNull { BuildingCatalog.spec(it).island == isle.sport } ?: continue
+            val spec = BuildingCatalog.spec(arena)
+            if (spec.countAt(stadium) == 0) continue
+            arenaSpot(arena, isle)?.let { (x, y) -> slots += Slot(arena, spec.capAt(stadium), x, y) }
+        }
+        val ground = LandSet(listOf(land) + open)
+        check(slots.all { s -> lands.allows(ground, s.type, footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off its island" }
+        return City(stadium, ground.ids.toSet(), slots, open.mapNotNull { it.sport }.toSet())
     }
 }

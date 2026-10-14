@@ -38,10 +38,10 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET/PATCH/DELETE | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it); DELETE erases the account (sign-in data, tokens, chat lines) and retires the club into a bot |
 | POST | `/api/v1/auth/transfer-code`; `/auth/transfer` `{code, deviceId}` | move an account to another device with a one-time code (24 h) |
 | GET/POST | `/api/v1/club/inbox`, `/club/inbox/read` | in-app inbox (matchday results, season end, accepted challenges, new league members); `GET /club` has `inboxUnread` |
-| GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level) |
+| GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level), the sport town's set (14 Oct 2026): `name` in the `Accept-Language`, `island` (an island arena: built on that zone's side island only, once the zone is open), `section` (the sport it opens), `soon` + `about` + `soonText` (no mechanic yet: what it will do, «soon») |
 | GET | `/api/v1/catalog/land` | the land mask (`resources/land/land_mask.json`, from the art pipeline; the old 48×48 square until it is installed): 10 m cells of the main island and the locked side islands; `ETag` = its sha1 id |
 | POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, `land` = `{maskId, regions, locked}`; `parcels`/`gridSize` are the old square's, kept for one client release) |
-| POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` |
+| POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` (an arena off its own island: 400 "This arena is built on its own island"; its island locked: 400 "Open this island first") |
 | POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`, `/move` `{x,y,rotation}`; DELETE | building actions (one builder; constructions queue on it) |
 | POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |
 | GET | `/api/v1/club/athletes` | squad, active trainings, slots |

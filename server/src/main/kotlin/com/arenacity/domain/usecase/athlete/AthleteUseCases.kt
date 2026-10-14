@@ -21,7 +21,7 @@ class StarterSquadInitializer(private val athletes: AthleteRepository, private v
     override suspend fun onClubCreated(club: Club) = athletes.createAll(AthleteFactory.starterSquad(club.id, clock.now()))
 }
 
-/** When a basketball or tennis court is first completed, the new section gets its starter squad (once). */
+/** When a basketball or tennis arena is first completed, the new section gets its starter squad (once). */
 class SectionSquadOnCourt(private val athletes: AthleteRepository, private val clock: Clock) : com.arenacity.domain.usecase.club.BuildingListener {
     override suspend fun onCompleted(building: Building) {
         val sport = com.arenacity.domain.rules.Sections.sportOfVenue(building.type) ?: return

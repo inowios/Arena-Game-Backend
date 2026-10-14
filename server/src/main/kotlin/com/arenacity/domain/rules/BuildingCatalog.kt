@@ -1,18 +1,31 @@
 package com.arenacity.domain.rules
 
+import com.arenacity.domain.model.ZoneSport
 import com.arenacity.domain.rules.BuildingType.*
 import kotlin.math.ceil
 import kotlin.math.min
 
-enum class BuildingType { PITCH, BASKETBALL_COURT, TENNIS_COURT, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, CLUB_SHOP, CAFE, PARKING, DECOR, FENCE, MUSEUM,
-    // the town the player builds on bought land (the eras map, 13 October): homes and workplaces pay tax, parks please, roads join
-    HOUSE, APARTMENT, OFFICE, PARK, ROAD }
+/**
+ * The sport town (the owner, 14 October 2026; art/sprites/town_l1 in the mobile repo): the club's buildings, the town's,
+ * the island arenas. Gone with it (V36 moved every club onto this set): CLUB_SHOP, CAFE and PARKING (one SHOPPING_CENTER),
+ * MUSEUM (the HALL_OF_FAME), PARK (the BACKYARD_COURT), the courts (the arenas), APARTMENT and OFFICE.
+ */
+enum class BuildingType { PITCH, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, DECOR, FENCE,
+    // the town: homes pay tax, roads join
+    HOUSE, ROAD,
+    // earning and pleasing: the shops, the honours, the yard courts, the fans, the press, the sponsors, the guests
+    SHOPPING_CENTER, HALL_OF_FAME, BACKYARD_COURT, FAN_ZONE, MEDIA_CENTER, SPONSOR_OFFICE, HOTEL,
+    // no mechanic yet: buildable and upgradable, their panel says what they will do and «soon» (BuildingSpec.soon)
+    ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ,
+    // the island arenas: each stands on its own side island once its zone opened it (BuildingSpec.island)
+    BASKETBALL_ARENA, VOLLEYBALL_ARENA, TENNIS_ARENA, PADEL_ARENA }
 
 /**
  * One level of a building. [effect] meaning depends on type:
- * PITCH = athlete attribute cap, courts = section attribute cap, ACADEMY = min quality (max = effect + 15),
- * TRAINING_CENTER = slots, MEDICAL_CENTER = heals per cooldown; [effect2]: PITCH = seats, TRAINING_CENTER = attribute
- * delta per training, MEDICAL_CENTER = cooldown hours.
+ * PITCH = athlete attribute cap, the basketball and tennis arenas = their section's attribute cap, ACADEMY = min quality
+ * (max = effect + 15), TRAINING_CENTER = slots, MEDICAL_CENTER = heals per cooldown, HALL_OF_FAME = exhibits; [effect2]:
+ * PITCH = seats, TRAINING_CENTER = attribute delta per training, MEDICAL_CENTER = cooldown hours, HALL_OF_FAME and
+ * BACKYARD_COURT = atmosphere % to the earning buildings round it.
  * [requiredStadium]: the stadium level this level needs (the stadium is the club's town hall, see [Stadium]);
  * [requiredTrophies]: for the stadium itself — the arena standing a bigger stadium needs.
  */
@@ -30,9 +43,12 @@ data class LevelSpec(
 /**
  * [counts]/[caps]: how many of the building a club may have and the highest level it may reach, by stadium level
  * (index 0 = stadium 1). The stadium itself has neither (count 1, its own levels).
+ * [island]: the zone sport whose side island the building stands on (an island arena; null = anywhere on the club's
+ * land); [soon]: no mechanic yet — buildable and upgradable, the client says what it will do and «soon».
  */
 data class BuildingSpec(val type: BuildingType, val width: Int, val height: Int, val enabled: Boolean, val levels: List<LevelSpec>,
-                        val counts: List<Int> = List(Stadium.MAX_LEVEL) { 1 }, val caps: List<Int> = List(Stadium.MAX_LEVEL) { levels.size }) {
+                        val counts: List<Int> = List(Stadium.MAX_LEVEL) { 1 }, val caps: List<Int> = List(Stadium.MAX_LEVEL) { levels.size },
+                        val island: ZoneSport? = null, val soon: Boolean = false) {
     val maxLevel get() = levels.size
     /** Most copies at the top stadium (Int.MAX_VALUE stays "unlimited" for nothing but the old API field). */
     val maxPerClub get() = counts.last()
@@ -70,6 +86,43 @@ object BuildingCatalog {
     private val CAP10 = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
     private val CAP8 = listOf(1, 2, 3, 4, 4, 5, 6, 6, 7, 8)
     private fun countsFrom(vararg c: Int) = c.toList()
+    /** One copy from stadium [unlock] on. */
+    private fun oneFrom(unlock: Int) = List(Stadium.MAX_LEVEL) { if (it + 1 >= unlock) 1 else 0 }
+
+    /**
+     * The ten levels of a building opening at stadium [unlock], spread evenly over the stadiums left: level 1 at [unlock],
+     * all ten at the top (stadium 2: 1, 2, … 8, 10; stadium 6: 1, 3, 5, 7, 10).
+     */
+    private fun capsFrom(unlock: Int): List<Int> = (1..Stadium.MAX_LEVEL).map { s ->
+        when { s < unlock -> 0; s == Stadium.MAX_LEVEL -> 10; else -> 1 + (s - unlock) * 9 / (Stadium.MAX_LEVEL - unlock) }
+    }
+
+    /** The stadium each level of [caps] needs: the first one whose cap allows it. */
+    private fun stadiumsOf(caps: List<Int>, levels: Int = 10) = (1..levels).map { i -> (1..Stadium.MAX_LEVEL).first { caps[it - 1] >= i } }
+
+    /**
+     * The curve of a building with no mechanic yet, by the stadium it opens at: level 1's and level 10's cost and
+     * build time (the other levels between them, evenly in proportion), alongside the existing buildings of that stage.
+     */
+    private val SOON_CURVES = mapOf(
+        2 to listOf(2_500L, 450_000L, 20 * M, 48 * H), 3 to listOf(6_000L, 520_000L, 1 * H, 52 * H), 4 to listOf(10_000L, 600_000L, 2 * H, 56 * H),
+        5 to listOf(15_000L, 680_000L, 3 * H, 60 * H), 6 to listOf(22_000L, 760_000L, 4 * H, 62 * H), 7 to listOf(35_000L, 840_000L, 6 * H, 64 * H),
+        8 to listOf(60_000L, 920_000L, 8 * H, 66 * H),
+    )
+
+    /** Ten levels on [SOON_CURVES] of stadium [unlock]: costs to two significant digits, times to 5 minutes (to the hour from 2 h). */
+    private fun soonLevels(unlock: Int): List<LevelSpec> {
+        val (c1, c10, t1, t10) = SOON_CURVES.getValue(unlock)
+        val stadiums = stadiumsOf(capsFrom(unlock))
+        return (0 until 10).map { i ->
+            val k = i / 9.0
+            val cost = c1 * Math.pow(c10.toDouble() / c1, k)
+            val digits = Math.pow(10.0, maxOf(0.0, Math.floor(Math.log10(cost)) - 1))
+            val secs = t1 * Math.pow(t10.toDouble() / t1, k)
+            val step = if (secs < 2 * H) 5 * M else H
+            LevelSpec((Math.round(cost / digits) * digits).toLong(), Math.round(secs / step) * step, stadiums[i])
+        }
+    }
 
     private val levelTable: Map<BuildingType, List<LevelSpec>> = mapOf(
         PITCH to listOf(
@@ -96,19 +149,22 @@ object BuildingCatalog {
             L(290_000, 29 * H, stadium = 9, incomePerHour = 930, capHours = 14),
             L(600_000, 60 * H, stadium = 10, incomePerHour = 1_200, capHours = 16),
         ),
-        CLUB_SHOP to listOf(
-            L(3_000, 30 * M, stadium = 2, incomePerHour = 200, capHours = 6),
-            L(5_500, 50 * M, stadium = 2, incomePerHour = 250, capHours = 7),
-            L(10_000, 90 * M, stadium = 3, incomePerHour = 310, capHours = 8),
-            L(19_000, 150 * M, stadium = 4, incomePerHour = 390, capHours = 9),
-            L(34_000, 270 * M, stadium = 5, incomePerHour = 490, capHours = 10),
-            L(63_000, 8 * H, stadium = 6, incomePerHour = 620, capHours = 11),
-            L(120_000, 13 * H, stadium = 7, incomePerHour = 770, capHours = 12),
-            L(210_000, 22 * H, stadium = 8, incomePerHour = 970, capHours = 13),
-            L(390_000, 38 * H, stadium = 9, incomePerHour = 1_200, capHours = 14),
-            L(720_000, 66 * H, stadium = 10, incomePerHour = 1_500, capHours = 16),
+        // the club shop, the café and the car park in one (the sport town): the shop's costs and times, the best of the
+        // three incomes (the car park's) at every level
+        SHOPPING_CENTER to listOf(
+            L(3_000, 30 * M, stadium = 2, incomePerHour = 250, capHours = 6),
+            L(5_500, 50 * M, stadium = 2, incomePerHour = 310, capHours = 7),
+            L(10_000, 90 * M, stadium = 3, incomePerHour = 390, capHours = 8),
+            L(19_000, 150 * M, stadium = 4, incomePerHour = 480, capHours = 9),
+            L(34_000, 270 * M, stadium = 5, incomePerHour = 600, capHours = 10),
+            L(63_000, 8 * H, stadium = 6, incomePerHour = 740, capHours = 11),
+            L(120_000, 13 * H, stadium = 7, incomePerHour = 920, capHours = 12),
+            L(210_000, 22 * H, stadium = 8, incomePerHour = 1_100, capHours = 13),
+            L(390_000, 38 * H, stadium = 9, incomePerHour = 1_400, capHours = 14),
+            L(720_000, 66 * H, stadium = 10, incomePerHour = 1_800, capHours = 16),
         ),
-        CAFE to listOf(
+        // the fans' square by the stadium: the old café's curve for now
+        FAN_ZONE to listOf(
             L(2_100, 20 * M, stadium = 2, incomePerHour = 150, capHours = 6),
             L(4_000, 35 * M, stadium = 2, incomePerHour = 190, capHours = 7),
             L(7_500, 1 * H, stadium = 3, incomePerHour = 240, capHours = 8),
@@ -120,17 +176,44 @@ object BuildingCatalog {
             L(350_000, 34 * H, stadium = 9, incomePerHour = 1_100, capHours = 14),
             L(660_000, 60 * H, stadium = 10, incomePerHour = 1_400, capHours = 16),
         ),
-        PARKING to listOf(
-            L(4_500, 45 * M, stadium = 3, incomePerHour = 250, capHours = 6),
-            L(8_000, 1 * H, stadium = 3, incomePerHour = 310, capHours = 7),
-            L(14_000, 2 * H, stadium = 3, incomePerHour = 390, capHours = 8),
-            L(25_000, 210 * M, stadium = 4, incomePerHour = 480, capHours = 9),
-            L(44_000, 330 * M, stadium = 5, incomePerHour = 600, capHours = 10),
-            L(79_000, 9 * H, stadium = 6, incomePerHour = 740, capHours = 11),
-            L(140_000, 16 * H, stadium = 7, incomePerHour = 920, capHours = 12),
-            L(250_000, 26 * H, stadium = 8, incomePerHour = 1_100, capHours = 13),
-            L(440_000, 43 * H, stadium = 9, incomePerHour = 1_400, capHours = 14),
-            L(780_000, 3 * D, stadium = 10, incomePerHour = 1_800, capHours = 16),
+        // the press and the sponsors (stadium 6) and the hotel (stadium 8) earn for now: one copy each where the old town
+        // had up to twelve apartments and eight offices, so each earns twice the old office's curve (the hotel above it);
+        // a fully built town then pays for its stadium as fast as the old one did (the buildings with no mechanic yet aside)
+        MEDIA_CENTER to listOf(
+            L(14_000, 3 * H, stadium = 6, incomePerHour = 440, capHours = 10),
+            L(24_000, 5 * H, stadium = 7, incomePerHour = 580, capHours = 10),
+            L(40_000, 8 * H, stadium = 7, incomePerHour = 740, capHours = 11),
+            L(66_000, 12 * H, stadium = 8, incomePerHour = 940, capHours = 11),
+            L(105_000, 16 * H, stadium = 8, incomePerHour = 1_200, capHours = 12),
+            L(165_000, 22 * H, stadium = 9, incomePerHour = 1_520, capHours = 12),
+            L(260_000, 30 * H, stadium = 9, incomePerHour = 1_920, capHours = 13),
+            L(400_000, 40 * H, stadium = 10, incomePerHour = 2_400, capHours = 13),
+            L(610_000, 52 * H, stadium = 10, incomePerHour = 3_000, capHours = 14),
+            L(900_000, 66 * H, stadium = 10, incomePerHour = 3_800, capHours = 14),
+        ),
+        SPONSOR_OFFICE to listOf(
+            L(16_000, 3 * H, stadium = 6, incomePerHour = 520, capHours = 10),
+            L(27_000, 5 * H, stadium = 7, incomePerHour = 660, capHours = 10),
+            L(45_000, 8 * H, stadium = 7, incomePerHour = 860, capHours = 11),
+            L(75_000, 12 * H, stadium = 8, incomePerHour = 1_100, capHours = 11),
+            L(120_000, 16 * H, stadium = 8, incomePerHour = 1_400, capHours = 12),
+            L(190_000, 22 * H, stadium = 9, incomePerHour = 1_780, capHours = 12),
+            L(300_000, 30 * H, stadium = 9, incomePerHour = 2_260, capHours = 13),
+            L(460_000, 40 * H, stadium = 10, incomePerHour = 2_860, capHours = 13),
+            L(700_000, 52 * H, stadium = 10, incomePerHour = 3_600, capHours = 14),
+            L(1_000_000, 66 * H, stadium = 10, incomePerHour = 4_500, capHours = 14),
+        ),
+        HOTEL to listOf(
+            L(90_000, 10 * H, stadium = 8, incomePerHour = 1_300, capHours = 12),
+            L(130_000, 13 * H, stadium = 9, incomePerHour = 1_640, capHours = 12),
+            L(180_000, 17 * H, stadium = 9, incomePerHour = 2_000, capHours = 13),
+            L(250_000, 22 * H, stadium = 9, incomePerHour = 2_400, capHours = 13),
+            L(340_000, 28 * H, stadium = 9, incomePerHour = 2_900, capHours = 14),
+            L(460_000, 34 * H, stadium = 10, incomePerHour = 3_400, capHours = 14),
+            L(620_000, 41 * H, stadium = 10, incomePerHour = 4_000, capHours = 15),
+            L(820_000, 49 * H, stadium = 10, incomePerHour = 4_600, capHours = 15),
+            L(1_080_000, 57 * H, stadium = 10, incomePerHour = 5_300, capHours = 16),
+            L(1_400_000, 66 * H, stadium = 10, incomePerHour = 6_000, capHours = 16),
         ),
         ACADEMY to listOf(
             L(1_500, 10 * M, stadium = 1, effect = 40),
@@ -162,7 +245,9 @@ object BuildingCatalog {
             L(190_000, 27 * H, stadium = 9, effect = 3, effect2 = 2),
             L(420_000, 60 * H, stadium = 10, effect = 4, effect2 = 2),
         ),
-        BASKETBALL_COURT to listOf(
+        // the island arenas. Basketball (the old court's eight levels, two more at the top) and tennis open their sections:
+        // effect = the section's attribute cap; volleyball and padel have no match engine yet (soon)
+        BASKETBALL_ARENA to listOf(
             L(7_500, 2 * H, stadium = 3, effect = 60),
             L(14_000, 210 * M, stadium = 4, effect = 65),
             L(25_000, 330 * M, stadium = 5, effect = 70),
@@ -171,8 +256,25 @@ object BuildingCatalog {
             L(160_000, 23 * H, stadium = 8, effect = 85),
             L(290_000, 37 * H, stadium = 9, effect = 90),
             L(540_000, 60 * H, stadium = 10, effect = 95),
+            L(760_000, 63 * H, stadium = 10, effect = 97),
+            L(1_000_000, 66 * H, stadium = 10, effect = 99),
         ),
-        TENNIS_COURT to listOf(
+        VOLLEYBALL_ARENA to listOf(
+            L(20_000, 4 * H, stadium = 5),
+            L(32_000, 6 * H, stadium = 6),
+            L(50_000, 9 * H, stadium = 7),
+            L(78_000, 13 * H, stadium = 7),
+            L(120_000, 18 * H, stadium = 8),
+            L(180_000, 24 * H, stadium = 8),
+            L(270_000, 31 * H, stadium = 9),
+            L(410_000, 40 * H, stadium = 9),
+            L(620_000, 52 * H, stadium = 10),
+            L(950_000, 66 * H, stadium = 10),
+        ),
+        // the old tennis court's eight levels (costs, times, the stadium each needs, the section's cap), two more at the
+        // top: a court the sport town made into an arena (V36) goes on upgrading where the court did; a new club builds
+        // its first from stadium 7 (the counts), when its island opens (rules.Zones)
+        TENNIS_ARENA to listOf(
             L(12_000, 3 * H, stadium = 4, effect = 60),
             L(21_000, 270 * M, stadium = 4, effect = 65),
             L(37_000, 7 * H, stadium = 5, effect = 70),
@@ -181,10 +283,25 @@ object BuildingCatalog {
             L(200_000, 27 * H, stadium = 8, effect = 85),
             L(340_000, 42 * H, stadium = 9, effect = 90),
             L(600_000, 66 * H, stadium = 10, effect = 95),
+            L(820_000, 68 * H, stadium = 10, effect = 97),
+            L(1_100_000, 70 * H, stadium = 10, effect = 99),
+        ),
+        PADEL_ARENA to listOf(
+            L(150_000, 12 * H, stadium = 9),
+            L(210_000, 16 * H, stadium = 10),
+            L(280_000, 20 * H, stadium = 10),
+            L(370_000, 25 * H, stadium = 10),
+            L(480_000, 31 * H, stadium = 10),
+            L(610_000, 38 * H, stadium = 10),
+            L(760_000, 45 * H, stadium = 10),
+            L(930_000, 52 * H, stadium = 10),
+            L(1_120_000, 59 * H, stadium = 10),
+            L(1_350_000, 66 * H, stadium = 10),
         ),
         DECOR to listOf(L(200, 0)),
-        // the trophy museum: effect = exhibits on its shelves, effect2 = atmosphere % to earning buildings around it
-        MUSEUM to listOf(
+        // the hall of fame (the old trophy museum, its levels and effect): effect = exhibits on its shelves, effect2 =
+        // atmosphere % to earning buildings around it
+        HALL_OF_FAME to listOf(
             L(9_000, 4 * H, stadium = 3, effect = 6, effect2 = 2),
             L(25_000, 10 * H, stadium = 5, effect = 12, effect2 = 4),
             L(70_000, 20 * H, stadium = 6, effect = 20, effect2 = 6),
@@ -194,11 +311,11 @@ object BuildingCatalog {
         // fences: drawn along the plot by dragging, instant to build and to upgrade (no builder) — a coin sink that
         // changes the look: wooden picket → hedge → brick → stone → steel → glass with an LED rail
         FENCE to listOf(L(30, 0), L(150, 0, stadium = 2), L(600, 0, stadium = 3), L(2_000, 0, stadium = 5), L(6_000, 0, stadium = 7), L(15_000, 0, stadium = 9)),
-        // the town on bought land: tax per hour; the look follows the era (levels 4-6 the town, 7-9 the city of the future, 10 the apex)
+        // the town's homes: tax per hour, a few from the first stadium (the sport town), a level more with every stadium
         HOUSE to listOf(
-            L(2_500, 20 * M, stadium = 4, incomePerHour = 60, capHours = 8),
-            L(4_500, 40 * M, stadium = 4, incomePerHour = 80, capHours = 8),
-            L(8_000, 90 * M, stadium = 4, incomePerHour = 110, capHours = 9),
+            L(2_500, 20 * M, stadium = 1, incomePerHour = 60, capHours = 8),
+            L(4_500, 40 * M, stadium = 2, incomePerHour = 80, capHours = 8),
+            L(8_000, 90 * M, stadium = 3, incomePerHour = 110, capHours = 9),
             L(14_000, 3 * H, stadium = 4, incomePerHour = 150, capHours = 9),
             L(24_000, 5 * H, stadium = 5, incomePerHour = 200, capHours = 10),
             L(40_000, 8 * H, stadium = 6, incomePerHour = 260, capHours = 10),
@@ -207,68 +324,53 @@ object BuildingCatalog {
             L(200_000, 26 * H, stadium = 9, incomePerHour = 570, capHours = 13),
             L(330_000, 36 * H, stadium = 10, incomePerHour = 740, capHours = 14),
         ),
-        APARTMENT to listOf(
-            L(9_000, 2 * H, stadium = 5, incomePerHour = 180, capHours = 8),
-            L(15_000, 3 * H, stadium = 5, incomePerHour = 230, capHours = 8),
-            L(25_000, 5 * H, stadium = 5, incomePerHour = 300, capHours = 9),
-            L(42_000, 8 * H, stadium = 5, incomePerHour = 390, capHours = 9),
-            L(70_000, 12 * H, stadium = 5, incomePerHour = 500, capHours = 10),
-            L(115_000, 16 * H, stadium = 6, incomePerHour = 640, capHours = 10),
-            L(190_000, 22 * H, stadium = 7, incomePerHour = 820, capHours = 11),
-            L(300_000, 30 * H, stadium = 8, incomePerHour = 1_050, capHours = 12),
-            L(470_000, 40 * H, stadium = 9, incomePerHour = 1_300, capHours = 13),
-            L(720_000, 54 * H, stadium = 10, incomePerHour = 1_650, capHours = 14),
-        ),
-        OFFICE to listOf(
-            L(16_000, 3 * H, stadium = 6, incomePerHour = 260, capHours = 10),
-            L(27_000, 5 * H, stadium = 6, incomePerHour = 330, capHours = 10),
-            L(45_000, 8 * H, stadium = 6, incomePerHour = 430, capHours = 11),
-            L(75_000, 12 * H, stadium = 6, incomePerHour = 550, capHours = 11),
-            L(120_000, 16 * H, stadium = 6, incomePerHour = 700, capHours = 12),
-            L(190_000, 22 * H, stadium = 6, incomePerHour = 890, capHours = 12),
-            L(300_000, 30 * H, stadium = 7, incomePerHour = 1_130, capHours = 13),
-            L(460_000, 40 * H, stadium = 8, incomePerHour = 1_430, capHours = 13),
-            L(700_000, 52 * H, stadium = 9, incomePerHour = 1_800, capHours = 14),
-            L(1_000_000, 66 * H, stadium = 10, incomePerHour = 2_250, capHours = 14),
-        ),
-        // parks: effect = atmosphere % to earning buildings around (like the museum)
-        PARK to listOf(
-            L(5_000, 1 * H, stadium = 4, effect2 = 3),
-            L(12_000, 3 * H, stadium = 5, effect2 = 4),
-            L(30_000, 6 * H, stadium = 6, effect2 = 5),
-            L(70_000, 10 * H, stadium = 7, effect2 = 6),
-            L(150_000, 16 * H, stadium = 8, effect2 = 7),
-            L(300_000, 24 * H, stadium = 9, effect2 = 8),
-            L(600_000, 36 * H, stadium = 10, effect2 = 10),
+        // the yard courts (the old parks): effect2 = atmosphere % to the earning buildings round them
+        BACKYARD_COURT to listOf(
+            L(5_000, 1 * H, stadium = 3, effect2 = 3),
+            L(12_000, 3 * H, stadium = 4, effect2 = 4),
+            L(25_000, 5 * H, stadium = 5, effect2 = 5),
+            L(45_000, 8 * H, stadium = 6, effect2 = 6),
+            L(80_000, 11 * H, stadium = 7, effect2 = 7),
+            L(140_000, 15 * H, stadium = 7, effect2 = 8),
+            L(240_000, 20 * H, stadium = 8, effect2 = 9),
+            L(400_000, 28 * H, stadium = 9, effect2 = 10),
+            L(620_000, 38 * H, stadium = 10, effect2 = 11),
             L(900_000, 48 * H, stadium = 10, effect2 = 12),
         ),
         // roads: drawn by dragging like fences, instant; a coin sink that joins the town up
         ROAD to listOf(L(40, 0, stadium = 4), L(200, 0, stadium = 7), L(800, 0, stadium = 10)),
-    )
+    ) + SOON.associateWith { soonLevels(SOON_UNLOCK.getValue(it)) }
 
     // Footprints (cells of 10 m) are fixed for all ten levels and generous — the owner, 12 October: a building never
-    // changes its plot, growth is in height and richness; the plots differ by type and are big since the square is big.
-    val specs: Map<BuildingType, BuildingSpec> = listOf(
+    // changes its plot, growth is in height and richness; the plots differ by type (the sport town's list, 14 October).
+    val specs: Map<BuildingType, BuildingSpec> = (listOf(
         BuildingSpec(PITCH, 8, 6, true, levelTable.getValue(PITCH)),
-        // courts open a sport section (starter squad on completion); level = attribute cap of that section, like the pitch
-        BuildingSpec(BASKETBALL_COURT, 3, 2, true, levelTable.getValue(BASKETBALL_COURT), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 8)),
-        BuildingSpec(TENNIS_COURT, 3, 2, true, levelTable.getValue(TENNIS_COURT), countsFrom(0, 0, 0, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 8)),
         BuildingSpec(ACADEMY, 5, 4, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
         BuildingSpec(TRAINING_CENTER, 6, 4, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
         BuildingSpec(MEDICAL_CENTER, 4, 4, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
         BuildingSpec(TICKET_OFFICE, 5, 2, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), CAP10),
-        BuildingSpec(CLUB_SHOP, 4, 3, true, levelTable.getValue(CLUB_SHOP), countsFrom(0, 1, 1, 1, 1, 2, 2, 2, 3, 3), CAP10),
-        BuildingSpec(CAFE, 3, 3, true, levelTable.getValue(CAFE), countsFrom(0, 1, 1, 1, 2, 2, 2, 3, 3, 3), CAP10),
-        BuildingSpec(PARKING, 5, 3, true, levelTable.getValue(PARKING), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), CAP10),
         BuildingSpec(DECOR, 1, 1, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
-        BuildingSpec(MUSEUM, 4, 5, true, levelTable.getValue(MUSEUM), countsFrom(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
         BuildingSpec(FENCE, 1, 1, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
-        BuildingSpec(HOUSE, 3, 3, true, levelTable.getValue(HOUSE), countsFrom(0, 0, 0, 4, 8, 12, 16, 20, 24, 30), CAP10),
-        BuildingSpec(APARTMENT, 4, 3, true, levelTable.getValue(APARTMENT), countsFrom(0, 0, 0, 0, 2, 4, 6, 8, 10, 12), CAP10),
-        BuildingSpec(OFFICE, 4, 4, true, levelTable.getValue(OFFICE), countsFrom(0, 0, 0, 0, 0, 2, 3, 4, 6, 8), CAP10),
-        BuildingSpec(PARK, 4, 4, true, levelTable.getValue(PARK), countsFrom(0, 0, 0, 2, 3, 4, 5, 6, 8, 10), listOf(0, 0, 0, 1, 2, 3, 4, 5, 6, 8)),
+        BuildingSpec(HOUSE, 3, 3, true, levelTable.getValue(HOUSE), countsFrom(2, 3, 4, 6, 8, 12, 16, 20, 24, 30), CAP10),
         BuildingSpec(ROAD, 1, 1, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 60, 120, 200, 300, 400, 500, 600), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
-    ).associateBy { it.type }
+        BuildingSpec(SHOPPING_CENTER, 5, 4, true, levelTable.getValue(SHOPPING_CENTER), countsFrom(0, 1, 1, 1, 2, 2, 2, 2, 2, 2), CAP10),
+        BuildingSpec(HALL_OF_FAME, 4, 5, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
+        BuildingSpec(BACKYARD_COURT, 3, 3, true, levelTable.getValue(BACKYARD_COURT), countsFrom(0, 0, 1, 1, 2, 2, 3, 3, 4, 4), capsFrom(3)),
+        BuildingSpec(FAN_ZONE, 4, 4, true, levelTable.getValue(FAN_ZONE), oneFrom(2), CAP10),
+        BuildingSpec(MEDIA_CENTER, 4, 3, true, levelTable.getValue(MEDIA_CENTER), oneFrom(6), capsFrom(6)),
+        BuildingSpec(SPONSOR_OFFICE, 3, 3, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
+        BuildingSpec(HOTEL, 4, 4, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
+        // the arenas open a sport section (a starter squad when the first one is finished), on their own island
+        BuildingSpec(BASKETBALL_ARENA, 8, 6, true, levelTable.getValue(BASKETBALL_ARENA), oneFrom(3), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 10),
+            island = ZoneSport.BASKETBALL),
+        BuildingSpec(VOLLEYBALL_ARENA, 8, 6, true, levelTable.getValue(VOLLEYBALL_ARENA), oneFrom(5), capsFrom(5),
+            island = ZoneSport.VOLLEYBALL, soon = true),
+        BuildingSpec(TENNIS_ARENA, 8, 6, true, levelTable.getValue(TENNIS_ARENA), oneFrom(7), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 10),
+            island = ZoneSport.TENNIS),
+        BuildingSpec(PADEL_ARENA, 8, 6, true, levelTable.getValue(PADEL_ARENA), oneFrom(9), capsFrom(9),
+            island = ZoneSport.PADEL, soon = true),
+    ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = true) })
+        .associateBy { it.type }
 
     fun spec(type: BuildingType): BuildingSpec = specs.getValue(type)
     fun level(type: BuildingType, level: Int): LevelSpec = spec(type).levels[level.coerceIn(1, spec(type).maxLevel) - 1]
@@ -285,6 +387,13 @@ object BuildingCatalog {
     /** 1 gold per started 10 minutes, minimum 1. */
     fun speedUpGold(remainingSeconds: Long): Int = if (remainingSeconds <= 0) 0 else maxOf(1, ceil(remainingSeconds / 600.0).toInt())
 }
+
+/** The buildings with no mechanic yet (the sport town, 14 October), the stadium each opens at and its footprint. */
+private val SOON = listOf(ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ)
+private val SOON_UNLOCK = mapOf(ATHLETES_RESIDENCE to 2, YOUTH_SPORTS_SCHOOL to 3, SPORTS_SCIENCE_LAB to 4, SCHOOL to 4, TRANSPORT_HUB to 4,
+    SCOUTING_OFFICE to 5, RECOVERY_CENTER to 5, ANALYTICS_CENTER to 7, COACHING_HQ to 8)
+private val SOON_SIZE = mapOf(ATHLETES_RESIDENCE to (5 to 3), YOUTH_SPORTS_SCHOOL to (4 to 4), SPORTS_SCIENCE_LAB to (4 to 4), SCHOOL to (4 to 4), TRANSPORT_HUB to (4 to 3),
+    SCOUTING_OFFICE to (3 to 3), RECOVERY_CENTER to (4 to 4), ANALYTICS_CENTER to (3 to 3), COACHING_HQ to (3 to 3))
 
 object ClubLevels {
     private val thresholds = listOf(0, 100, 300, 700, 1_500, 3_000, 5_500, 9_000, 14_000, 20_000)

@@ -18,19 +18,25 @@ object TestDb {
 
     private var last: HikariDataSource? = null
 
-    /** Wipes and migrates the schema; the previous test's pool is closed so connections never pile up. */
-    fun fresh(): HikariDataSource {
+    /**
+     * Wipes and migrates the schema ([target]: up to that version only, e.g. "35" to test the next migration on old
+     * data — [migrate] then runs the rest); the previous test's pool is closed so connections never pile up.
+     */
+    fun fresh(target: String? = null): HikariDataSource {
         last?.takeUnless { it.isClosed }?.close()
         val ds = HikariDataSource(HikariConfig().apply {
             driverClassName = "org.postgresql.Driver"; jdbcUrl = url; username = user; password = this@TestDb.password
             maximumPoolSize = 12; isAutoCommit = false; transactionIsolation = "TRANSACTION_READ_COMMITTED"
         })
-        Flyway.configure().dataSource(ds).locations("classpath:db/migration").cleanDisabled(false).load().apply { clean(); migrate() }
+        Flyway.configure().dataSource(ds).locations("classpath:db/migration").cleanDisabled(false).apply { if (target != null) target(target) }.load().apply { clean(); migrate() }
         // explicit default: earlier test classes' pools are closed by now
         org.jetbrains.exposed.sql.transactions.TransactionManager.defaultDatabase = Database.connect(ds)
         last = ds
         return ds
     }
+
+    /** Runs the migrations [fresh] left out (all of them up to the latest). */
+    fun migrate(ds: HikariDataSource, target: String? = null) { Flyway.configure().dataSource(ds).locations("classpath:db/migration").apply { if (target != null) target(target) }.load().migrate() }
 
     /** Application config for `testApplication { environment { config = TestDb.appConfig() } }` against the same database. */
     fun appConfig(extra: Map<String, String> = emptyMap()) = MapApplicationConfig(

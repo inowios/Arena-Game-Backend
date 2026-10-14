@@ -5,6 +5,7 @@ import com.arenacity.domain.model.*
 import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.UserRepository
+import com.arenacity.domain.repository.ZoneRepository
 import com.arenacity.domain.rules.LandMap
 import com.arenacity.domain.rules.Lands
 import com.arenacity.domain.rules.Showcase
@@ -14,7 +15,8 @@ import java.util.UUID
 /**
  * The two showcase friends every player has (rules.Showcase): bot clubs outside every league (tzBucket −1), their cities
  * rebuilt from the layout at start-up whenever the layout changed, so they always show what the current game allows
- * (a new land mask re-fits both towns into it on the first start; [lands]: that mask).
+ * (a new land mask re-fits both towns into it on the first start; [lands]: that mask). [zones]: where the side islands
+ * the showcase has open are kept (their zones OPEN, so a visitor sees the islands and the arenas on them).
  */
 class ShowcaseService(
     private val users: UserRepository,
@@ -22,6 +24,7 @@ class ShowcaseService(
     private val buildings: BuildingRepository,
     private val clock: Clock,
     private val lands: LandMap = Lands.MAP,
+    private val zones: ZoneRepository? = null,
 ) {
     data class Def(val id: UUID, val name: String, val stadium: Int, val level: Int, val reputation: Int, val primary: String, val secondary: String)
 
@@ -47,6 +50,14 @@ class ShowcaseService(
         }
         // the town stands on the current land mask by construction: the land migration has nothing to move here
         clubs.setLandMask(d.id, lands.id)
+        // the side islands it has open: their zones OPEN (restored at once), the others locked
+        zones?.let { repo ->
+            val have = repo.listByClub(d.id).associateBy { it.sport }
+            for (sport in ZoneSport.values()) {
+                val state = if (sport in city.zones) ZoneState.OPEN else ZoneState.LOCKED
+                if (have[sport]?.state != state && (state == ZoneState.OPEN || have[sport] != null)) repo.upsert(ClubZone(d.id, sport, state, now, null))
+            }
+        }
         // the buildings: replaced only when the layout differs from what is stored
         val have = buildings.listByClub(d.id)
         val want = city.slots.map { Triple(it.type, it.level, it.x to it.y) }.toSet()

@@ -82,7 +82,7 @@ object Collections {
 }
 
 /**
- * The trophy museum (А11): a building whose shelves hold the club's honours — every achievement tier reached, league
+ * The trophy museum (А11), the HALL_OF_FAME since the sport town: a building whose shelves hold the club's honours — every achievement tier reached, league
  * titles, cups, the highest arena. Its level is how many exhibits fit ([MuseumRules.capacity]); visitors draw a crowd
  * that lifts the earning buildings around it ([MuseumRules.atmospherePct] within [MuseumRules.RANGE] cells).
  */

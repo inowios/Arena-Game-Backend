@@ -1,5 +1,6 @@
 package com.arenacity.presentation.dto
 
+import com.arenacity.common.i18n.ServerI18n
 import com.arenacity.domain.model.Building
 import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.model.Club
@@ -9,6 +10,7 @@ import com.arenacity.domain.rules.ClubLevels
 import com.arenacity.domain.rules.LandMap
 import com.arenacity.domain.rules.LandSet
 import com.arenacity.domain.rules.LevelSpec
+import com.arenacity.domain.rules.Sections
 import com.arenacity.domain.rules.Stadium
 import com.arenacity.domain.rules.Zones
 import kotlinx.serialization.Serializable
@@ -44,18 +46,29 @@ import java.time.Instant
 
 /** [requiredStadium]: stadium level this level needs; [requiredTrophies]: for the stadium — the trophies a bigger stadium needs. */
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredStadium: Int, val requiredTrophies: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
-/** [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first stadium level with a copy. */
+/**
+ * [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first
+ * stadium level with a copy. The sport town (14 October): [island] = the zone sport whose side island the building stands
+ * on (an island arena; null = anywhere on the club's land), [section] = the sport section it opens (the stadium and the
+ * basketball and tennis arenas), [soon] = no mechanic yet (buildable and upgradable; [about] says what it will do,
+ * [soonText] is «soon»); [name] and [about] in the caller's language (Accept-Language).
+ */
 @Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>,
-                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1)
+                                         val counts: List<Int> = emptyList(), val caps: List<Int> = emptyList(), val unlockStadium: Int = 1,
+                                         val name: String = "", val island: String? = null, val section: String? = null, val soon: Boolean = false,
+                                         val about: String? = null, val soonText: String? = null)
 
 @Serializable data class BuildingDto(
     val id: String, val type: String, val level: Int, val x: Int, val y: Int, val rotation: Int, val state: String,
     val upgradeEndsAt: String?, val remainingSeconds: Long, val speedUpGold: Int, val pendingIncome: Long, val incomePerHour: Long, val capHours: Int,
     val nextLevel: LevelSpecDto?,
     val variant: String? = null,
-    /** Atmosphere bonus to income in % (total and its parts: decor around, next to the stadium, a car park nearby). */
+    /**
+     * Atmosphere bonus to income in % (total and its parts: decor around, next to the stadium, the old car park — 0 since
+     * the sport town —, fences, the hall of fame, complete sets, a live event, a yard court nearby).
+     */
     val bonusPct: Int = 0, val bonusDecor: Int = 0, val bonusStadium: Int = 0, val bonusParking: Int = 0, val bonusFence: Int = 0,
-    val bonusMuseum: Int = 0, val bonusCollection: Int = 0, val bonusEvent: Int = 0,
+    val bonusMuseum: Int = 0, val bonusCollection: Int = 0, val bonusEvent: Int = 0, val bonusCourt: Int = 0,
 )
 
 @Serializable data class ClubStateResponse(val club: ClubDto, val buildings: List<BuildingDto>, val gridSize: Int, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val ads: AdsStateDto? = null, val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
@@ -107,7 +120,9 @@ fun Club.adsState(now: Instant): AdsStateDto {
 }
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
-fun BuildingSpec.toDto() = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium)
+fun BuildingSpec.toDto(lang: String = "en") = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium,
+    ServerI18n.t("building.${type.name}", lang), island?.name, Sections.sportOfVenue(type)?.name, soon,
+    "building.${type.name}.about".takeIf { ServerI18n.has(it) }?.let { ServerI18n.t(it, lang) }, if (soon) ServerI18n.t("building.soon", lang) else null)
 
 fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.arenacity.domain.rules.Atmosphere.Bonus = com.arenacity.domain.rules.Atmosphere.Bonus()): BuildingDto {
     val spec = BuildingCatalog.level(type, level)
@@ -116,7 +131,7 @@ fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.arenacity.domai
     val next = if (BuildingCatalog.hasLevel(type, level + 1)) BuildingCatalog.level(type, level + 1).toDto(level + 1) else null
     val rate = if (atmosphere.total > 0) (spec.incomePerHour * (1.0 + atmosphere.total / 100.0)).toLong() else spec.incomePerHour
     return BuildingDto(id.toString(), type.name, level, gridX, gridY, rotation, state.name, upgradeEndsAt?.toString(), remaining, BuildingCatalog.speedUpGold(remaining), pending, rate, spec.capHours, next, variant,
-        atmosphere.total, atmosphere.decor, atmosphere.stadium, atmosphere.parking, atmosphere.fence, atmosphere.museum, atmosphere.collection, atmosphere.event)
+        atmosphere.total, atmosphere.decor, atmosphere.stadium, atmosphere.parking, atmosphere.fence, atmosphere.museum, atmosphere.collection, atmosphere.event, atmosphere.court)
 }
 
 fun com.arenacity.domain.model.Obstacle.toDto(now: Instant, stadium: Int): ObstacleDto {

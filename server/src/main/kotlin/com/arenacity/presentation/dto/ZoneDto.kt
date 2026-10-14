@@ -8,4 +8,4 @@ import kotlinx.serialization.Serializable
     val restoreEndsAt: String?, val secondsLeft: Long, val soon: Boolean,
 )
 
-fun ZoneView.toDto() = ZoneDto(spec.sport.name, state.name, spec.priceCoins, spec.requiredStadium, spec.restoreSeconds, restoreEndsAt?.toString(), secondsLeft, spec.soon)
+fun ZoneView.toDto() = ZoneDto(spec.sport.name, state.name, spec.priceCoins, requiredStadium, spec.restoreSeconds, restoreEndsAt?.toString(), secondsLeft, spec.soon)

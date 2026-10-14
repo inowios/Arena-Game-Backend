@@ -21,7 +21,9 @@ class SectionsTest {
     private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val sections = SectionService(buildings, athletes)
-    private val service = ClubService(clubs, buildings, clock, listOf(SectionSquadOnCourt(athletes, clock)))
+    // the basketball zone open: its island (the shipped mask's) is the club's land, where the arena stands
+    private val zones = FakeZoneRepository()
+    private val service = ClubService(clubs, buildings, clock, listOf(SectionSquadOnCourt(athletes, clock))).apply { openZones = { id -> openZoneSports(zones, id, clock.now()) } }
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
@@ -37,14 +39,17 @@ class SectionsTest {
     private fun clubWithCourt(): Club = runBlocking {
         val c = create(user, "Hoops FC", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); buildings.setStadium(c.id, 4)
-        val court = place(user, BuildingType.BASKETBALL_COURT, 9, 19, 0)
-        assertEquals(listOf(Sport.FOOTBALL), sections.active(clubs.rows.getValue(c.id)), "court under construction is not a section yet")
+        zones.open(c.id, ZoneSport.BASKETBALL)
+        val isle = service.lands.island(ZoneSport.BASKETBALL)!!
+        val (x, y) = isle.cells.first { (x, y) -> isle.fits(com.arenacity.domain.rules.Footprint(x, y, 8, 6)) }
+        val court = place(user, BuildingType.BASKETBALL_ARENA, x, y, 0)
+        assertEquals(listOf(Sport.FOOTBALL), sections.active(clubs.rows.getValue(c.id)), "an arena under construction is not a section yet")
         speed(user, court.id)
         clubs.rows.getValue(c.id)
     }
 
     @Test
-    fun `finishing a basketball court opens the section with a starter squad, once`() = runBlocking<Unit> {
+    fun `finishing a basketball arena opens the section with a starter squad, once`() = runBlocking<Unit> {
         val c = clubWithCourt()
         val hoopers = athletes.rows.values.filter { it.clubId == c.id && it.sport == Sport.BASKETBALL }
         assertEquals(8, hoopers.size)
@@ -57,7 +62,7 @@ class SectionsTest {
     @Test
     fun `academy graduates per section, only for open sections`() = runBlocking<Unit> {
         clubWithCourt()
-        place(user, BuildingType.ACADEMY, 13, 19, 0).let { speed(user, it.id) }
+        place(user, BuildingType.ACADEMY, 13, 21, 0).let { speed(user, it.id) }
         val g = academy(user, Sport.BASKETBALL)
         assertEquals(Sport.BASKETBALL, g.sport); assertTrue(g.position in setOf(Position.G, Position.F, Position.C))
         clock.advanceSeconds(9 * 3600)

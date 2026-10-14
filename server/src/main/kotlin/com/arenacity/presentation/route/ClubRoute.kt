@@ -44,7 +44,11 @@ fun Route.clubRoutes() {
     val rest: com.arenacity.domain.usecase.live.RestSquadUseCase by inject()
     val zonesUc: com.arenacity.domain.usecase.club.ZoneUseCases by inject()
 
-    get("/catalog/buildings") { call.respond(BuildingCatalog.specs.values.map { it.toDto() }.toSuccessResponse()) }
+    // the names and the «soon» lines in the caller's language
+    get("/catalog/buildings") {
+        val lang = com.arenacity.common.i18n.ServerI18n.fromHeader(call.request.headers[HttpHeaders.AcceptLanguage]) ?: "en"
+        call.respond(BuildingCatalog.specs.values.map { it.toDto(lang) }.toSuccessResponse())
+    }
     // the land mask (rules.Lands): land_mask.json as data, what the client bundles when the ids match (ETag = the id)
     val landMask by lazy { kotlinx.serialization.json.Json.parseToJsonElement(clubService.lands.json) }
     get("/catalog/land") {

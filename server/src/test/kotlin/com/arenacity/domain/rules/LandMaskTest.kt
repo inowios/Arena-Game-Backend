@@ -35,7 +35,10 @@ class LandMaskTest {
             assertTrue((-2..2).any { dx -> (-2..2).any { dy -> !main.has(b.first + dx, b.second + dy) } }, "the $id bridge's foot is far from the land's edge")
         }
         // both showcase towns fit it (ShowcaseTest checks them in full)
-        for (stadium in listOf(5, 10)) assertTrue(Showcase.city(stadium, lands).slots.all { main.fits(footprint(it.type, it.x, it.y, 0)) })
+        for (stadium in listOf(5, 10)) {
+            val ground = LandSet(listOf(main) + Showcase.islands(stadium, lands))   // the arenas on their open islands
+            assertTrue(Showcase.city(stadium, lands).slots.all { lands.allows(ground, it.type, footprint(it.type, it.x, it.y, 0)) })
+        }
     }
 
     @Test

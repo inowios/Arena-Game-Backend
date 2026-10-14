@@ -65,8 +65,9 @@ class ClubUseCasesTest {
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 13, 0) }           // overlaps pitch
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 36, 29, 0) }       // outside the plot (cells -9..38)
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, -10, 0, 0) }
-        assertFailsWith<ValidationException> { place(user, BuildingType.PARKING, 9, 19, 0) }        // stadium 3 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_COURT, 9, 19, 0) }   // stadium 4 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.BACKYARD_COURT, 9, 19, 0) }  // stadium 3 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.SCHOOL, 9, 19, 0) }          // stadium 4 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_ARENA, 52, 2, 0) }    // stadium 7 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 9, 19, 0) }  // a 2nd office needs stadium 4
         place(user, BuildingType.ACADEMY, 9, 19, 0)
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 19, 0) }          // one academy, ever
@@ -74,17 +75,22 @@ class ClubUseCasesTest {
     }
 
     @Test
-    fun `a court stands on the land like any other building`() = runBlocking<Unit> {
+    fun `a house and the buildings with no mechanic yet are built and upgraded like any other`() = runBlocking<Unit> {
         newClub()
-        clubs.update(clubs.rows.values.first().copy(coins = 1_000_000, trophies = 100_000))
-        // stadium 3: two upgrades of the pitch
-        repeat(2) { val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }; upgrade(user, pitch.id); clock.advanceSeconds(24 * 3600) }
-        assertEquals(3, get(user).stadium)
-        // every court stands on the land like any other building (the eras map, 12 October): no reserved plots
-        val court = place(user, BuildingType.BASKETBALL_COURT, 20, 20, 0)
-        assertEquals(20, court.gridX); assertEquals(20, court.gridY)
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 39, 39, 0) }.template)
-        Unit
+        clubs.update(clubs.rows.values.first().copy(coins = 1_000_000, gold = 500, trophies = 100_000))
+        // houses from the first stadium (the sport town): a few, then more with every stadium
+        place(user, BuildingType.HOUSE, 9, 19, 0).let { speed(user, it.id) }
+        place(user, BuildingType.HOUSE, 13, 19, 0).let { speed(user, it.id) }
+        assertEquals("Requires stadium level {0}", assertFailsWith<ValidationException> { place(user, BuildingType.HOUSE, 17, 19, 0) }.template)
+        // stadium 2: the athletes' residence opens; it builds, earns nothing yet, and upgrades as the stadium grows
+        val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }
+        upgrade(user, pitch.id).let { speed(user, it.id) }
+        val residence = place(user, BuildingType.ATHLETES_RESIDENCE, 9, 23, 0).let { speed(user, it.id) }
+        assertEquals("This building has no income", assertFailsWith<ValidationException> { collect(user, residence.id) }.template)
+        assertEquals("Requires stadium level {0}", assertFailsWith<ValidationException> { upgrade(user, residence.id) }.template)
+        upgrade(user, pitch.id).let { speed(user, it.id) }
+        assertEquals(2, upgrade(user, residence.id).level)
+        assertTrue(BuildingCatalog.spec(BuildingType.ATHLETES_RESIDENCE).soon)
     }
 
     @Test
@@ -126,7 +132,7 @@ class ClubUseCasesTest {
         assertEquals(BuildingState.IDLE, done.state); assertEquals(before - 1, clubs.rows.values.first().gold)   // 9 min left = 1 gold
         val coins = clubs.rows.values.first().coins
         clubs.update(clubs.rows.values.first().copy(coins = 0))
-        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.CAFE, 9, 19, 0) }  // the café opens at stadium 2
+        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.FAN_ZONE, 9, 19, 0) }  // the fan zone opens at stadium 2
         clubs.update(clubs.rows.values.first().copy(coins = coins))
         assertFailsWith<ValidationException> { upgrade(user, pitch.id) }                     // stadium 3 needs 300 trophies
         clubs.update(clubs.rows.values.first().copy(trophies = 300))

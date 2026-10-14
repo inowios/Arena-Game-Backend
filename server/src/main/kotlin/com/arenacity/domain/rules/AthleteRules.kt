@@ -58,7 +58,7 @@ object AthleteFactory {
     /** 14 footballers, quality 42..55. */
     fun starterSquad(clubId: UUID, now: Instant): List<Athlete> = squad(clubId, now, 42, 55)
 
-    /** Starter squad of a new section (granted when its court is first completed). */
+    /** Starter squad of a new section (granted when its arena is first completed). */
     fun starterSquad(clubId: UUID, sport: Sport, now: Instant): List<Athlete> = squad(clubId, now, 42, 55, sport)
 
     fun squad(clubId: UUID, now: Instant, qualityMin: Int, qualityMax: Int, sport: Sport = Sport.FOOTBALL): List<Athlete> {
@@ -79,17 +79,17 @@ object TrainingRules {
     fun slots(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect
     fun delta(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect2
     fun attributeCap(pitchLevel: Int) = BuildingCatalog.level(BuildingType.PITCH, pitchLevel).effect
-    /** Cap for a sport's athletes: the level of that section's venue (stadium, basketball court, tennis court). */
+    /** Cap for a sport's athletes: the level of that section's venue (the stadium, the basketball arena, the tennis arena). */
     fun attributeCap(sport: Sport, venueLevel: Int) = BuildingCatalog.level(Sections.venue(sport), venueLevel).effect
     fun academyQuality(academyLevel: Int): IntRange { val lo = BuildingCatalog.level(BuildingType.ACADEMY, academyLevel).effect; return lo..(lo + 15) }
     fun medicalCooldownSeconds(medicalLevel: Int) = BuildingCatalog.level(BuildingType.MEDICAL_CENTER, medicalLevel).effect2 * 3600L
 }
 
-/** Sport sections: football always, basketball/tennis once their court is built. */
+/** Sport sections: football always, basketball/tennis once their arena is built (on its island) or their zone is open. */
 object Sections {
     val ORDER = listOf(Sport.FOOTBALL, Sport.BASKETBALL, Sport.TENNIS)
 
-    fun venue(sport: Sport): BuildingType = when (sport) { Sport.FOOTBALL -> BuildingType.PITCH; Sport.BASKETBALL -> BuildingType.BASKETBALL_COURT; Sport.TENNIS -> BuildingType.TENNIS_COURT }
+    fun venue(sport: Sport): BuildingType = when (sport) { Sport.FOOTBALL -> BuildingType.PITCH; Sport.BASKETBALL -> BuildingType.BASKETBALL_ARENA; Sport.TENNIS -> BuildingType.TENNIS_ARENA }
     fun sportOfVenue(type: BuildingType): Sport? = ORDER.firstOrNull { venue(it) == type }
 
     fun profile(sport: Sport): com.arenacity.engine.model.SportProfile = when (sport) {
@@ -98,7 +98,10 @@ object Sections {
         Sport.TENNIS -> com.arenacity.engine.model.TENNIS
     }
 
-    /** A venue counts once its first construction is done; it stays usable while being upgraded to the next level. */
+    /**
+     * A venue counts once its first construction is done; it stays usable while being upgraded to the next level, and
+     * while it waits parked off the land (an arena whose island is closed: the old courts, V36).
+     */
     fun venueOperational(b: Building): Boolean = b.state == BuildingState.IDLE || b.level > 1
     /** The level that applies right now (an upgrade in progress still plays at the previous level). */
     fun effectiveLevel(b: Building): Int = if (b.state == BuildingState.UPGRADING) (b.level - 1).coerceAtLeast(1) else b.level

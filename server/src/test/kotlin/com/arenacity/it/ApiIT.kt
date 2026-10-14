@@ -76,16 +76,22 @@ class ApiIT {
         val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
         assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
         val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
-        // both showcases stand on the land mask's main island; the grounds carry the visited club's land (and, for one
-        // client release, the old square's sixteen parcels and 48 cells)
+        // both showcases stand on the land mask's main island, the top one's arenas on its side islands (open: its zones);
+        // the grounds carry the visited club's land (and, for one client release, the old square's sixteen parcels and 48 cells)
         val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
         assertEquals(served.id, g["land"]!!.o()["maskId"]!!.jsonPrimitive.content)
-        assertEquals(listOf(served.main.id), g["land"]!!.o()["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(listOf(served.main.id) + com.arenacity.domain.rules.Showcase.islands(10, served).map { it.id }, g["land"]!!.o()["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(16, g["parcels"]!!.jsonArray.size); assertEquals(48, g["gridSize"]!!.jsonPrimitive.int)
         assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
         val types = g["buildings"]!!.jsonArray.map { it.o()["type"]!!.jsonPrimitive.content }
         assertEquals(com.arenacity.domain.rules.Showcase.city(10, served).slots.size, types.size)
         assertTrue(types.count { it != "ROAD" && it != "DECOR" } >= 15)
+        assertTrue(types.containsAll(listOf("BASKETBALL_ARENA", "VOLLEYBALL_ARENA", "TENNIS_ARENA", "PADEL_ARENA")), "the arenas on their islands")
+        // the catalog names the buildings in the caller's language and marks the ones to come
+        val catalog = call(HttpMethod.Get, "/catalog/buildings", lang = "ru").data.jsonArray.map { it.o() }.associateBy { it["type"]!!.jsonPrimitive.content }
+        assertEquals("Зал славы", catalog.getValue("HALL_OF_FAME")["name"]!!.jsonPrimitive.content)
+        assertEquals("Скоро", catalog.getValue("COACHING_HQ")["soonText"]!!.jsonPrimitive.content)
+        assertEquals("BASKETBALL", catalog.getValue("BASKETBALL_ARENA")["island"]!!.jsonPrimitive.content)
         // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
         val state = call(HttpMethod.Get, "/club", t).data.o()
         val land = state["land"]!!.o()

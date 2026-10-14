@@ -84,6 +84,17 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
     }
 
     /**
+     * Where a [type] may stand ([LandMap.allows]): on the club's land ([requireLand]); an island arena on its own side
+     * island only, once its zone opened that island (the server is the authority).
+     */
+    fun requireSite(st: ClubState, type: BuildingType, fp: Footprint) {
+        val sport = BuildingCatalog.spec(type).island ?: return requireLand(st, fp)
+        val isle = lands.island(sport)
+        if (isle == null || !isle.fits(fp)) throw ValidationException("This arena is built on its own island")
+        if (st.land.regions.none { it === isle }) throw ValidationException("Open this island first")
+    }
+
+    /**
      * Moves the club onto the current land mask, once per mask (clubs.land_mask): the owner's picture made the land a
      * mask that follows the painted meadow, so a town built on the old square may stand partly in the sea. Runs in its own
      * transaction (or the caller's) under the club's row lock and reads the stored mask again under it, so the parallel
@@ -100,29 +111,41 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
     }
 
     /**
-     * Whatever stands off [land] moves onto it. The road and fence tiles off it go, refunded at what their levels cost (the
-     * player did not cause the loss; moved tile by tile, a boulevard the shore cut came back as stray tiles and blobs at
-     * the meadow's edge). Then every lost building is parked off the map ([Lands.parked]), so no two ever share a top-left
-     * cell mid-way (the (club, x, y) uniqueness: one moved onto the corner of another still waiting to move was a 500).
-     * Then, the biggest first (the stadium first), each goes to the free spot nearest where it stood, turned a quarter if
-     * only that fits, with a lawn cell round it where there is room anywhere (decor needs none: it goes to the nearest free
-     * cell); a building the land has no room for stays parked — the client lists it off the land, to be placed by hand.
-     * Obstacles off the land go; the gold of one being cleared or cleared is the club's. Every move and removal is logged.
-     * Returns that gold and the coins refunded.
+     * Whatever stands off [land], or where it may not stand, moves onto it. A building may not stand off the land, an island
+     * arena off its own island ([LandMap.allows]; the old courts became arenas, V36), and no two may overlap (the sport
+     * town's footprints grew, V36): the stadium keeps its place first, then the biggest, the oldest first; a road or fence
+     * tile under one of them goes, decor moves. The road and fence tiles that go are refunded at what their levels cost
+     * (the player did not cause the loss; moved tile by tile, a boulevard the shore cut came back as stray tiles and blobs
+     * at the meadow's edge). Then every lost building is parked off the map ([Lands.parked]), so no two ever share a
+     * top-left cell mid-way (the (club, x, y) uniqueness: one moved onto the corner of another still waiting to move was a
+     * 500). Then, the biggest first (the stadium first), each goes to the free spot nearest where it stood — an arena on
+     * its own island, while that is open —, turned a quarter if only that fits, with a lawn cell round it where there is
+     * room anywhere (decor needs none: it goes to the nearest free cell); a building the land has no room for (an arena
+     * whose island is closed) stays parked — the client lists it off the land, to be placed by hand. Obstacles off the land
+     * or under a building that stays go; the gold of one being cleared or cleared is the club's. Every move and removal is
+     * logged. Returns that gold and the coins refunded.
      */
     private suspend fun rehome(club: Club, list: List<Building>, land: LandSet, now: Instant): Pair<Int, Long> {
         fun fp(b: Building) = footprint(b.type, b.gridX, b.gridY, b.rotation)
         val log = mutableListOf<RehomeMove>()
         var gold = 0
         var coins = 0L
+        // what keeps its place: on ground it may stand on, clear of everything that kept its place before it
+        val kept = mutableListOf<Footprint>()
+        val stays = HashSet<UUID>()
+        val order = compareBy<Building>({ it.type != BuildingType.PITCH }, { it.type in Stadium.COSMETIC }, { -fp(it).let { f -> f.w * f.h } }, { it.createdAt }, { it.id })
+        for (b in list.sortedWith(order)) {
+            val f = fp(b)
+            if (lands.allows(land, b.type, f) && kept.none { it.overlaps(f) }) { kept += f; stays += b.id }
+        }
         val keptObstacles = mutableListOf<Footprint>()
         obstacles?.listByClub(club.id)?.forEach { o ->
-            if (land.fits(o.footprint)) { keptObstacles += o.footprint; return@forEach }
+            if (land.fits(o.footprint) && kept.none { it.overlaps(o.footprint) }) { keptObstacles += o.footprint; return@forEach }
             val owed = if (o.state == ObstacleState.IDLE) 0 else o.rewardGold
             obstacles.delete(o.id); gold += owed
             log += RehomeMove(club.id, o.id, RehomeMove.OBSTACLE, o.kind.name, o.gridX, o.gridY, 0, null, null, 0, owed, lands.id, now)
         }
-        val (cut, lost) = list.filter { !land.fits(fp(it)) }.partition { it.type == BuildingType.ROAD || it.type == BuildingType.FENCE }
+        val (cut, lost) = list.filter { it.id !in stays }.partition { it.type == BuildingType.ROAD || it.type == BuildingType.FENCE }
         for (b in cut) {
             val refund = (1..b.level).sumOf { BuildingCatalog.level(b.type, it).cost }
             buildings.delete(b.id); coins += refund
@@ -138,7 +161,7 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
                 for (y in y0 until y0 + h) for (x in x0 until x0 + w) if (x - bx0 in 0 until bw && y - by0 in 0 until bh && taken[(y - by0) * bw + x - bx0]) return false
                 return true
             }
-            (list - lost.toSet() - cut.toSet()).forEach { mark(fp(it)) }
+            kept.forEach(::mark)
             keptObstacles.forEach(::mark)
             // park them all first, each on its own cell well apart (one parked by an earlier mask keeps its cell)
             val used = list.filter { Lands.isParked(it.gridY) }.map { it.gridX to it.gridY }.toMutableSet()
@@ -158,8 +181,8 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
                 var best: Triple<Int, Int, Int>? = null; var bestD = Long.MAX_VALUE; var bestLawn = false
                 for (rot in listOf(b.rotation, (b.rotation + 90) % 360).distinctBy { footprint(b.type, 0, 0, it).let { f -> f.w to f.h } }) {
                     val size = footprint(b.type, 0, 0, rot)
-                    for ((x, y) in land.cells) {
-                        if (!clear(x, y, size.w, size.h) || !land.fits(Footprint(x, y, size.w, size.h))) continue
+                    for ((x, y) in lands.cellsFor(land, b.type)) {
+                        if (!clear(x, y, size.w, size.h) || !lands.allows(land, b.type, Footprint(x, y, size.w, size.h))) continue
                         val padded = lawn && clear(x - 1, y - 1, size.w + 2, size.h + 2)
                         // the original rotation wins a tie; a quarter turn only when it alone fits
                         val d = (x - ox).toLong() * (x - ox) + (y - oy).toLong() * (y - oy) + if (rot == b.rotation) 0 else 1_000_000_000L
@@ -293,7 +316,7 @@ class PlaceBuildingUseCase(private val service: ClubService, private val buildin
         }
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(type, x, y, rotation)
-        service.requireLand(st, fp)
+        service.requireSite(st, type, fp)
         if (st.buildings.any { footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         if (lvl.buildSeconds > 0) service.requireFreeBuilder(st)
@@ -378,7 +401,7 @@ class MoveBuildingUseCase(private val service: ClubService, private val building
         val b = st.buildings.firstOrNull { it.id == buildingId } ?: throw NotFoundException("Building not found")
         if (rotation !in setOf(0, 90, 180, 270)) throw ValidationException("Rotation must be 0/90/180/270")
         val fp = footprint(b.type, x, y, rotation)
-        service.requireLand(st, fp)
+        service.requireSite(st, b.type, fp)
         if (st.buildings.any { it.id != b.id && footprint(it.type, it.gridX, it.gridY, it.rotation).overlaps(fp) }) throw ConflictException("Overlaps another building")
         if (st.obstacles.any { it.footprint.overlaps(fp) }) throw ConflictException("Clear the obstacle first")
         buildings.move(b.copy(gridX = x, gridY = y, rotation = rotation, updatedAt = clock.now()))
@@ -520,8 +543,8 @@ data class Placement(val id: UUID, val x: Int, val y: Int, val rotation: Int)
 
 /**
  * Edit mode: many buildings moved at once (swaps included). The whole arrangement is checked as one — every moved
- * building on the land with no obstacle underneath, nothing overlapping — and written in two steps so the (club, x, y)
- * uniqueness never trips mid-way. Buildings not listed stay where they are: one the land has no room for (parked off
+ * building where it may stand (an island arena on its own island) with no obstacle underneath, nothing overlapping —
+ * and written in two steps so the (club, x, y) uniqueness never trips mid-way. Buildings not listed stay where they are: one the land has no room for (parked off
  * the map since the land mask, rules.Lands) never blocks a save that does not move it.
  */
 class ApplyLayoutUseCase(private val service: ClubService, private val buildings: BuildingRepository, private val clock: Clock, private val tx: Tx = NoTx) {
@@ -533,7 +556,7 @@ class ApplyLayoutUseCase(private val service: ClubService, private val buildings
         val listed = moves.filter { m -> byId.containsKey(m.id) || (if (partial) false else throw NotFoundException("Building not found")) }
         if (listed.distinctBy { it.id }.size != listed.size) throw ValidationException("A building is listed twice")
         // a saved layout older than the land mask: a spot that is sea now is skipped, the building stays where it is
-        val wanted = listed.filter { m -> !partial || byId.getValue(m.id).let { st.land.fits(footprint(it.type, m.x, m.y, m.rotation)) } }.associateBy { it.id }
+        val wanted = listed.filter { m -> !partial || byId.getValue(m.id).let { service.lands.allows(st.land, it.type, footprint(it.type, m.x, m.y, m.rotation)) } }.associateBy { it.id }
         val final = st.buildings.map { b ->
             val m = wanted[b.id]
             if (m == null) b else {
@@ -544,7 +567,7 @@ class ApplyLayoutUseCase(private val service: ClubService, private val buildings
         val changed = final.filter { f -> byId.getValue(f.id).let { it.gridX != f.gridX || it.gridY != f.gridY || it.rotation != f.rotation } }
         if (changed.isEmpty()) return emptyList()
         val moved = changed.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
-        moved.forEach { service.requireLand(st, it) }
+        changed.zip(moved).forEach { (b, fp) -> service.requireSite(st, b.type, fp) }
         val fps = final.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
         for (i in fps.indices) for (j in i + 1 until fps.size) if (fps[i].overlaps(fps[j])) throw ConflictException("Overlaps another building")
         if (moved.any { fp -> st.obstacles.any { it.footprint.overlaps(fp) } }) throw ConflictException("Clear the obstacle first")

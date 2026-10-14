@@ -76,3 +76,12 @@ class FakeRehomeLog : com.arenacity.domain.repository.RehomeLogRepository {
     val rows = mutableListOf<com.arenacity.domain.repository.RehomeMove>()
     override suspend fun record(moves: List<com.arenacity.domain.repository.RehomeMove>) { rows += moves }
 }
+
+class FakeZoneRepository : com.arenacity.domain.repository.ZoneRepository {
+    val rows = mutableListOf<com.arenacity.domain.model.ClubZone>()
+    override suspend fun listByClub(clubId: UUID) = rows.filter { it.clubId == clubId }
+    override suspend fun upsert(zone: com.arenacity.domain.model.ClubZone) = zone.also { z -> rows.removeAll { it.clubId == z.clubId && it.sport == z.sport }; rows += z }
+    /** The club's zone of [sport] open now (bought and restored). */
+    fun open(clubId: UUID, sport: com.arenacity.domain.model.ZoneSport, at: java.time.Instant = java.time.Instant.EPOCH) =
+        rows.add(com.arenacity.domain.model.ClubZone(clubId, sport, com.arenacity.domain.model.ZoneState.OPEN, at, null))
+}

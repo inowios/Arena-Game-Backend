@@ -67,7 +67,7 @@ class ConcurrencyIT {
     @Test
     fun `a finished training is applied once even when the squad is read in parallel`() {
         runBlocking {
-            place(userId, BuildingType.TRAINING_CENTER, 9, 19, 0)
+            place(userId, BuildingType.TRAINING_CENTER, 9, 21, 0)
             clock.advanceSeconds(3600)
         }
         val athlete = runBlocking { squads.squad(userId).athletes.minBy { it.mental } }   // stays under the pitch cap

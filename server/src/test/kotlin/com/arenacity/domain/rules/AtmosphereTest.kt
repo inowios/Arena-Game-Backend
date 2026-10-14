@@ -19,22 +19,30 @@ class AtmosphereTest {
     }
 
     @Test
-    fun `decor, the stadium and a car park lift income, capped`() {
+    fun `decor, the stadium and a yard court lift income, capped`() {
         val pitch = b(BuildingType.PITCH, 0, 0)              // 8×6
-        val cafe = b(BuildingType.CAFE, 9, 0)                 // gap 1 to the pitch
-        val far = b(BuildingType.CLUB_SHOP, 20, 20)
-        val decor = (11..12).flatMap { x -> (0..4).map { y -> b(BuildingType.DECOR, x, y) } }   // ten trees beside the café
-        val parking = b(BuildingType.PARKING, 12, 4)
-        val bonus = Atmosphere.of(listOf(pitch, cafe, far, parking) + decor)
-        val c = bonus.getValue(cafe.id)
+        val fans = b(BuildingType.FAN_ZONE, 9, 0)             // 4×4, gap 1 to the pitch
+        val far = b(BuildingType.SHOPPING_CENTER, 20, 20)
+        val decor = (14..15).flatMap { x -> (0..4).map { y -> b(BuildingType.DECOR, x, y) } }   // ten trees beside the fan zone
+        val court = b(BuildingType.BACKYARD_COURT, 13, 5)    // 3×3, gap 1 below it
+        val bonus = Atmosphere.of(listOf(pitch, fans, far, court) + decor)
+        val c = bonus.getValue(fans.id)
         assertEquals(Atmosphere.DECOR_CAP, c.decor)            // decor part capped
         assertEquals(Atmosphere.STADIUM_PCT, c.stadium)
-        assertEquals(Atmosphere.PARKING_PCT, c.parking)
-        assertEquals(39, c.total)
-        assertEquals(Atmosphere.CAP, Atmosphere.Bonus(30, 10, 5, 8).total)   // never above the cap
+        assertEquals(BuildingCatalog.level(BuildingType.BACKYARD_COURT, 1).effect2, c.court)
+        assertEquals(0, c.parking)                              // the car park went with the sport town
+        assertEquals(37, c.total)
+        assertEquals(Atmosphere.CAP, Atmosphere.Bonus(30, 10, 0, 8, court = 5).total)   // never above the cap
         assertEquals(0, bonus.getValue(far.id).total)
         assertEquals(0, bonus.getValue(pitch.id).total)        // not an income building
-        assertEquals(0, bonus.getValue(parking.id).stadium)     // the car park does not live off the crowd
+        assertEquals(0, bonus.getValue(court.id).total)        // nor is the yard court
+        // a yard court still being built lifts nothing yet; the hotel, the press and the sponsors earn like the shops
+        val building = court.copy(state = BuildingState.UPGRADING)
+        assertEquals(0, Atmosphere.of(listOf(pitch, fans, building)).getValue(fans.id).court)
+        val hotel = b(BuildingType.HOTEL, 13, 9)
+        assertEquals(BuildingCatalog.level(BuildingType.BACKYARD_COURT, 1).effect2, Atmosphere.of(listOf(court, hotel)).getValue(hotel.id).court)
+        val byTheStands = hotel.copy(gridX = 9, gridY = 0)
+        assertEquals(0, Atmosphere.of(listOf(pitch, byTheStands)).getValue(byTheStands.id).stadium)   // the hotel does not live off the crowd
     }
 
     @Test

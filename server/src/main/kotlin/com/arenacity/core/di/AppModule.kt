@@ -193,7 +193,7 @@ val appModule = module {
             g.openZones = { id -> com.arenacity.domain.usecase.club.openZoneSports(koin.get(), id, koin.get<Clock>().now()) }
         }
     }
-    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get()) }
+    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get(), zones = get()) }
     single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
     single { com.arenacity.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }
