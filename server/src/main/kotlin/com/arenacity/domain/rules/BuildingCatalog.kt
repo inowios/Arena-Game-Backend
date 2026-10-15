@@ -1,14 +1,15 @@
 package com.arenacity.domain.rules
 
-import com.arenacity.domain.model.ZoneSport
 import com.arenacity.domain.rules.BuildingType.*
 import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * The sport town (the owner, 14 October 2026; art/sprites/town_l1 in the mobile repo): the club's buildings, the town's,
- * the island arenas. Gone with it (V36 moved every club onto this set): CLUB_SHOP, CAFE and PARKING (one SHOPPING_CENTER),
- * MUSEUM (the HALL_OF_FAME), PARK (the BACKYARD_COURT), the courts (the arenas), APARTMENT and OFFICE.
+ * The sport town (the owner, 14 October 2026; art/sprites/town_l1 in the mobile repo): the club's buildings and the town's.
+ * Gone with it (V36 moved every club onto this set): CLUB_SHOP, CAFE and PARKING (one SHOPPING_CENTER), MUSEUM (the
+ * HALL_OF_FAME), PARK (the BACKYARD_COURT), the courts (the island arenas), APARTMENT and OFFICE. The island arenas
+ * (BASKETBALL_, VOLLEYBALL_, TENNIS_ and PADEL_ARENA) went on 15 October 2026 (the owner: the side islands are the
+ * peoples' homes, the game is football only; V44 refunded them).
  */
 enum class BuildingType { PITCH, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, DECOR, FENCE,
     // the town: homes pay tax, roads join
@@ -16,13 +17,11 @@ enum class BuildingType { PITCH, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKE
     // earning and pleasing: the shops, the honours, the yard courts, the fans, the press, the sponsors, the guests
     SHOPPING_CENTER, HALL_OF_FAME, BACKYARD_COURT, FAN_ZONE, MEDIA_CENTER, SPONSOR_OFFICE, HOTEL,
     // no mechanic yet: buildable and upgradable, their panel says what they will do and «soon» (BuildingSpec.soon)
-    ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ,
-    // the island arenas: each stands on its own side island once its zone opened it (BuildingSpec.island)
-    BASKETBALL_ARENA, VOLLEYBALL_ARENA, TENNIS_ARENA, PADEL_ARENA }
+    ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ }
 
 /**
  * One level of a building. [effect] meaning depends on type:
- * PITCH = athlete attribute cap, the basketball and tennis arenas = their section's attribute cap, ACADEMY = min quality
+ * PITCH = athlete attribute cap, ACADEMY = min quality
  * (max = effect + 15), TRAINING_CENTER = slots, MEDICAL_CENTER = heals per cooldown, HALL_OF_FAME = exhibits; [effect2]:
  * PITCH = seats, TRAINING_CENTER = attribute delta per training, MEDICAL_CENTER = cooldown hours, HALL_OF_FAME and
  * BACKYARD_COURT = atmosphere % to the earning buildings round it.
@@ -43,12 +42,11 @@ data class LevelSpec(
 /**
  * [counts]/[caps]: how many of the building a club may have and the highest level it may reach, by stadium level
  * (index 0 = stadium 1). The stadium itself has neither (count 1, its own levels).
- * [island]: the zone sport whose side island the building stands on (an island arena; null = anywhere on the club's
- * land); [soon]: no mechanic yet — buildable and upgradable, the client says what it will do and «soon».
+ * [soon]: no mechanic yet — buildable and upgradable, the client says what it will do and «soon».
  */
 data class BuildingSpec(val type: BuildingType, val width: Int, val height: Int, val enabled: Boolean, val levels: List<LevelSpec>,
                         val counts: List<Int> = List(Stadium.MAX_LEVEL) { 1 }, val caps: List<Int> = List(Stadium.MAX_LEVEL) { levels.size },
-                        val island: ZoneSport? = null, val soon: Boolean = false) {
+                        val soon: Boolean = false) {
     val maxLevel get() = levels.size
     /** Most copies at the top stadium (Int.MAX_VALUE stays "unlimited" for nothing but the old API field). */
     val maxPerClub get() = counts.last()
@@ -245,59 +243,6 @@ object BuildingCatalog {
             L(190_000, 27 * H, stadium = 9, effect = 3, effect2 = 2),
             L(420_000, 60 * H, stadium = 10, effect = 4, effect2 = 2),
         ),
-        // the island arenas. Basketball (the old court's eight levels, two more at the top) and tennis open their sections:
-        // effect = the section's attribute cap; volleyball and padel have no match engine yet (soon)
-        BASKETBALL_ARENA to listOf(
-            L(7_500, 2 * H, stadium = 3, effect = 60),
-            L(14_000, 210 * M, stadium = 4, effect = 65),
-            L(25_000, 330 * M, stadium = 5, effect = 70),
-            L(47_000, 9 * H, stadium = 6, effect = 75),
-            L(86_000, 14 * H, stadium = 7, effect = 80),
-            L(160_000, 23 * H, stadium = 8, effect = 85),
-            L(290_000, 37 * H, stadium = 9, effect = 90),
-            L(540_000, 60 * H, stadium = 10, effect = 95),
-            L(760_000, 63 * H, stadium = 10, effect = 97),
-            L(1_000_000, 66 * H, stadium = 10, effect = 99),
-        ),
-        VOLLEYBALL_ARENA to listOf(
-            L(20_000, 4 * H, stadium = 5),
-            L(32_000, 6 * H, stadium = 6),
-            L(50_000, 9 * H, stadium = 7),
-            L(78_000, 13 * H, stadium = 7),
-            L(120_000, 18 * H, stadium = 8),
-            L(180_000, 24 * H, stadium = 8),
-            L(270_000, 31 * H, stadium = 9),
-            L(410_000, 40 * H, stadium = 9),
-            L(620_000, 52 * H, stadium = 10),
-            L(950_000, 66 * H, stadium = 10),
-        ),
-        // the old tennis court's eight levels (costs, times, the stadium each needs, the section's cap), two more at the
-        // top: a court the sport town made into an arena (V36) goes on upgrading where the court did; a new club builds
-        // its first from stadium 7 (the counts), when its island opens (rules.Zones)
-        TENNIS_ARENA to listOf(
-            L(12_000, 3 * H, stadium = 4, effect = 60),
-            L(21_000, 270 * M, stadium = 4, effect = 65),
-            L(37_000, 7 * H, stadium = 5, effect = 70),
-            L(64_000, 11 * H, stadium = 6, effect = 75),
-            L(110_000, 18 * H, stadium = 7, effect = 80),
-            L(200_000, 27 * H, stadium = 8, effect = 85),
-            L(340_000, 42 * H, stadium = 9, effect = 90),
-            L(600_000, 66 * H, stadium = 10, effect = 95),
-            L(820_000, 68 * H, stadium = 10, effect = 97),
-            L(1_100_000, 70 * H, stadium = 10, effect = 99),
-        ),
-        PADEL_ARENA to listOf(
-            L(150_000, 12 * H, stadium = 9),
-            L(210_000, 16 * H, stadium = 10),
-            L(280_000, 20 * H, stadium = 10),
-            L(370_000, 25 * H, stadium = 10),
-            L(480_000, 31 * H, stadium = 10),
-            L(610_000, 38 * H, stadium = 10),
-            L(760_000, 45 * H, stadium = 10),
-            L(930_000, 52 * H, stadium = 10),
-            L(1_120_000, 59 * H, stadium = 10),
-            L(1_350_000, 66 * H, stadium = 10),
-        ),
         DECOR to listOf(L(200, 0)),
         // the hall of fame (the old trophy museum, its levels and effect): effect = exhibits on its shelves, effect2 =
         // atmosphere % to earning buildings around it
@@ -347,11 +292,8 @@ object BuildingCatalog {
     // the build grid's tile is 2×2 cells (20 m, [Grid.TILE]) — every footprint a whole number of tiles, every building on
     // a tile ([Grid.aligned], the server checks it) — and each footprint's proportions come from its own ChatGPT drawing
     // (art/scripts/cut_sprites.py fits the drawing's ground inside the footprint's diamond and town_sprites.py lists the
-    // fill each candidate gets): the ticket office square as drawn, the stadium 12×12 the biggest, the island arenas
-    // as big as their islands allow and no bigger than it (14 October, pass 4: each island's clear centrepiece, with a
-    // lawn cell round it on the island, in its drawing's proportions — the basketball and volleyball arenas 12×12, the
-    // tennis arena 12×10, the padel arena 10×12 on its narrow island; LandMaskTest checks they fit); DECOR, FENCE and ROAD
-    // one tile each. A stadium-10 town (every type at its count,
+    // fill each candidate gets): the ticket office square as drawn, the stadium 12×12 the biggest (the island arenas,
+    // 12×12 and the like on their islands, went on 15 October); DECOR, FENCE and ROAD one tile each. A stadium-10 town (every type at its count,
     // the decor, the fences and the roads at their allowance) covers ~76 % of the main island's tiles (2108 of 2780 cells;
     // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %): the houses 20 at the top (30 of 4×4
     // before), the roads 140 tiles (600 cells before; 180 left no room for the 40 fence tiles, the review of pass 3).
@@ -373,15 +315,6 @@ object BuildingCatalog {
         BuildingSpec(MEDIA_CENTER, 6, 4, true, levelTable.getValue(MEDIA_CENTER), oneFrom(6), capsFrom(6)),
         BuildingSpec(SPONSOR_OFFICE, 4, 4, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
         BuildingSpec(HOTEL, 6, 4, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
-        // the arenas open a sport section (a starter squad when the first one is finished), on their own island
-        BuildingSpec(BASKETBALL_ARENA, 12, 12, true, levelTable.getValue(BASKETBALL_ARENA), oneFrom(3), listOf(0, 0, 1, 2, 3, 4, 5, 6, 7, 10),
-            island = ZoneSport.BASKETBALL),
-        BuildingSpec(VOLLEYBALL_ARENA, 12, 12, true, levelTable.getValue(VOLLEYBALL_ARENA), oneFrom(5), capsFrom(5),
-            island = ZoneSport.VOLLEYBALL, soon = true),
-        BuildingSpec(TENNIS_ARENA, 12, 10, true, levelTable.getValue(TENNIS_ARENA), oneFrom(7), listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 10),
-            island = ZoneSport.TENNIS),
-        BuildingSpec(PADEL_ARENA, 10, 12, true, levelTable.getValue(PADEL_ARENA), oneFrom(9), capsFrom(9),
-            island = ZoneSport.PADEL, soon = true),
     ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = true) })
         .associateBy { it.type }
 

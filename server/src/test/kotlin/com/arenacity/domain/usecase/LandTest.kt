@@ -18,7 +18,7 @@ import kotlin.test.*
  * The land as a mask (the owner's picture, 13 October): the buildable cells follow the painted meadow, every placement is
  * checked cell by cell against it, and a town built on the old square moves onto it once. Here the clubs are built on
  * the old square ([Lands.SQUARE]) and the land then becomes [TestLand.NOTCHED] (its top-right corner is sea, a locked
- * tennis island beside it).
+ * androids' island beside it).
  */
 class LandTest {
     private val clock = FixedClock()
@@ -93,7 +93,7 @@ class LandTest {
         buildings.setStadium(club.id, 4)   // roads open at stadium 4
         val st = get(user)
         assertEquals(listOf("main"), st.land.ids)
-        assertEquals(listOf("tennis"), notched.lands.locked(st.land).map { it.id })
+        assertEquals(listOf("android"), notched.lands.locked(st.land).map { it.id })
         // the academy (8×6) would reach into the sea of the cut corner (x >= 30, y <= 0); a tile left it stands on the meadow
         assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 24, -4, 0) }.template)
         // on the build grid's tiles only (14 October, pass 3): a top-left cell even both ways
@@ -105,37 +105,37 @@ class LandTest {
         // roads and fences tile by tile
         assertEquals("Outside your land", assertFailsWith<ValidationException> { draw(user, listOf(28 to 2, 30 to 0), BuildingType.ROAD) }.template)
         assertEquals(1, draw(user, listOf(28 to 2), BuildingType.ROAD).size)
-        // the tennis island is land, but locked until its arena opens it
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 52, 2, 0) }.template)
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { draw(user, listOf(54 to 4), BuildingType.ROAD) }.template)
+        // the androids' island is land, but locked until its bridge opens it
+        assertEquals("The island opens with its bridge", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 52, 2, 0) }.template)
+        assertEquals("The island opens with its bridge", assertFailsWith<ValidationException> { draw(user, listOf(54 to 4), BuildingType.ROAD) }.template)
         assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.DECOR, 44, 2, 0) }.template)   // the strait
         // edit mode checks the moved buildings the same way
         assertEquals("Outside your land", assertFailsWith<ValidationException> { applyLayout(user, listOf(Placement(academy.id, 30, -8, 0))) }.template)
     }
 
     @Test
-    fun `a side island opens with its arena, as GET club zones has it`() = runBlocking<Unit> {
+    fun `a people's island opens with its bridge, as GET club zones has it`() = runBlocking<Unit> {
         val club = newClub()
         val zones = object : com.arenacity.domain.repository.ZoneRepository {
             val rows = mutableListOf<com.arenacity.domain.model.ClubZone>()
             override suspend fun listByClub(clubId: UUID) = rows.filter { it.clubId == clubId }
-            override suspend fun upsert(zone: com.arenacity.domain.model.ClubZone) = zone.also { z -> rows.removeAll { it.clubId == z.clubId && it.sport == z.sport }; rows += z }
+            override suspend fun upsert(zone: com.arenacity.domain.model.ClubZone) = zone.also { z -> rows.removeAll { it.clubId == z.clubId && it.people == z.people }; rows += z }
         }
-        val opened = service(TestLand.NOTCHED).apply { openZones = { id -> openZoneSports(zones, id, clock.now()) } }
+        val opened = service(TestLand.NOTCHED).apply { openZones = { id -> openPeoples(zones, id, clock.now()) } }
         val placeThere = PlaceBuildingUseCase(opened, buildings, clock)
-        // bought, still being restored: the island stays locked
-        zones.upsert(com.arenacity.domain.model.ClubZone(club.id, com.arenacity.domain.model.ZoneSport.TENNIS, com.arenacity.domain.model.ZoneState.RESTORING, clock.now(), clock.now().plusSeconds(60)))
+        // the bridge still being built: the island stays locked
+        zones.upsert(com.arenacity.domain.model.ClubZone(club.id, com.arenacity.domain.model.People.ANDROID, com.arenacity.domain.model.ZoneState.RESTORING, clock.now(), clock.now().plusSeconds(60)))
         assertEquals(listOf("main"), opened.state(user).land.ids)
-        assertEquals("The island opens with its arena", assertFailsWith<ValidationException> { placeThere(user, BuildingType.DECOR, 52, 2, 0) }.template)
+        assertEquals("The island opens with its bridge", assertFailsWith<ValidationException> { placeThere(user, BuildingType.DECOR, 52, 2, 0) }.template)
         // restored (the zone OPEN once its time is up): the island is the club's land, no longer locked, and visitors see it
         clock.advanceSeconds(61)
         val st = opened.state(user)
-        assertEquals(listOf("main", "tennis"), st.land.ids)
+        assertEquals(listOf("main", "android"), st.land.ids)
         assertTrue(TestLand.NOTCHED.locked(st.land).isEmpty())
         assertEquals(52, placeThere(user, BuildingType.DECOR, 52, 2, 0).gridX)
         val grounds = GetGroundsUseCase(clubs, buildings, com.arenacity.domain.usecase.athlete.SectionService(buildings, FakeAthleteRepository()), TestLand.NOTCHED)
-            .apply { openZones = { id -> openZoneSports(zones, id, clock.now()) } }(club.id)
-        assertEquals(listOf("main", "tennis"), grounds.land.ids)
+            .apply { openZones = { id -> openPeoples(zones, id, clock.now()) } }(club.id)
+        assertEquals(listOf("main", "android"), grounds.land.ids)
         assertTrue(grounds.buildings.any { it.gridX == 52 && it.gridY == 2 })
     }
 

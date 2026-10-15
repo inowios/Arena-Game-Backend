@@ -21,27 +21,19 @@ class StarterSquadInitializer(private val athletes: AthleteRepository, private v
     override suspend fun onClubCreated(club: Club) = athletes.createAll(AthleteFactory.starterSquad(club.id, clock.now()))
 }
 
-/** When a basketball or tennis arena is first completed, the new section gets its starter squad (once). */
-class SectionSquadOnCourt(private val athletes: AthleteRepository, private val clock: Clock) : com.arenacity.domain.usecase.club.BuildingListener {
-    override suspend fun onCompleted(building: Building) {
-        val sport = com.arenacity.domain.rules.Sections.sportOfVenue(building.type) ?: return
-        if (sport == Sport.FOOTBALL || building.level != 1) return
-        if (athletes.listByClub(building.clubId).any { it.sport == sport }) return
-        athletes.createAll(AthleteFactory.starterSquad(building.clubId, sport, clock.now()))
-    }
-}
-
-/** Which sport sections a club fields: enough athletes for a lineup and (for humans) an operational venue. */
-class SectionService(private val buildings: com.arenacity.domain.repository.BuildingRepository, private val athletes: AthleteRepository,
-                     private val zones: com.arenacity.domain.usecase.club.ZoneUseCases? = null) {
+/**
+ * Which sport sections a club fields: enough athletes for a lineup and (for humans) an operational venue. Football only
+ * since 15 October 2026 (rules.Sections; the basketball and tennis arenas that opened the other two, with a starter
+ * squad when the first was finished, went).
+ */
+class SectionService(private val buildings: com.arenacity.domain.repository.BuildingRepository, private val athletes: AthleteRepository) {
     suspend fun active(club: Club, squad: List<Athlete>? = null, clubBuildings: List<Building>? = null): List<Sport> {
         val list = squad ?: athletes.listByClub(club.id)
         fun enough(s: Sport) = list.count { it.sport == s } >= com.arenacity.domain.rules.Sections.profile(s).startersCount
         if (club.isBot) return com.arenacity.domain.rules.Sections.ORDER.filter(::enough)
         val bs = clubBuildings ?: buildings.listByClub(club.id)
-        val open = zones?.openSports(club.id) ?: emptySet()   // an open arena in the club's rectangle stands for the venue
         return com.arenacity.domain.rules.Sections.ORDER.filter { s ->
-            enough(s) && (s == Sport.FOOTBALL || s in open || bs.any { it.type == com.arenacity.domain.rules.Sections.venue(s) && com.arenacity.domain.rules.Sections.venueOperational(it) })
+            enough(s) && (s == Sport.FOOTBALL || bs.any { it.type == com.arenacity.domain.rules.Sections.venue(s) && com.arenacity.domain.rules.Sections.venueOperational(it) })
         }
     }
 }
@@ -93,8 +85,7 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
     }
 }
 
-class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.arenacity.domain.usecase.economy.ProgressTracker = com.arenacity.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx,
-                            private val zones: com.arenacity.domain.usecase.club.ZoneUseCases? = null) {
+class StartTrainingUseCase(private val service: ClubService, private val squads: SquadService, private val athletes: AthleteRepository, private val trainings: TrainingRepository, private val clock: Clock, private val progress: com.arenacity.domain.usecase.economy.ProgressTracker = com.arenacity.domain.usecase.economy.ProgressTracker { _, _ -> }, private val tx: Tx = NoTx) {
     /** [attribute] null = a technique drill: a skill point for the trees instead of an attribute point. */
     suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind?): Training = tx {
         val st = service.state(userId, lock = true)
@@ -111,9 +102,8 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (!drill)
         {
             val venue = st.buildings.firstOrNull { it.type == com.arenacity.domain.rules.Sections.venue(a.sport) }
-            val arenaOpen = a.sport != Sport.FOOTBALL && zones?.openSports(st.club.id)?.contains(a.sport) == true
-            if (venue == null && !arenaOpen) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + a.sport.name))
-            val venueLevel = if (venue != null) com.arenacity.domain.rules.Sections.effectiveLevel(venue) else com.arenacity.domain.rules.Zones.ARENA_VENUE_LEVEL
+            if (venue == null || a.sport != Sport.FOOTBALL) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + a.sport.name))
+            val venueLevel = com.arenacity.domain.rules.Sections.effectiveLevel(venue)
             if (a.attribute(attribute!!) >= TrainingRules.attributeCap(a.sport, venueLevel)) throw ValidationException("Attribute capped by the venue level; upgrade it")
             if (!com.arenacity.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
         }

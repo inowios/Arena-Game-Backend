@@ -7,12 +7,12 @@ import com.arenacity.domain.rules.LandRegion
 object TestLand {
     /**
      * The old square plot (cells -9..38 on both axes) with its top-right corner cut off (x 30..38, y -9..0 is sea), and a
-     * side island locked by tennis to its right (x 50..63, y 0..11: room for the 11×8 arena) with its bridge slot on the main island's shore.
+     * side island to its right (x 50..63, y 0..11), the androids' (the tennis island before 15 October 2026), with its bridge slot on the main island's shore.
      */
     val NOTCHED: LandMap by lazy {
         val main = LandRegion.of("main", null, -9, -9, (-9..38).map { y -> (-9..38).joinToString("") { x -> if (x >= 30 && y <= 0) "." else "#" } })
-        val tennis = LandRegion.of("tennis", "TENNIS", 50, 0, List(12) { "#".repeat(14) })
-        LandMap.of(listOf(main, tennis), 10 to 10, 4 to 22, mapOf("tennis" to (38 to 5)))
+        val android = LandRegion.of("android", "ANDROID", 50, 0, List(12) { "#".repeat(14) })
+        LandMap.of(listOf(main, android), 10 to 10, 4 to 22, mapOf("android" to (38 to 5)))
     }
 
     /**

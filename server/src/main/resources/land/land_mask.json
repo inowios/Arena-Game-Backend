@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "c9c2cb41bfb7788896565e1252b2ab3a0153c64b",
+  "id": "b098c62ec0f640641d5bff4d1c5ffc75bde070e4",
   "cell": 10,
   "frame": "cell (x,y) = world x in [10x,10x+10), z in [10y,10y+10), y = 0",
   "anchors": {
@@ -13,19 +13,19 @@
       22
     ],
     "bridges": {
-      "basketball": [
+      "beast": [
         17,
         -16
       ],
-      "padel": [
+      "shadow": [
         -8,
         21
       ],
-      "volleyball": [
+      "stone": [
         41,
         25
       ],
-      "tennis": [
+      "android": [
         17,
         49
       ]
@@ -112,8 +112,8 @@
       ]
     },
     {
-      "id": "basketball",
-      "lock": "BASKETBALL",
+      "id": "beast",
+      "lock": "BEAST",
       "x0": 3,
       "y0": -75,
       "w": 24,
@@ -143,8 +143,8 @@
       ]
     },
     {
-      "id": "padel",
-      "lock": "PADEL",
+      "id": "shadow",
+      "lock": "SHADOW",
       "x0": -70,
       "y0": 7,
       "w": 19,
@@ -178,8 +178,8 @@
       ]
     },
     {
-      "id": "volleyball",
-      "lock": "VOLLEYBALL",
+      "id": "stone",
+      "lock": "STONE",
       "x0": 88,
       "y0": -1,
       "w": 23,
@@ -213,8 +213,8 @@
       ]
     },
     {
-      "id": "tennis",
-      "lock": "TENNIS",
+      "id": "android",
+      "lock": "ANDROID",
       "x0": 8,
       "y0": 92,
       "w": 28,

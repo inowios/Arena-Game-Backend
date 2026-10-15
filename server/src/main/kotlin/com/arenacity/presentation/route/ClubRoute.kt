@@ -85,11 +85,11 @@ fun Route.clubRoutes() {
             post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             // the old land buying (parcels round the plot): gone since the land is a mask, the route answers so for one client release
             post("/land/{col}/{row}/buy") { throw ValidationException("Land is not for sale") }
-            // the stadium zones of the club's rectangle (CITY-BUILD-PLAN stage A)
+            // the bridges to the peoples' islands (rules.Zones); {people}: BEAST, STONE, ANDROID, SHADOW (an old client's sport name reads as its island's people)
             get("/zones") { call.respond(zonesUc.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
             post("/zones/{sport}/buy") {
-                val sport = runCatching { com.arenacity.domain.model.ZoneSport.valueOf(call.parameters["sport"]!!.uppercase()) }.getOrElse { throw com.arenacity.domain.exception.ValidationException("Unknown zone") }
-                call.respond(HttpStatusCode.Created, zonesUc.buy(call.userId(), sport).toDto().toSuccessResponse(201))
+                val people = com.arenacity.domain.model.People.parse(call.parameters["sport"]) ?: throw com.arenacity.domain.exception.ValidationException("Unknown zone")
+                call.respond(HttpStatusCode.Created, zonesUc.buy(call.userId(), people).toDto().toSuccessResponse(201))
             }
             get("/inbox") {
                 val club = getClub(call.userId()).club

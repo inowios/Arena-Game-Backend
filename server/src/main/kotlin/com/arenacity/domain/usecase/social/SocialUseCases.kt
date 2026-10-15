@@ -195,15 +195,15 @@ class HeadToHeadUseCase(private val service: ClubService, private val clubs: Clu
     }
 }
 
-/** [land]: the visited club's land (the main island, and its side islands once their arenas open them), [lands] its mask. */
+/** [land]: the visited club's land (the main island, and the peoples' islands once its bridges to them stand), [lands] its mask. */
 data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>, val land: com.arenacity.domain.rules.LandSet,
                    val lands: com.arenacity.domain.rules.LandMap)
 
 /** Another club's grounds, read-only (spec §5 "прогресс друга": visit the friend's club). */
 class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService,
                         private val lands: com.arenacity.domain.rules.LandMap = com.arenacity.domain.rules.Lands.MAP) {
-    /** The zone sports whose arena opens a club's side island (its OPEN zones; DI), as in ClubService. */
-    var openZones: suspend (UUID) -> Set<com.arenacity.domain.model.ZoneSport> = { emptySet() }
+    /** The peoples whose island a club's bridge opened (its OPEN zones; DI), as in ClubService. */
+    var openZones: suspend (UUID) -> Set<com.arenacity.domain.model.People> = { emptySet() }
 
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")

@@ -48,9 +48,9 @@ import java.time.Instant
 @Serializable data class LevelSpecDto(val level: Int, val cost: Long, val buildSeconds: Long, val requiredStadium: Int, val requiredTrophies: Int, val incomePerHour: Long, val capHours: Int, val effect: Int, val effect2: Int)
 /**
  * [counts]/[caps]: copies allowed and highest level allowed by stadium level (index 0 = stadium 1); [unlockStadium]: first
- * stadium level with a copy. The sport town (14 October): [island] = the zone sport whose side island the building stands
- * on (an island arena; null = anywhere on the club's land), [section] = the sport section it opens (the stadium and the
- * basketball and tennis arenas), [soon] = no mechanic yet (buildable and upgradable; [about] says what it will do,
+ * stadium level with a copy. The sport town (14 October): [island] = the people whose island the building stands on
+ * (none since the island arenas went, 15 October: always null, kept for the old clients), [section] = the sport section
+ * it opens (the stadium: football), [soon] = no mechanic yet (buildable and upgradable; [about] says what it will do,
  * [soonText] is «soon»); [name] and [about] in the caller's language (Accept-Language).
  */
 @Serializable data class BuildingSpecDto(val type: String, val width: Int, val height: Int, val maxPerClub: Int, val enabled: Boolean, val levels: List<LevelSpecDto>,
@@ -93,18 +93,20 @@ fun com.arenacity.domain.rules.EnergyState.toDto() = EnergyDto(current, max, nex
 /**
  * The club's land since the owner's picture (13 October, docs/art/PERSPECTIVE-MAP.md §5.5 in the mobile repo): [maskId] =
  * the sha1 id of the land mask (GET /catalog/land; the client compares its bundled copy), [regions] = the ids of the
- * regions the club builds on (the main island; a side island once its arena opens it), [locked] = the side islands
- * still locked. [parcel]/[parcels]/[nextPrice]/[buyable] are the old parcel field's, kept for one client release (land
+ * regions the club builds on (the main island; a people's island once its bridge stands), [locked] = the peoples'
+ * islands still locked (under their domes), [peoples] = the peoples that have returned (their island open: BEAST,
+ * STONE, ANDROID, SHADOW; humans always live on the main island and are not listed; rules.Peoples). [parcel]/[parcels]/[nextPrice]/[buyable] are the old parcel field's, kept for one client release (land
  * is not for sale: 0 and false).
  */
 @Serializable data class LandDto(val parcel: Int = LEGACY_PARCEL, val parcels: Int = LEGACY_PARCELS, val nextPrice: Long = 0, val buyable: Boolean = false,
-                                 val maskId: String = "", val regions: List<String> = emptyList(), val locked: List<LockedLandDto> = emptyList())
+                                 val maskId: String = "", val regions: List<String> = emptyList(), val locked: List<LockedLandDto> = emptyList(),
+                                 val peoples: List<String> = emptyList())
 /**
- * A side island not open for building: its region [id], the [zone] sport whose arena opens it, the stadium level that
- * arena needs; [state] LOCKED (its arena is not open yet: not bought, or still being restored — GET /club/zones has
- * which). A zone that is OPEN opens its island: it is in [LandDto.regions] then, not here.
+ * A people's island still under its dome: its region [id], its [people] (BEAST, STONE, ANDROID, SHADOW; [zone] the same,
+ * the field older clients read), the stadium level its bridge needs; [state] LOCKED (its bridge does not stand yet: not
+ * started, or still being built — GET /club/zones has which). An island whose bridge stands is in [LandDto.regions] then.
  */
-@Serializable data class LockedLandDto(val id: String, val zone: String?, val requiredStadium: Int, val state: String = "LOCKED")
+@Serializable data class LockedLandDto(val id: String, val zone: String?, val requiredStadium: Int, val state: String = "LOCKED", val people: String? = null)
 
 private const val LEGACY_PARCEL = 12
 private const val LEGACY_PARCELS = 6
@@ -112,7 +114,8 @@ private const val LEGACY_PARCELS = 6
 val LEGACY_HOME_PARCELS: List<ParcelDto> = (1..4).flatMap { c -> (1..4).map { r -> ParcelDto(c, r) } }
 
 fun LandSet.toDto(lands: LandMap) = LandDto(maskId = lands.id, regions = ids,
-    locked = lands.locked(this).map { r -> LockedLandDto(r.id, r.lock, r.sport?.let { Zones.spec(it).requiredStadium } ?: 0) })
+    locked = lands.locked(this).map { r -> LockedLandDto(r.id, r.people?.name ?: r.lock, r.people?.let { Zones.spec(it).requiredStadium } ?: 0, people = r.people?.name) },
+    peoples = com.arenacity.domain.rules.Peoples.returned(regions.mapNotNull { it.people }.toSet()).map { it.name })
 /** An obstacle on the plot: [cost]/[seconds] to clear it; [rewardGold] only once it is cleared (READY). */
 @Serializable data class ObstacleDto(val id: String, val kind: String, val x: Int, val y: Int, val w: Int, val h: Int, val state: String, val remainingSeconds: Long,
                                      val cost: Long, val seconds: Long, val speedUpGold: Int, val rewardGold: Int)
@@ -132,7 +135,7 @@ fun Club.adsState(now: Instant): AdsStateDto {
 
 fun LevelSpec.toDto(level: Int) = LevelSpecDto(level, cost, buildSeconds, requiredStadium, requiredTrophies, incomePerHour, capHours, effect, effect2)
 fun BuildingSpec.toDto(lang: String = "en") = BuildingSpecDto(type.name, width, height, maxPerClub, enabled, levels.mapIndexed { i, l -> l.toDto(i + 1) }, counts, (1..Stadium.MAX_LEVEL).map { capAt(it) }, unlockStadium,
-    ServerI18n.t("building.${type.name}", lang), island?.name, Sections.sportOfVenue(type)?.name, soon,
+    ServerI18n.t("building.${type.name}", lang), null, Sections.sportOfVenue(type)?.name, soon,
     "building.${type.name}.about".takeIf { ServerI18n.has(it) }?.let { ServerI18n.t(it, lang) }, if (soon) ServerI18n.t("building.soon", lang) else null)
 
 fun Building.toDto(now: Instant, clubLevel: Int, atmosphere: com.arenacity.domain.rules.Atmosphere.Bonus = com.arenacity.domain.rules.Atmosphere.Bonus()): BuildingDto {

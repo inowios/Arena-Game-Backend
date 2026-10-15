@@ -1,6 +1,6 @@
 package com.arenacity.domain.rules
 
-import com.arenacity.domain.model.ZoneSport
+import com.arenacity.domain.model.People
 import kotlin.math.abs
 
 /**
@@ -8,7 +8,7 @@ import kotlin.math.abs
  * stadium, one built to the maximum — so players see what their city can become»; then «a beautiful city, not buildings
  * on top of each other»). Two bot clubs shared by everyone, on the land mask ([Lands]; the owner's picture, 13 October:
  * the land follows the painted meadow, an organic shape), laid out as a planned town round the stadium on the main
- * island, the arenas on the side islands open at that stadium (the sport town, 14 October):
+ * island, the peoples' islands open at that stadium (15 October: no arenas on them any more, a people lives on each):
  *  - the stadium, the town's biggest building, at the mask's anchor, the meadow's middle, on its plaza; a ring avenue
  *    round the plaza, boulevards one tile (20 m) wide on the axes from the stadium out to the shore (towards the side islands; a bridge's foot off them gets
  *    a short spur, straight or with one turn) and the ring's lines run on to the shore, with another avenue every 16 cells where the meadow reaches
@@ -26,8 +26,8 @@ import kotlin.math.abs
  *    town outwards — the hotel, the school and the transport hub in the other blocks along the boulevards, houses and
  *    yard courts in the outer blocks once those are full;
  *  - trees along the boulevards and the plaza's approaches first, then the ring, the avenues and the shore;
- *  - the side islands whose zone the stadium allows are open ([islands]); each holds its arena in its middle once the
- *    stadium allows the arena.
+ *  - the peoples' islands whose bridge the stadium allows are open ([islands]); the town builds nothing there (the
+ *    client draws each people's settlement in the middle).
  * Within the game's limits (no type over its count or level cap at that stadium); the town takes as many copies as fit
  * with that spacing (at the top fewer houses and yard courts than allowed, so it stays spacious). Pure: the same mask and
  * catalogue always give the same city.
@@ -39,7 +39,7 @@ import kotlin.math.abs
 object Showcase {
     data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int)
     /** [regions]: the land mask's regions the town stands on (the main island and the open side islands); [zones]: the zones open. */
-    data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<ZoneSport> = emptySet())
+    data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<People> = emptySet())
 
     /**
      * Tiles from the stadium's middle to the ring's lines: c − 8 and c + 7 (tiles 0 and 15 round the 6×6-tile stadium's
@@ -75,26 +75,9 @@ object Showcase {
     /** The suburbs: a house, a yard court, a house (the court second: a small meadow's last lot still gets one). */
     private val HOMES = listOf(BuildingType.HOUSE, BuildingType.BACKYARD_COURT, BuildingType.HOUSE)
 
-    /** The side islands open in a showcase at [stadium]: those whose zone that stadium allows (rules.Zones). */
+    /** The peoples' islands open in a showcase at [stadium]: those whose bridge that stadium allows (rules.Zones). */
     fun islands(stadium: Int, lands: LandMap = Lands.MAP): List<LandRegion> =
-        lands.regions.filter { r -> r !== lands.main && r.sport?.let { Zones.spec(it).requiredStadium <= stadium } == true }
-
-    /**
-     * Where an island's arena of [type] stands: the spot nearest the island's middle with a lawn cell round it on the
-     * island (on one too small for that, without); null when it does not fit at all.
-     */
-    private fun arenaSpot(type: BuildingType, isle: LandRegion): Pair<Int, Int>? {
-        val (sw, sh) = size(type)
-        val mx = isle.cells.sumOf { it.first + 0.5 } / isle.area; val my = isle.cells.sumOf { it.second + 0.5 } / isle.area
-        var best: Pair<Int, Int>? = null; var bestD = Double.MAX_VALUE; var bestLawn = false
-        for ((x, y) in isle.cells) {
-            if (!isle.fits(Footprint(x, y, sw, sh))) continue
-            val lawn = isle.fits(Footprint(x - 1, y - 1, sw + 2, sh + 2))
-            val d = Math.hypot(x + sw / 2.0 - mx, y + sh / 2.0 - my)
-            if ((lawn && !bestLawn) || (lawn == bestLawn && d < bestD)) { best = x to y; bestD = d; bestLawn = lawn }
-        }
-        return best
-    }
+        lands.regions.filter { r -> r !== lands.main && r.people?.let { Zones.spec(it).requiredStadium <= stadium } == true }
 
     /**
      * The cells [x0, x1) × [y0, y1) a block's buildings stand on (its pavement already left out) and what stands there;
@@ -378,17 +361,11 @@ object Showcase {
         val roadLevel = BuildingCatalog.spec(BuildingType.ROAD).capAt(stadium).coerceAtLeast(1)
         for ((x, y) in roads) slots += Slot(BuildingType.ROAD, roadLevel, x, y)
 
-        // the side islands open at this stadium, each with its arena in its middle once the stadium allows it
+        // the peoples' islands open at this stadium (nothing built there: the settlements are the client's)
         val open = islands(stadium, lands)
-        for (isle in open) {
-            val arena = BuildingType.values().firstOrNull { BuildingCatalog.spec(it).island == isle.sport } ?: continue
-            val spec = BuildingCatalog.spec(arena)
-            if (spec.countAt(stadium) == 0) continue
-            arenaSpot(arena, isle.tiles())?.let { (x, y) -> slots += Slot(arena, spec.capAt(stadium), x, y) }
-        }
         val ground = LandSet(listOf(lands.main) + open)
         val cells = slots.map { it.copy(x = it.x * T, y = it.y * T) }
         check(cells.all { s -> Grid.aligned(s.x, s.y) && lands.allows(ground, s.type, footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off its island" }
-        return City(stadium, ground.ids.toSet(), cells, open.mapNotNull { it.sport }.toSet())
+        return City(stadium, ground.ids.toSet(), cells, open.mapNotNull { it.people }.toSet())
     }
 }

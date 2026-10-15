@@ -94,6 +94,8 @@ class PackUseCases(private val service: ClubService, private val clubs: ClubRepo
             val tier = Packs.roll(spec, r, sinceEpic, sinceLegend)
             tiers += tier
             if (tier == PullTier.LEGEND) { sinceLegend = 0; sinceEpic = 0 } else if (tier == PullTier.EPIC) { sinceEpic = 0; sinceLegend++ } else { sinceEpic++; sinceLegend++ }
+            // TODO(peoples): a generated athlete has no people yet; with the roster's characters, draw only those
+            // rules.Peoples.dropsInPacks allows (humans, and the peoples whose island the club opened: ClubService.openZones)
             pulled += AthleteFactory.create(r.nextLong(), club.id, Sport.FOOTBALL, tier.quality.first, tier.quality.last, null, now).copy(id = UUID.randomUUID(), cardKind = spec.kind)
         }
         athletes.createAll(pulled)

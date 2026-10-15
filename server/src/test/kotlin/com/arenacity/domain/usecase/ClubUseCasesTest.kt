@@ -67,7 +67,6 @@ class ClubUseCasesTest {
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, -10, 0, 0) }
         assertFailsWith<ValidationException> { place(user, BuildingType.BACKYARD_COURT, 8, 26, 0) }  // stadium 3 required
         assertFailsWith<ValidationException> { place(user, BuildingType.SCHOOL, 8, 26, 0) }          // stadium 4 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TENNIS_ARENA, 52, 2, 0) }    // stadium 7 required
         assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 8, 26, 0) }  // a 2nd office needs stadium 4
         place(user, BuildingType.ACADEMY, 8, 26, 0)
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 18, 26, 0) }          // one academy, ever

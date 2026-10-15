@@ -14,26 +14,24 @@ class BuildingRulesTest {
             assertEquals(s.maxLevel, s.capAt(Stadium.MAX_LEVEL), "$t top cap")
             assertTrue(s.caps.zipWithNext().all { (a, b) -> b >= a } && s.counts.zipWithNext().all { (a, b) -> b >= a }, "$t caps/counts")
             // a level's stadium requirement is the first stadium whose cap allows it
-            // (the tennis arena's are the old court's, for the courts V36 made into arenas: by its caps alone, below its count)
-            if (t != BuildingType.PITCH) s.levels.forEachIndexed { i, l -> assertEquals((1..10).first { s.capAt(it) >= i + 1 && (s.countAt(it) > 0 || t == BuildingType.TENNIS_ARENA) }, l.requiredStadium, "$t L${i + 1}") }
+            if (t != BuildingType.PITCH) s.levels.forEachIndexed { i, l -> assertEquals((1..10).first { s.capAt(it) >= i + 1 && s.countAt(it) > 0 }, l.requiredStadium, "$t L${i + 1}") }
         }
         assertEquals(0, BuildingCatalog.spec(BuildingType.PITCH).levels.first().cost)
         assertEquals(5_500, BuildingCatalog.level(BuildingType.PITCH, 10).requiredTrophies)
-        assertEquals(3, BuildingCatalog.spec(BuildingType.BASKETBALL_ARENA).unlockStadium)
         assertEquals(2, BuildingCatalog.spec(BuildingType.SHOPPING_CENTER).unlockStadium)
     }
 
     /**
      * The whole town fits (the review of 14 October, pass 3): at every stadium level every main-island type at its count,
      * the decor, the fences and the roads at their allowance take at most 80 % of the main island's whole tiles (the
-     * shipped land mask), so a full town leaves room for lawns and odd corners; the island arenas stand on their own islands.
+     * shipped land mask), so a full town leaves room for lawns and odd corners.
      */
     @Test
     fun `a full town at every stadium level fits the main island`() {
         val main = Lands.MAP.main
         val tiles = main.tiles().cells.size * Grid.TILE * Grid.TILE
         for (stadium in 1..Stadium.MAX_LEVEL) {
-            val cells = BuildingType.values().map { BuildingCatalog.spec(it) }.filter { it.enabled && it.island == null }
+            val cells = BuildingType.values().map { BuildingCatalog.spec(it) }.filter { it.enabled }
                 .sumOf { it.countAt(stadium) * it.width * it.height }
             assertTrue(cells <= 0.8 * tiles, "stadium $stadium: $cells of $tiles cells")
         }
@@ -52,8 +50,7 @@ class BuildingRulesTest {
             BuildingType.HOTEL to Row(6, 4, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(6, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 4, 3, 1),
             BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
             BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 4, 5, 1), BuildingType.ANALYTICS_CENTER to Row(6, 4, 7, 1),
-            BuildingType.COACHING_HQ to Row(4, 4, 8, 1), BuildingType.BASKETBALL_ARENA to Row(12, 12, 3, 1), BuildingType.VOLLEYBALL_ARENA to Row(12, 12, 5, 1),
-            BuildingType.TENNIS_ARENA to Row(12, 10, 7, 1), BuildingType.PADEL_ARENA to Row(10, 12, 9, 1),
+            BuildingType.COACHING_HQ to Row(4, 4, 8, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -64,21 +61,12 @@ class BuildingRulesTest {
         // the new types have ten levels (the hall of fame keeps the museum's five); every level's art is the level-1 sprite for now
         for (t in list.keys - setOf(BuildingType.PITCH, BuildingType.ACADEMY, BuildingType.TRAINING_CENTER, BuildingType.MEDICAL_CENTER, BuildingType.HALL_OF_FAME))
             assertEquals(10, BuildingCatalog.spec(t).maxLevel, "$t")
-        // the arenas stand on their islands; basketball and tennis open their sections, volleyball and padel are «soon»
-        assertEquals(mapOf(BuildingType.BASKETBALL_ARENA to com.arenacity.domain.model.ZoneSport.BASKETBALL, BuildingType.VOLLEYBALL_ARENA to com.arenacity.domain.model.ZoneSport.VOLLEYBALL,
-            BuildingType.TENNIS_ARENA to com.arenacity.domain.model.ZoneSport.TENNIS, BuildingType.PADEL_ARENA to com.arenacity.domain.model.ZoneSport.PADEL),
-            BuildingCatalog.specs.values.filter { it.island != null }.associate { it.type to it.island })
-        assertEquals(BuildingType.BASKETBALL_ARENA, Sections.venue(com.arenacity.domain.model.Sport.BASKETBALL))
-        assertEquals(BuildingType.TENNIS_ARENA, Sections.venue(com.arenacity.domain.model.Sport.TENNIS))
-        assertEquals(95, BuildingCatalog.level(BuildingType.BASKETBALL_ARENA, 8).effect, "the old court's levels")
-        // an arena's island opens with the arena itself: never earlier (an island bought and left empty, its section
-        // without a squad), never later; every island zone has its arena
-        for (s in BuildingCatalog.specs.values.filter { it.island != null })
-            assertEquals(s.unlockStadium, Zones.spec(s.island!!).requiredStadium, "${s.type}: its zone opens at ${Zones.spec(s.island!!).requiredStadium}")
-        for (z in Lands.MAP.regions.mapNotNull { it.sport }) assertNotNull(Zones.arenaOf(z), "$z island's arena")
+        // no island arenas any more (15 October 2026): football is the one section, the stadium its venue
+        assertEquals(listOf(com.arenacity.domain.model.Sport.FOOTBALL), Sections.ORDER)
+        assertEquals(BuildingType.PITCH, Sections.venue(com.arenacity.domain.model.Sport.FOOTBALL))
         // the ones with no mechanic yet: nothing to collect, no effect, «soon»
         val soon = setOf(BuildingType.ATHLETES_RESIDENCE, BuildingType.YOUTH_SPORTS_SCHOOL, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB,
-            BuildingType.SCOUTING_OFFICE, BuildingType.RECOVERY_CENTER, BuildingType.ANALYTICS_CENTER, BuildingType.COACHING_HQ, BuildingType.VOLLEYBALL_ARENA, BuildingType.PADEL_ARENA)
+            BuildingType.SCOUTING_OFFICE, BuildingType.RECOVERY_CENTER, BuildingType.ANALYTICS_CENTER, BuildingType.COACHING_HQ)
         assertEquals(soon, BuildingCatalog.specs.values.filter { it.soon }.map { it.type }.toSet())
         for (t in soon) assertTrue(BuildingCatalog.spec(t).levels.all { it.incomePerHour == 0L && it.effect == 0 && it.effect2 == 0 }, "$t has no effect yet")
         // the earners: the shopping centre pays the best of the old shop's, café's and car park's incomes, the fan zone the café's
@@ -87,22 +75,26 @@ class BuildingRulesTest {
         for (t in listOf(BuildingType.MEDIA_CENTER, BuildingType.SPONSOR_OFFICE, BuildingType.HOTEL)) assertTrue(BuildingCatalog.spec(t).levels.all { it.incomePerHour > 0 }, "$t earns")
     }
 
-    /** The old tennis court (before the sport town): its caps by stadium; V36 made every court a TENNIS_ARENA at its level. */
+    /**
+     * The bridges to the peoples' islands (the owner, 15 October 2026): each island in the shipped mask is a people's, its
+     * bridge needs the stadium of the people's era (the beastfolk 4, the stone people 5, the androids 7, the shadows 10)
+     * and keeps the price and the building time the island's zone had.
+     */
     @Test
-    fun `a court made into a tennis arena upgrades no later than the court did`() {
-        val court = listOf(0, 0, 0, 2, 3, 4, 5, 6, 7, 8)
-        val arena = BuildingCatalog.spec(BuildingType.TENNIS_ARENA)
-        for (stadium in 1..10) for (level in 1..7) {
-            if (court[stadium - 1] < level + 1) continue
-            assertTrue(arena.capAt(stadium) >= level + 1, "L$level → L${level + 1} at stadium $stadium")
-            assertTrue(BuildingCatalog.level(BuildingType.TENNIS_ARENA, level + 1).requiredStadium <= stadium, "L${level + 1} shown as needing a bigger stadium than $stadium")
-        }
-        assertEquals(listOf(60, 65, 70, 75, 80, 85, 90, 95), arena.levels.take(8).map { it.effect }, "the court's section caps")
-        assertEquals(7, arena.unlockStadium, "a new club builds it from stadium 7")
-        // the island: from stadium 7, or from the arena's first level's stadium for a club that already owns one
-        assertEquals(7, Zones.requiredStadium(com.arenacity.domain.model.ZoneSport.TENNIS, emptySet()))
-        assertEquals(4, Zones.requiredStadium(com.arenacity.domain.model.ZoneSport.TENNIS, setOf(BuildingType.TENNIS_ARENA)))
-        assertEquals(3, Zones.requiredStadium(com.arenacity.domain.model.ZoneSport.BASKETBALL, setOf(BuildingType.BASKETBALL_ARENA)))
+    fun `every island is a people's, its bridge at the people's era`() {
+        assertEquals(com.arenacity.domain.model.People.entries.toSet(), Lands.MAP.regions.mapNotNull { it.people }.toSet())
+        assertEquals(mapOf("beast" to com.arenacity.domain.model.People.BEAST, "stone" to com.arenacity.domain.model.People.STONE, "android" to com.arenacity.domain.model.People.ANDROID, "shadow" to com.arenacity.domain.model.People.SHADOW),
+            Lands.MAP.regions.filter { it.people != null }.associate { it.id to it.people })
+        assertEquals(mapOf(com.arenacity.domain.model.People.BEAST to 4, com.arenacity.domain.model.People.STONE to 5, com.arenacity.domain.model.People.ANDROID to 7, com.arenacity.domain.model.People.SHADOW to 10), Zones.specs.mapValues { it.value.requiredStadium })
+        assertEquals(mapOf(com.arenacity.domain.model.People.BEAST to 8_000L, com.arenacity.domain.model.People.STONE to 50_000L, com.arenacity.domain.model.People.ANDROID to 40_000L, com.arenacity.domain.model.People.SHADOW to 120_000L), Zones.specs.mapValues { it.value.priceCoins })
+        // the era of each people is the one its bridge's stadium starts (stadium 1–3 / 4–6 / 7–9 / 10)
+        for ((p, z) in Zones.specs) assertEquals(Peoples.era(p), when (z.requiredStadium) { in 1..3 -> 1; in 4..6 -> 2; in 7..9 -> 3; else -> 4 }, "$p")
+        // the old sport names still read (an old client, an old mask): the island each sport's arena stood on
+        assertEquals(com.arenacity.domain.model.People.BEAST, com.arenacity.domain.model.People.parse("BASKETBALL")); assertEquals(com.arenacity.domain.model.People.STONE, com.arenacity.domain.model.People.parse("volleyball")); assertEquals(com.arenacity.domain.model.People.ANDROID, com.arenacity.domain.model.People.parse("TENNIS"))
+        assertEquals(com.arenacity.domain.model.People.SHADOW, com.arenacity.domain.model.People.parse("PADEL")); assertEquals(com.arenacity.domain.model.People.SHADOW, com.arenacity.domain.model.People.parse("shadow")); assertNull(com.arenacity.domain.model.People.parse("HOCKEY"))
+        // the packs: humans always, a people only once its island is open
+        assertTrue(Peoples.dropsInPacks(null, emptySet())); assertFalse(Peoples.dropsInPacks(com.arenacity.domain.model.People.ANDROID, setOf(com.arenacity.domain.model.People.BEAST)))
+        assertTrue(Peoples.dropsInPacks(com.arenacity.domain.model.People.BEAST, setOf(com.arenacity.domain.model.People.BEAST)))
     }
 
     @Test
@@ -144,7 +136,7 @@ class BuildingRulesTest {
     fun `footprints rotate and overlap`() {
         val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x12
         assertEquals(Footprint(0, 0, 12, 12), a)
-        assertEquals(Footprint(0, 0, 12, 10), footprint(BuildingType.PADEL_ARENA, 0, 0, 90))
+        assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.ACADEMY, 0, 0, 90))
         assertTrue(a.overlaps(Footprint(10, 10, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
         // every footprint is whole tiles of the build grid (14 October, pass 3), DECOR, FENCE and ROAD one tile each
         for (t in BuildingType.values()) { val s = BuildingCatalog.spec(t); assertTrue(s.width % Grid.TILE == 0 && s.height % Grid.TILE == 0, "$t ${s.width}x${s.height}") }

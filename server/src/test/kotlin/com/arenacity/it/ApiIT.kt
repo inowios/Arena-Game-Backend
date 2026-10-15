@@ -76,7 +76,7 @@ class ApiIT {
         val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
         assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
         val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
-        // both showcases stand on the land mask's main island, the top one's arenas on its side islands (open: its zones);
+        // both showcases stand on the land mask's main island, the top one with every people's island open (its zones);
         // the grounds carry the visited club's land (and, for one client release, the old square's sixteen parcels and 48 cells)
         val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
         assertEquals(served.id, g["land"]!!.o()["maskId"]!!.jsonPrimitive.content)
@@ -86,18 +86,25 @@ class ApiIT {
         val types = g["buildings"]!!.jsonArray.map { it.o()["type"]!!.jsonPrimitive.content }
         assertEquals(com.arenacity.domain.rules.Showcase.city(10, served).slots.size, types.size)
         assertTrue(types.count { it != "ROAD" && it != "DECOR" } >= 15)
-        assertTrue(types.containsAll(listOf("BASKETBALL_ARENA", "VOLLEYBALL_ARENA", "TENNIS_ARENA", "PADEL_ARENA")), "the arenas on their islands")
+        assertTrue(types.none { it.endsWith("_ARENA") }, "no arenas on the islands")
+        assertEquals(listOf("BEAST", "STONE", "ANDROID", "SHADOW"), g["land"]!!.o()["peoples"]!!.jsonArray.map { it.jsonPrimitive.content })
         // the catalog names the buildings in the caller's language and marks the ones to come
         val catalog = call(HttpMethod.Get, "/catalog/buildings", lang = "ru").data.jsonArray.map { it.o() }.associateBy { it["type"]!!.jsonPrimitive.content }
         assertEquals("Зал славы", catalog.getValue("HALL_OF_FAME")["name"]!!.jsonPrimitive.content)
         assertEquals("Скоро", catalog.getValue("COACHING_HQ")["soonText"]!!.jsonPrimitive.content)
-        assertEquals("BASKETBALL", catalog.getValue("BASKETBALL_ARENA")["island"]!!.jsonPrimitive.content)
+        assertTrue(catalog.keys.none { it.endsWith("_ARENA") })
         // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
         val state = call(HttpMethod.Get, "/club", t).data.o()
         val land = state["land"]!!.o()
         assertEquals(served.id, land["maskId"]!!.jsonPrimitive.content)
         assertEquals(listOf(served.main.id), land["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(served.locked(served.home).map { it.id }, land["locked"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
+        // every people's island under its dome, with its people and its bridge's stadium; the bridges are on sale by the people's key
+        assertEquals(setOf("BEAST", "STONE", "ANDROID", "SHADOW"), land["locked"]!!.jsonArray.map { it.o()["people"]!!.jsonPrimitive.content }.toSet())
+        assertEquals(emptyList<String>(), land["peoples"]!!.jsonArray.map { it.jsonPrimitive.content })
+        val bridges = call(HttpMethod.Get, "/club/zones", t).data.jsonArray.map { it.o() }
+        assertEquals(mapOf("BEAST" to 4, "STONE" to 5, "ANDROID" to 7, "SHADOW" to 10), bridges.associate { it["people"]!!.jsonPrimitive.content to it["requiredStadium"]!!.jsonPrimitive.int })
+        assertEquals("Потрібен стадіон рівня 4", call(HttpMethod.Post, "/club/zones/basketball/buy", t, expect = 400, lang = "uk").o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
         assertEquals(0, land["nextPrice"]!!.jsonPrimitive.int); assertEquals(false, land["buyable"]!!.jsonPrimitive.boolean)
         val cached = client.request("/api/v1/catalog/land") { header(HttpHeaders.IfNoneMatch, "\"${served.id}\"") }
         assertEquals(304, cached.status.value)

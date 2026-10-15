@@ -223,19 +223,17 @@ No opponent around	No opponent around	No hay rivales cerca	Não há adversários
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
 days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90
 Needs stadium level {0}	Needs stadium level {0}	Necesita el estadio de nivel {0}	Precisa do estádio de nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
-The zone is already yours	The zone is already yours	La zona ya es tuya	A zona já é sua	Эта зона уже ваша	Ця зона вже ваша
-This zone has no island yet	This zone has no island yet: it opens later	Esta zona aún no tiene isla: se abrirá más adelante	Esta zona ainda não tem ilha: abre mais tarde	У этой зоны пока нет острова: она откроется позже	У цієї зони поки немає острова: вона відкриється пізніше
-Unknown zone	Unknown zone	Zona desconocida	Zona desconhecida	Неизвестная зона	Невідома зона
+The zone is already yours	The bridge to this island is already yours	El puente a esta isla ya es tuyo	A ponte para esta ilha já é sua	Мост к этому острову уже твой	Міст до цього острова вже твій
+This zone has no island yet	This people has no island yet: it opens later	Este pueblo aún no tiene isla: se abrirá más adelante	Este povo ainda não tem ilha: abre mais tarde	У этого народа пока нет острова: он откроется позже	У цього народу поки немає острова: він відкриється пізніше
+Unknown zone	Unknown island	Isla desconocida	Ilha desconhecida	Неизвестный остров	Невідомий острів
 # --- land (a mask since the owner's picture, 13 October)
 Outside your land	That spot is outside your land	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами твоей земли	Це місце за межами твоєї землі
 Off the build grid	Buildings stand on the grid's tiles	Los edificios van sobre las casillas de la cuadrícula	Os edifícios ficam nas casas da grade	Здания ставятся по клеткам сетки	Будівлі ставляться по клітинках сітки
-The island opens with its arena	This island opens with its arena	Esta isla se abre con su arena	Esta ilha abre com a sua arena	Этот остров откроется вместе с его ареной	Цей острів відкриється разом з його ареною
+The island opens with its bridge	This island opens once its bridge is built	Esta isla se abre cuando se construye su puente	Esta ilha abre quando a sua ponte é construída	Этот остров откроется, когда построишь к нему мост	Цей острів відкриється, коли збудуєш до нього міст
 Land is not for sale	The land round your plot is not for sale: your club grows on the islands	El terreno alrededor de tu parcela no está a la venta: tu club crece en las islas	O terreno ao redor do seu lote não está à venda: seu clube cresce nas ilhas	Земля вокруг твоего участка не продаётся: клуб растёт на островах	Земля навколо твоєї ділянки не продається: клуб росте на островах
 Only fences and roads are drawn	Only roads can be drawn	Solo se pueden dibujar calles	Só ruas podem ser desenhadas	Рисовать можно только дороги	Малювати можна лише дороги
 Unknown type	Unknown building type	Tipo de edificio desconocido	Tipo de prédio desconhecido	Неизвестный тип здания	Невідомий тип будівлі
-# --- the sport town (14 October 2026): the island arenas, the buildings' names (GET /catalog/buildings), what the ones with no mechanic yet will do
-This arena is built on its own island	This arena is built on its own island	Esta arena se construye en su propia isla	Esta arena é construída na sua própria ilha	Эта арена строится на своём острове	Ця арена будується на своєму острові
-Open this island first	Open this island first: buy and restore its zone	Primero abre esta isla: compra y restaura su zona	Primeiro abra esta ilha: compre e restaure a sua zona	Сначала открой этот остров: купи и восстанови его зону	Спершу відкрий цей острів: купи й віднови його зону
+# --- the sport town (14 October 2026): the buildings' names (GET /catalog/buildings), what the ones with no mechanic yet will do (the island arenas went on 15 October)
 building.soon	Soon	Pronto	Em breve	Скоро	Незабаром
 building.PITCH	Stadium	Estadio	Estádio	Стадион	Стадіон
 building.ACADEMY	Academy	Academia	Academia	Академия	Академія
@@ -262,10 +260,6 @@ building.SCOUTING_OFFICE	Scouting Office	Oficina de ojeadores	Central de olheiro
 building.RECOVERY_CENTER	Recovery Center	Centro de recuperación	Centro de recuperação	Центр восстановления	Центр відновлення
 building.ANALYTICS_CENTER	Analytics Center	Centro de análisis	Centro de análise	Аналитический центр	Аналітичний центр
 building.COACHING_HQ	Coaching HQ	Sede técnica	Sede técnica	Тренерский штаб	Тренерський штаб
-building.BASKETBALL_ARENA	Basketball Arena	Arena de baloncesto	Arena de basquete	Баскетбольная арена	Баскетбольна арена
-building.VOLLEYBALL_ARENA	Volleyball Arena	Arena de voleibol	Arena de vôlei	Волейбольная арена	Волейбольна арена
-building.TENNIS_ARENA	Tennis Arena	Arena de tenis	Arena de tênis	Теннисная арена	Тенісна арена
-building.PADEL_ARENA	Padel Arena	Arena de pádel	Arena de padel	Падел-арена	Падел-арена
 building.ATHLETES_RESIDENCE.about	Your athletes will live here between matches.	Aquí vivirán tus atletas entre partidos.	Seus atletas vão morar aqui entre as partidas.	Здесь будут жить ваши спортсмены между матчами.	Тут житимуть ваші спортсмени між матчами.
 building.YOUTH_SPORTS_SCHOOL.about	Will bring up young athletes for every section.	Formará a jóvenes atletas para cada sección.	Vai formar jovens atletas para cada seção.	Будет растить юных спортсменов для всех секций.	Ростиме юних спортсменів для всіх секцій.
 building.SPORTS_SCIENCE_LAB.about	Will study your athletes to make training pay off more.	Estudiará a tus atletas para que los entrenamientos rindan más.	Vai estudar seus atletas para que os treinos rendam mais.	Будет изучать спортсменов, чтобы тренировки давали больше.	Вивчатиме спортсменів, щоб тренування давали більше.
@@ -275,5 +269,3 @@ building.SCOUTING_OFFICE.about	Will search the world for talented players for yo
 building.RECOVERY_CENTER.about	Will help your athletes recover after matches and training.	Ayudará a tus atletas a recuperarse tras partidos y entrenamientos.	Vai ajudar seus atletas a se recuperar depois de jogos e treinos.	Поможет спортсменам восстанавливаться после матчей и тренировок.	Допомагатиме спортсменам відновлюватися після матчів і тренувань.
 building.ANALYTICS_CENTER.about	Will study your rivals before every match.	Analizará a tus rivales antes de cada partido.	Vai analisar seus adversários antes de cada partida.	Будет разбирать соперников перед каждым матчем.	Розбиратиме суперників перед кожним матчем.
 building.COACHING_HQ.about	Will bring in coaches to sharpen your tactics.	Traerá entrenadores que afinarán tu táctica.	Vai trazer técnicos para afiar a sua tática.	Будет приглашать тренеров, которые отточат вашу тактику.	Запрошуватиме тренерів, які відточать вашу тактику.
-building.VOLLEYBALL_ARENA.about	Will open the volleyball section.	Abrirá la sección de voleibol.	Vai abrir a seção de vôlei.	Откроет волейбольную секцию.	Відкриє волейбольну секцію.
-building.PADEL_ARENA.about	Will open the padel section.	Abrirá la sección de pádel.	Vai abrir a seção de padel.	Откроет секцию падела.	Відкриє секцію падела.

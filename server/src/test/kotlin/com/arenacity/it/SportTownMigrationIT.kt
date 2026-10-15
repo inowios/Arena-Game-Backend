@@ -3,11 +3,11 @@ package com.arenacity.it
 import com.arenacity.common.tx.DbTx
 import com.arenacity.data.repository.*
 import com.arenacity.domain.model.BuildingState
-import com.arenacity.domain.model.ZoneSport
+import com.arenacity.domain.model.People
 import com.arenacity.domain.rules.*
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.LandSweep
-import com.arenacity.domain.usecase.club.openZoneSports
+import com.arenacity.domain.usecase.club.openPeoples
 import com.arenacity.testutil.FixedClock
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -15,9 +15,10 @@ import java.util.UUID
 import kotlin.test.*
 
 /**
- * The sport town's migration (V36__Sport_town.sql) on a club built with the old buildings, then the start-up sweep that
- * settles it (ClubService.settle): the old types become the new ones, what goes is refunded and logged, the grown
- * footprints and the arenas move.
+ * The sport town's migration (V36__Sport_town.sql) on a club built with the old buildings, then the later ones up to the
+ * peoples' islands (V44: the island arenas V36 made of the courts go, refunded) and the start-up sweep that settles the
+ * towns (ClubService.settle): the old types become the new ones, what goes is refunded and logged, the grown footprints
+ * move.
  */
 @EnabledIfEnvironmentVariable(named = "TEST_DATABASE_URL", matches = ".+")
 class SportTownMigrationIT {
@@ -99,14 +100,41 @@ class SportTownMigrationIT {
         assertEquals(listOf<String?>(null), query("SELECT land_mask FROM clubs WHERE id = '$club'") { it.getString(1) })
         assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$other'") { it.getString(1) })
 
-        // the start-up sweep
+        // V37–V44 and the start-up sweep (today's code reads today's schema: the arenas V36 made are gone by then). V39 and
+        // V40 (the build grid's tiles and no obstacles, 14 October, pass 3): every obstacle goes, nothing refunded; V44 (the
+        // peoples' islands, 15 October): the arenas go, refunded at what their levels cost, and the zones are the peoples'
+        sql.clear()
+        for ((c, state) in listOf(club to "IDLE", crowded to "READY"))
+            sql.append("INSERT INTO obstacles (id, club_id, kind, grid_x, grid_y, state, reward_gold) VALUES ('${UUID.randomUUID()}', '$c', 'ROCK', 0, 30, '$state', 5);\n")
+        sql.append("UPDATE clubs SET obstacles_spawned_at = now();\n")
+        // the other club had bought hockey's zone (never an island): V44 gives its price back
+        sql.append("INSERT INTO club_zones (club_id, sport, state, bought_at, restore_ends_at) VALUES ('$other', 'HOCKEY', 'OPEN', now(), NULL);\n")
+        ds.connection.use { c -> c.createStatement().execute(sql.toString()); c.commit() }
+        val gold = query("SELECT id, gold FROM clubs") { it.getString(1) to it.getInt(2) }.toMap()
+        TestDb.migrate(ds)
+        assertEquals(listOf(0), query("SELECT count(*) FROM obstacles") { it.getInt(1) })
+        assertEquals(listOf(0), query("SELECT count(*) FROM clubs WHERE obstacles_spawned_at IS NOT NULL") { it.getInt(1) })
+        assertEquals(gold, query("SELECT id, gold FROM clubs") { it.getString(1) to it.getInt(2) }.toMap(), "nothing refunded for the obstacles")
+        // the basketball arena (level 4) and the tennis arena (level 2) are gone, every level refunded
+        val arenas = (7_500L + 14_000 + 25_000 + 47_000) + (12_000L + 21_000)
+        assertNull(query("SELECT id FROM buildings WHERE type LIKE '%_ARENA'") { it.getString(1) }.firstOrNull())
+        assertEquals(1_000 + refund + arenas, query("SELECT coins FROM clubs WHERE id = '$club'") { it.getLong(1) }.single())
+        assertEquals(setOf("BASKETBALL_ARENA" to 93_500L, "TENNIS_ARENA" to 33_000L),
+            query("SELECT type, coins FROM rehome_log WHERE club_id = '$club' AND mask_id = 'peoples'") { it.getString(1) to it.getLong(2) }.toSet())
+        assertEquals(listOf(81_000L), query("SELECT coins FROM clubs WHERE id = '$other'") { it.getLong(1) })
+        assertEquals(listOf(0), query("SELECT count(*) FROM club_zones WHERE club_id = '$other'") { it.getInt(1) })
+        // the open basketball zone is the beastfolk's island now
+        assertEquals(listOf("BEAST" to "OPEN"), query("SELECT sport, state FROM club_zones WHERE club_id = '$club'") { it.getString(1) to it.getString(2) })
+        assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$showcase'") { it.getString(1) })
+
         val clubs = ClubRepositoryImpl(); val buildings = BuildingRepositoryImpl(); val zones = ZoneRepositoryImpl()
         val service = ClubService(clubs, buildings, clock, obstacles = ObstacleRepositoryImpl(), tx = DbTx, moves = RehomeLogRepositoryImpl())
-            .apply { openZones = { id -> openZoneSports(zones, id, clock.now()) } }
-        assertEquals(1, LandSweep(clubs, service).run { _, e -> throw e })
+            .apply { openZones = { id -> openPeoples(zones, id, clock.now()) } }
+        assertEquals(setOf(People.BEAST), openPeoples(zones, club, clock.now()))
+        assertEquals(3, LandSweep(clubs, service).run { _, e -> throw e })
         assertEquals(Lands.MAP.id, clubs.findById(club)!!.landMask)
         val list = buildings.listByClub(club)
-        val land = Lands.MAP.of(setOf(ZoneSport.BASKETBALL))
+        val land = Lands.MAP.of(setOf(People.BEAST))
         val placed = list.filter { !Lands.isParked(it.gridY) }
         assertTrue(placed.all { Lands.MAP.allows(land, it.type, footprint(it.type, it.gridX, it.gridY, it.rotation)) }, "everything stands where it may")
         val fps = placed.map { footprint(it.type, it.gridX, it.gridY, it.rotation) }
@@ -118,45 +146,15 @@ class SportTownMigrationIT {
         assertEquals(26 to 22, byId.getValue(ids["shop"]!!).let { it.gridX to it.gridY })
         assertNotEquals(30 to 22, byId.getValue(ids["cafe"]!!).let { it.gridX to it.gridY })
         assertNull(byId[ids["road"]])
-        assertEquals(1_000 + refund + BuildingCatalog.level(BuildingType.ROAD, 1).cost, clubs.findById(club)!!.coins)
-        // the basketball arena on its island (the zone is open), the tennis arena parked until the player opens its island
-        val basket = byId.getValue(ids["basket"]!!)
-        assertTrue(Lands.MAP.island(ZoneSport.BASKETBALL)!!.fits(footprint(basket.type, basket.gridX, basket.gridY, basket.rotation)))
-        val tennis = byId.getValue(ids["tennis"]!!)
-        assertTrue(Lands.isParked(tennis.gridY))
-        assertTrue(Sections.venueOperational(tennis) && tennis.state == BuildingState.IDLE, "the tennis section stays open")
-        // once: a second sweep finds nothing to settle
-        assertEquals(0, LandSweep(clubs, service).run())
-
-        // V37 and V38: every town but the showcases settles once more; the crowded one (a stadium-1 town laid out before
-        // the footprints grew, its academy under the stadium) ends with nothing overlapping, everything on a tile
-        TestDb.migrate(ds, target = "38")
-        assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$showcase'") { it.getString(1) })
-        assertEquals(3, LandSweep(clubs, service).run { _, e -> throw e })
+        assertEquals(1_000 + refund + arenas + BuildingCatalog.level(BuildingType.ROAD, 1).cost, clubs.findById(club)!!.coins)
+        // the crowded one (a stadium-1 town laid out before the footprints grew, its academy under the stadium) ends with
+        // nothing overlapping, everything on a tile
         val town = buildings.listByClub(crowded)
         val pitch3 = town.single { it.type == BuildingType.PITCH }; val academy3 = town.single { it.type == BuildingType.ACADEMY }
         assertTrue(Grid.aligned(pitch3.gridX, pitch3.gridY) && Grid.aligned(academy3.gridX, academy3.gridY))
         assertFalse(footprint(academy3.type, academy3.gridX, academy3.gridY, academy3.rotation).overlaps(footprint(pitch3.type, pitch3.gridX, pitch3.gridY, 0)))
         assertTrue(Lands.MAP.allows(Lands.MAP.home, academy3.type, footprint(academy3.type, academy3.gridX, academy3.gridY, academy3.rotation)))
-        assertEquals(0, LandSweep(clubs, service).run())
-
-        // V39 and V40 (the build grid's tiles and no obstacles, 14 October, pass 3): every town but the showcases is marked
-        // for the sweep again and every obstacle goes, nothing refunded; the towns already settled on tiles stay exactly as
-        // they are
-        sql.clear()
-        for ((c, state) in listOf(club to "IDLE", crowded to "READY"))
-            sql.append("INSERT INTO obstacles (id, club_id, kind, grid_x, grid_y, state, reward_gold) VALUES ('${UUID.randomUUID()}', '$c', 'ROCK', 0, 30, '$state', 5);\n")
-        sql.append("UPDATE clubs SET obstacles_spawned_at = now();\n")
-        ds.connection.use { c -> c.createStatement().execute(sql.toString()); c.commit() }
-        val gold = query("SELECT id, gold FROM clubs") { it.getString(1) to it.getInt(2) }.toMap()
-        val settled = listOf(club, other, crowded).associateWith { c -> buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet() }
-        TestDb.migrate(ds)
-        assertEquals(listOf(0), query("SELECT count(*) FROM obstacles") { it.getInt(1) })
-        assertEquals(listOf(0), query("SELECT count(*) FROM clubs WHERE obstacles_spawned_at IS NOT NULL") { it.getInt(1) })
-        assertEquals(listOf<String?>(Lands.MAP.id), query("SELECT land_mask FROM clubs WHERE id = '$showcase'") { it.getString(1) })
-        assertEquals(3, LandSweep(clubs, service).run { _, e -> throw e })
-        for ((c, was) in settled) assertEquals(was, buildings.listByClub(c).map { Triple(it.id, it.gridX, it.gridY) }.toSet(), "a settled town stays")
-        assertEquals(gold, query("SELECT id, gold FROM clubs") { it.getString(1) to it.getInt(2) }.toMap(), "nothing refunded for the obstacles")
+        // once: a second sweep finds nothing to settle
         assertEquals(0, LandSweep(clubs, service).run())
     }
 }

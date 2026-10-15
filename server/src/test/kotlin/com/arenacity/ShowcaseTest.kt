@@ -15,19 +15,20 @@ class ShowcaseTest {
     private fun check(stadium: Int, lands: LandMap) {
         val city = Showcase.city(stadium, lands)
         val land = lands.main
-        // the main island and the side islands whose zone the stadium allows
+        // the main island and the peoples' islands whose bridge the stadium allows
         val open = Showcase.islands(stadium, lands)
         assertEquals(setOf(land.id) + open.map { it.id }, city.regions, "the main island and the open side islands")
-        assertEquals(open.mapNotNull { it.sport }.toSet(), city.zones)
+        assertEquals(open.mapNotNull { it.people }.toSet(), city.zones)
+        assertEquals(com.arenacity.domain.model.People.entries.filter { Zones.spec(it).requiredStadium <= stadium && lands.island(it) != null }.toSet(), city.zones)
         val ground = LandSet(listOf(land) + open)
         val cells = HashMap<Pair<Int, Int>, BuildingType>()
         for (s in city.slots) {
             val spec = BuildingCatalog.spec(s.type)
             assertTrue(Grid.aligned(s.x, s.y), "${s.type} at ${s.x},${s.y} is off the build grid's tiles")
             assertTrue(s.level in 1..spec.capAt(stadium).coerceAtLeast(1), "${s.type} level ${s.level} over the cap at stadium $stadium")
-            // an arena on its own open island, everything else on the main island
-            if (spec.island != null) assertTrue(lands.allows(ground, s.type, Footprint(s.x, s.y, spec.width, spec.height)), "${s.type} at ${s.x},${s.y} is off its island")
-            else assertTrue(land.fits(Footprint(s.x, s.y, spec.width, spec.height)), "${s.type} at ${s.x},${s.y} is off the island")
+            // everything on the main island (the peoples' islands hold no buildings of the town)
+            assertTrue(land.fits(Footprint(s.x, s.y, spec.width, spec.height)), "${s.type} at ${s.x},${s.y} is off the island")
+            assertTrue(lands.allows(ground, s.type, Footprint(s.x, s.y, spec.width, spec.height)))
             for (x in s.x until s.x + spec.width) for (y in s.y until s.y + spec.height)
                 assertTrue(cells.put(x to y, s.type) == null, "${s.type} overlaps ${cells[x to y]} at $x,$y")
         }
@@ -39,11 +40,10 @@ class ShowcaseTest {
                 BuildingType.SPONSOR_OFFICE to 'o', BuildingType.HOTEL to 'H', BuildingType.ATHLETES_RESIDENCE to 'r', BuildingType.YOUTH_SPORTS_SCHOOL to 'y',
                 BuildingType.SPORTS_SCIENCE_LAB to 'l', BuildingType.SCHOOL to 's', BuildingType.TRANSPORT_HUB to 't', BuildingType.SCOUTING_OFFICE to 'c',
                 BuildingType.RECOVERY_CENTER to 'v', BuildingType.ANALYTICS_CENTER to 'a', BuildingType.COACHING_HQ to 'q')
-            val built = city.slots.filter { it.type != BuildingType.ROAD && it.type != BuildingType.DECOR && BuildingCatalog.spec(it.type).island == null }
+            val built = city.slots.filter { it.type != BuildingType.ROAD && it.type != BuildingType.DECOR }
                 .sumOf { BuildingCatalog.spec(it.type).width * BuildingCatalog.spec(it.type).height }
             println("stadium $stadium on ${land.area} cells: " + city.slots.groupingBy { it.type }.eachCount().entries.sortedBy { it.key.ordinal }.joinToString { "${it.key}=${it.value}" } + ", built $built cells (${built * 100 / land.area} %)")
             for (y in land.y0 until land.y0 + land.h) println((land.x0 until land.x0 + land.w).joinToString("") { x -> cells[x to y]?.let { (ch[it] ?: it.name.first()).toString() } ?: if (land.has(x, y)) "." else " " })
-            for (s in city.slots.filter { BuildingCatalog.spec(it.type).island != null }) println("${s.type} L${s.level} at ${s.x},${s.y}")
         }
         val counts = city.slots.groupingBy { it.type }.eachCount()
         for ((type, n) in counts) assertTrue(n <= BuildingCatalog.spec(type).countAt(stadium), "$type: $n > ${BuildingCatalog.spec(type).countAt(stadium)}")
@@ -51,7 +51,7 @@ class ShowcaseTest {
         val pitch = city.slots.single { it.type == BuildingType.PITCH }
         assertEquals(stadium, pitch.level); assertEquals(lands.stadium, pitch.x to pitch.y)
         val ps = BuildingCatalog.spec(BuildingType.PITCH)
-        for (s in city.slots.filter { it.type != BuildingType.PITCH && BuildingCatalog.spec(it.type).island == null })
+        for (s in city.slots.filter { it.type != BuildingType.PITCH })
             assertTrue(BuildingCatalog.spec(s.type).let { it.width * it.height } < ps.width * ps.height, "${s.type} is as big as the stadium")
         val mx = land.cells.sumOf { it.first + 0.5 } / land.area; val my = land.cells.sumOf { it.second + 0.5 } / land.area
         assertTrue(Math.hypot(pitch.x + ps.width / 2.0 - mx, pitch.y + ps.height / 2.0 - my) < 6, "the stadium is off the meadow's middle ($mx, $my)")
@@ -65,21 +65,16 @@ class ShowcaseTest {
         assertEquals(stadium, Stadium.level(city.slots.map { com.arenacity.domain.model.Building(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), it.type, it.level, it.x, it.y, 0,
             com.arenacity.domain.model.BuildingState.IDLE, null, java.time.Instant.EPOCH, java.time.Instant.EPOCH, java.time.Instant.EPOCH) }))
         // every type the stadium allows is there at least once, the club's buildings every copy (the town as many as fit
-        // spaciously); an arena where its island is open (a mask without that island has none)
+        // spaciously)
         for (type in BuildingType.values()) {
             val spec = BuildingCatalog.spec(type)
             if (type == BuildingType.FENCE || spec.countAt(stadium) == 0) continue
-            if (spec.island != null && open.none { it.sport == spec.island }) { assertEquals(null, counts[type], "$type without its island"); continue }
             assertTrue((counts[type] ?: 0) >= 1, "$type at stadium $stadium")
             if (type !in setOf(BuildingType.HOUSE, BuildingType.BACKYARD_COURT, BuildingType.ROAD, BuildingType.DECOR))
                 assertEquals(spec.countAt(stadium), counts[type], "every $type at stadium $stadium")
         }
-        // the islands hold their arenas only: one in each open island whose arena the stadium allows
-        for (s in city.slots.filter { BuildingCatalog.spec(it.type).island != null }) {
-            val isle = lands.island(BuildingCatalog.spec(s.type).island!!)!!
-            assertTrue(isle in open, "${s.type} on a closed island")
-            assertEquals(1, city.slots.count { isle.fits(footprint(it.type, it.x, it.y, 0)) }, "${isle.id} holds its arena only")
-        }
+        // the peoples' islands hold nothing of the town (their settlements are the client's)
+        for (isle in open) assertEquals(0, city.slots.count { isle.fits(footprint(it.type, it.x, it.y, 0)) }, "${isle.id} holds nothing")
         // the streets: one network on the meadow; the ring round the plaza at every stadium (tiles c - RING .. c + RING - 1
         // round the stadium's middle tile c), at the top the boulevards on the axes from the ring out to the shore — all in
         // tiles of the build grid (Grid.TILE cells), the meadow's whole tiles
@@ -108,16 +103,15 @@ class ShowcaseTest {
         }
         // every tree the stadium allows stands on a kerb or the shore
         assertEquals(BuildingCatalog.spec(BuildingType.DECOR).countAt(stadium), counts[BuildingType.DECOR] ?: 0, "trees at stadium $stadium")
-        // a lawn tile along the shore round every building (an arena's lawn on its island); on tiles a building may front
-        // the street (14 October, pass 3: a 20 m pavement took too much of the meadow)
-        for (s in solid) { val sp = BuildingCatalog.spec(s.type); val own = (sp.island?.let { lands.island(it)!! } ?: land).tiles()
+        // a lawn tile along the shore round every building; on tiles a building may front the street (14 October, pass 3:
+        // a 20 m pavement took too much of the meadow)
+        for (s in solid) { val sp = BuildingCatalog.spec(s.type); val own = land.tiles()
             for (x in s.x / T until (s.x + sp.width) / T) for (y in s.y / T until (s.y + sp.height) / T)
             for (n in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) {
-                // (an island arena takes its island's middle, with a lawn round it where the island has room for one)
-                if (s.type != BuildingType.PITCH && sp.island == null) assertTrue(own.has(n.first, n.second), "${s.type} at ${s.x},${s.y} stands on the shore at $n")
+                if (s.type != BuildingType.PITCH) assertTrue(own.has(n.first, n.second), "${s.type} at ${s.x},${s.y} stands on the shore at $n")
             } }
         // a whole town at the top, the club and the first streets of the town at stadium 5 (the main island's)
-        val built = solid.filter { BuildingCatalog.spec(it.type).island == null }.sumOf { BuildingCatalog.spec(it.type).width * BuildingCatalog.spec(it.type).height }
+        val built = solid.sumOf { BuildingCatalog.spec(it.type).width * BuildingCatalog.spec(it.type).height }
         // (the sport town's buildings are smaller than the old towers and offices: a fifth of the meadow at the top; their
         // footprints doubled on 14 October, a third of the meadow then)
         assertTrue(built * 100 / land.area in (if (stadium == Stadium.MAX_LEVEL) 20..50 else 10..40), "$built of ${land.area} cells built at stadium $stadium")
@@ -140,18 +134,15 @@ class ShowcaseTest {
             val have = buildings.listByClub(d.id)
             val city = Showcase.city(d.stadium, TestLand.ORGANIC)
             assertEquals(city.slots.size, have.size)
-            // its side islands open (the zones OPEN, so a visitor sees them), the arenas on them, the rest on the meadow
-            val open = com.arenacity.domain.usecase.club.openZoneSports(zones, d.id, clock.now())
+            // its peoples' islands open (the zones OPEN, so a visitor sees them, the peoples back), the town on the meadow
+            val open = com.arenacity.domain.usecase.club.openPeoples(zones, d.id, clock.now())
             assertEquals(city.zones, open)
             val land = TestLand.ORGANIC.of(open)
             assertTrue(have.all { TestLand.ORGANIC.allows(land, it.type, footprint(it.type, it.gridX, it.gridY, it.rotation)) }, "${d.name} stands on the organic land")
-            assertTrue(have.any { it.type == BuildingType.BASKETBALL_ARENA }, "${d.name} has its basketball arena")
             assertEquals(TestLand.ORGANIC.id, clubs.rows.getValue(d.id).landMask, "${d.name} needs no land migration")
         }
-        // the top one has every arena on its island; stadium 5 the basketball and volleyball ones (tennis opens at 7, padel at 9)
-        assertEquals(setOf(BuildingType.BASKETBALL_ARENA, BuildingType.VOLLEYBALL_ARENA, BuildingType.TENNIS_ARENA, BuildingType.PADEL_ARENA),
-            buildings.listByClub(com.arenacity.domain.usecase.social.ShowcaseService.DEFS.last().id).filter { BuildingCatalog.spec(it.type).island != null }.map { it.type }.toSet())
-        assertEquals(setOf(BuildingType.BASKETBALL_ARENA, BuildingType.VOLLEYBALL_ARENA),
-            buildings.listByClub(com.arenacity.domain.usecase.social.ShowcaseService.DEFS.first().id).filter { BuildingCatalog.spec(it.type).island != null }.map { it.type }.toSet())
+        // the top one has every people back; stadium 5 the beastfolk and the stone people (the androids return at 7, the shadows at 10)
+        assertEquals(com.arenacity.domain.model.People.entries.toSet(), com.arenacity.domain.usecase.club.openPeoples(zones, com.arenacity.domain.usecase.social.ShowcaseService.DEFS.last().id, clock.now()))
+        assertEquals(setOf(com.arenacity.domain.model.People.BEAST, com.arenacity.domain.model.People.STONE), com.arenacity.domain.usecase.club.openPeoples(zones, com.arenacity.domain.usecase.social.ShowcaseService.DEFS.first().id, clock.now()))
     }
 }

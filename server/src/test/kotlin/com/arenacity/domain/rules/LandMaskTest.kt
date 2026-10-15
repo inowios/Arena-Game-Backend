@@ -21,11 +21,11 @@ class LandMaskTest {
         val seen = HashSet<Pair<Int, Int>>(); val queue = ArrayDeque(listOf(cells.first())); seen += cells.first()
         while (queue.isNotEmpty()) { val (x, y) = queue.removeFirst(); for (n in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) if (n in cells && seen.add(n)) queue.addLast(n) }
         assertEquals(cells.size, seen.size, "the main island is one piece")
-        // a new club's stadium and ticket office stand on it apart; the side islands are locked by a zone sport this server knows
+        // a new club's stadium and ticket office stand on it apart; the side islands are the peoples' this server knows
         val pitch = footprint(BuildingType.PITCH, lands.stadium.first, lands.stadium.second, 0)
         val office = footprint(BuildingType.TICKET_OFFICE, lands.ticket.first, lands.ticket.second, 0)
         assertTrue(main.fits(pitch) && main.fits(office) && !pitch.overlaps(office))
-        for (r in lands.regions - main) assertNotNull(r.sport, "the side island ${r.id} is locked by an unknown sport ${r.lock}")
+        for (r in lands.regions - main) assertNotNull(r.people, "the side island ${r.id} is locked by an unknown people ${r.lock}")
         for (i in lands.regions.indices) for (j in i + 1 until lands.regions.size) assertFalse(lands.regions[i].overlapsBox(lands.regions[j]))
         // the parking cells are off every island
         for (i in 0 until 50) for (row in 0..1) { val (x, y) = Lands.parked(i, row); assertTrue(lands.regions.none { it.has(x, y) }) }
@@ -34,18 +34,9 @@ class LandMaskTest {
             assertTrue(main.has(b.first, b.second), "the $id bridge's foot is off the main island")
             assertTrue((-2..2).any { dx -> (-2..2).any { dy -> !main.has(b.first + dx, b.second + dy) } }, "the $id bridge's foot is far from the land's edge")
         }
-        // every island arena is its island's centrepiece (14 October, pass 4): it fits its island on the build grid's tiles
-        // with a lawn cell round it, and the stadium stays at least as big as any of them
-        val stadium = BuildingCatalog.spec(BuildingType.PITCH)
-        for (t in BuildingType.values()) {
-            val s = BuildingCatalog.spec(t); val isle = s.island?.let { lands.island(it) } ?: continue
-            assertTrue(isle.cells.any { (x, y) -> Grid.aligned(x, y) && isle.fits(Footprint(x - 1, y - 1, s.width + 2, s.height + 2)) },
-                "$t ${s.width}x${s.height} has no tile on the ${isle.id} island with a lawn cell round it")
-            assertTrue(s.width <= stadium.width && s.height <= stadium.height, "$t ${s.width}x${s.height} is bigger than the stadium")
-        }
         // both showcase towns fit it (ShowcaseTest checks them in full)
         for (stadium in listOf(5, 10)) {
-            val ground = LandSet(listOf(main) + Showcase.islands(stadium, lands))   // the arenas on their open islands
+            val ground = LandSet(listOf(main) + Showcase.islands(stadium, lands))   // the main island and the open peoples' islands
             assertTrue(Showcase.city(stadium, lands).slots.all { lands.allows(ground, it.type, footprint(it.type, it.x, it.y, 0)) })
         }
     }

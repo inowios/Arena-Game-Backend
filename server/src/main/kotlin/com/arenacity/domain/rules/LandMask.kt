@@ -1,6 +1,6 @@
 package com.arenacity.domain.rules
 
-import com.arenacity.domain.model.ZoneSport
+import com.arenacity.domain.model.People
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -9,12 +9,12 @@ import java.util.BitSet
 
 /**
  * One region of the land mask: [w]×[h] cells from ([x0], [y0]) in the club's cell frame (cell (x, y) = world x in
- * [10x, 10x+10), z in [10y, 10y+10)); a building may stand on a set cell. [lock]: the zone sport whose arena opens the
- * region (a side island), null for the main island.
+ * [10x, 10x+10), z in [10y, 10y+10)); a building may stand on a set cell. [lock]: the people whose island the region is
+ * (a side island, opened by its bridge: rules.Zones; "BEAST", "STONE", "ANDROID", "SHADOW"), null for the main island.
  */
 class LandRegion(val id: String, val lock: String?, val x0: Int, val y0: Int, val w: Int, val h: Int, private val bits: BitSet) {
-    /** [lock] as a zone sport; null for the main island, or for a lock this server does not know (such a region never opens). */
-    val sport: ZoneSport? = lock?.let { l -> runCatching { ZoneSport.valueOf(l) }.getOrNull() }
+    /** [lock] as a people (an old mask's sport name reads as its people); null for the main island, or for a lock this server does not know (such a region never opens). */
+    val people: People? = People.parse(lock)
     val area: Int = bits.cardinality()
 
     fun has(x: Int, y: Int): Boolean {
@@ -70,7 +70,7 @@ class LandRegion(val id: String, val lock: String?, val x0: Int, val y0: Int, va
     }
 }
 
-/** The land a club builds on now: the main island and the side islands whose arena opened them (the regions are sea apart). */
+/** The land a club builds on now: the main island and the side islands whose bridge opened them (the regions are sea apart). */
 class LandSet(val regions: List<LandRegion>) {
     fun has(x: Int, y: Int) = regions.any { it.has(x, y) }
     /** A footprint stands on one region: islands are sea apart, nothing straddles two. */
@@ -85,8 +85,8 @@ class LandSet(val regions: List<LandRegion>) {
  * был ровно квадратным»): the buildable cells follow the meadow painted in the owner's picture, one 10 m cell each, in
  * `land_mask.json` — written by the art pipeline, byte-identical in this server's resources and in the client, which
  * compares its copy's [id] with the one GET /club sends. The server is the authority. [regions]: the main island (the
- * club's plot, unlocked) and the side islands, each locked by the zone sport whose arena opens it (the club's zone of that
- * sport OPEN: [of]). Anchors: the stadium's and the first ticket office's top-left cells (a new club's two buildings),
+ * club's plot, unlocked) and the side islands, each the island of a people, locked until the club's bridge to it stands
+ * (the club's zone of that people OPEN: [of]). Anchors: the stadium's and the first ticket office's top-left cells (a new club's two buildings),
  * the bridges' feet on the main island by island id (the cell where each bridge's crossing meets the buildable land:
  * the roads end there, Showcase's spurs).
  */
@@ -107,32 +107,26 @@ class LandMap(
     /** The text GET /catalog/land serves: the file itself when it came from one. */
     val json: String = json ?: encode()
 
-    /** The land of a club whose arenas of [open] sports are open: the main island and the side islands those sports lock. */
-    fun of(open: Set<ZoneSport>): LandSet =
-        if (open.isEmpty()) home else LandSet(listOf(main) + regions.filter { it !== main && it.sport != null && it.sport in open })
+    /** The land of a club whose bridges to the islands of [open] peoples stand: the main island and those islands. */
+    fun of(open: Set<People>): LandSet =
+        if (open.isEmpty()) home else LandSet(listOf(main) + regions.filter { it !== main && it.people != null && it.people in open })
 
     /** The regions not in [land]: the side islands still locked. */
     fun locked(land: LandSet): List<LandRegion> = regions.filter { r -> land.regions.none { it === r } }
 
-    /** The side island [sport]'s zone opens (null when this mask has none). */
-    fun island(sport: ZoneSport): LandRegion? = regions.firstOrNull { it !== main && it.sport == sport }
+    /** The island of [people] (null when this mask has none). */
+    fun island(people: People): LandRegion? = regions.firstOrNull { it !== main && it.people == people }
 
     /**
-     * A [type] may stand at [fp] on [land]: an island arena (BuildingSpec.island) on its own side island only, and only
-     * once [land] holds it (its zone open); anything else anywhere on [land].
+     * A [type] may stand at [fp] on [land]: anywhere on it (the island arenas, which stood on their own island only,
+     * went on 15 October 2026: V44). [type] stays for the callers (a building with a place of its own may come back).
      */
-    fun allows(land: LandSet, type: BuildingType, fp: Footprint): Boolean {
-        val sport = BuildingCatalog.spec(type).island ?: return land.fits(fp)
-        val isle = island(sport) ?: return false
-        return land.regions.any { it === isle } && isle.fits(fp)
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun allows(land: LandSet, type: BuildingType, fp: Footprint): Boolean = land.fits(fp)
 
-    /** The cells a [type] may stand on in [land]: its own island's for an island arena (none while it is locked), else the land's. */
-    fun cellsFor(land: LandSet, type: BuildingType): List<Pair<Int, Int>> {
-        val sport = BuildingCatalog.spec(type).island ?: return land.cells
-        val isle = island(sport)?.takeIf { i -> land.regions.any { it === i } } ?: return emptyList()
-        return isle.cells
-    }
+    /** The cells a [type] may stand on in [land]: the land's. */
+    @Suppress("UNUSED_PARAMETER")
+    fun cellsFor(land: LandSet, type: BuildingType): List<Pair<Int, Int>> = land.cells
 
     /** The sha1 of the canonical text ([canonical]); equals [id] for a well-formed file. */
     val computedId: String get() = sha1(regions)

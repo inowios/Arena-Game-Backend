@@ -9,7 +9,7 @@ import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.Obstacle
 import com.arenacity.domain.model.ObstacleState
-import com.arenacity.domain.model.ZoneSport
+import com.arenacity.domain.model.People
 import com.arenacity.domain.repository.ObstacleRepository
 import com.arenacity.domain.repository.RehomeLogRepository
 import com.arenacity.domain.repository.RehomeMove
@@ -27,7 +27,7 @@ fun interface ClubInitializer { suspend fun onClubCreated(club: Club) }
 fun interface BuildingListener { suspend fun onCompleted(building: Building) }
 
 data class ClubState(val club: Club, val buildings: List<Building>, val gridSize: Int, val now: Instant, val obstacles: List<Obstacle> = emptyList(),
-                     /** The land a building may stand on: the main island, and the side islands whose arena opened them (rules.Lands). */
+                     /** The land a building may stand on: the main island, and the peoples' islands whose bridge opened them (rules.Lands). */
                      val land: LandSet = Lands.MAP.home) {
     /** The stadium level whose limits apply now (the previous one while the stadium itself is being upgraded). */
     val stadium get() = Stadium.level(buildings)
@@ -57,10 +57,10 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
     /** What the running live events do (shorter constructions, more income, more gold in obstacles); set by DI. */
     var effects: suspend () -> EventEffects = { EventEffects() }
     /**
-     * The zone sports whose arena opens their side island for building: the club's zones that are OPEN (bought and
-     * restored; DI reads them, [openZoneSports]). None by default (tests).
+     * The peoples whose island is open for building: the club's zones that are OPEN (the bridge built; DI reads them,
+     * [openPeoples]). None by default (tests).
      */
-    var openZones: suspend (UUID) -> Set<ZoneSport> = { emptySet() }
+    var openZones: suspend (UUID) -> Set<People> = { emptySet() }
     suspend fun buildSeconds(base: Long) = effects().build(base)
 
     /** The player's club; a retired club (account deleted or moved away) belongs to nobody any more. */
@@ -79,25 +79,20 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         return ClubState(club, list, grid, now, if (club.isBot) emptyList() else obstaclesOf(club, list, land, now), land)
     }
 
-    /** A footprint off the club's land: on a side island still locked its arena opens it, anywhere else it is simply outside. */
+    /** A footprint off the club's land: on a people's island still locked its bridge opens it, anywhere else it is simply outside. */
     fun requireLand(st: ClubState, fp: Footprint) {
         requireTile(fp)
         if (st.land.fits(fp)) return
-        if (lands.locked(st.land).any { it.fits(fp) }) throw ValidationException("The island opens with its arena")
+        if (lands.locked(st.land).any { it.fits(fp) }) throw ValidationException("The island opens with its bridge")
         throw ValidationException("Outside your land")
     }
 
     /**
-     * Where a [type] may stand ([LandMap.allows]): on the club's land ([requireLand]); an island arena on its own side
-     * island only, once its zone opened that island (the server is the authority).
+     * Where a [type] may stand ([LandMap.allows]): on the club's land ([requireLand]; the island arenas, built on their
+     * own island only, went on 15 October 2026). The server is the authority.
      */
-    fun requireSite(st: ClubState, type: BuildingType, fp: Footprint) {
-        requireTile(fp)
-        val sport = BuildingCatalog.spec(type).island ?: return requireLand(st, fp)
-        val isle = lands.island(sport)
-        if (isle == null || !isle.fits(fp)) throw ValidationException("This arena is built on its own island")
-        if (st.land.regions.none { it === isle }) throw ValidationException("Open this island first")
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun requireSite(st: ClubState, type: BuildingType, fp: Footprint) = requireLand(st, fp)
 
     /** Every building stands on the build grid's tiles (14 October, pass 3: [Grid.TILE]): its top-left cell even both ways. */
     fun requireTile(fp: Footprint) {
@@ -121,17 +116,16 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
     }
 
     /**
-     * Whatever stands off [land], or where it may not stand, moves onto it. A building may not stand off the land, an island
-     * arena off its own island ([LandMap.allows]; the old courts became arenas, V36), and no two may overlap (the sport
+     * Whatever stands off [land], or where it may not stand, moves onto it. A building may not stand off the land
+     * ([LandMap.allows]; the island arenas that stood on their own island only went with V44), and no two may overlap (the sport
      * town's footprints grew, V36): the stadium keeps its place first, then the biggest, the oldest first; a road or fence
      * tile under one of them goes, decor moves. The road and fence tiles that go are refunded at what their levels cost
      * (the player did not cause the loss; moved tile by tile, a boulevard the shore cut came back as stray tiles and blobs
      * at the meadow's edge). Then every lost building is parked off the map ([Lands.parked]), so no two ever share a
      * top-left cell mid-way (the (club, x, y) uniqueness: one moved onto the corner of another still waiting to move was a
-     * 500). Then, the biggest first (the stadium first), each goes to the free spot nearest where it stood — an arena on
-     * its own island, while that is open —, turned a quarter if only that fits, with a lawn cell round it where there is
-     * room anywhere (decor needs none: it goes to the nearest free cell); a building the land has no room for (an arena
-     * whose island is closed) stays parked — the client lists it off the land, to be placed by hand. Obstacles off the land
+     * 500). Then, the biggest first (the stadium first), each goes to the free spot nearest where it stood, turned a
+     * quarter if only that fits, with a lawn cell round it where there is room anywhere (decor needs none: it goes to the
+     * nearest free cell); a building the land has no room for stays parked — the client lists it off the land, to be placed by hand. Obstacles off the land
      * or under a building that stays go; the gold of one being cleared or cleared is the club's. Every move and removal is
      * logged. Returns that gold and the coins refunded.
      */
