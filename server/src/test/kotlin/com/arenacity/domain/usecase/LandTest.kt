@@ -94,14 +94,15 @@ class LandTest {
         val st = get(user)
         assertEquals(listOf("main"), st.land.ids)
         assertEquals(listOf("android"), notched.lands.locked(st.land).map { it.id })
-        // the academy (8×6) would reach into the sea of the cut corner (x >= 30, y <= 0); a tile left it stands on the meadow
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 24, -4, 0) }.template)
+        // the academy (10×6 since 16 October) would reach into the sea of the cut corner (x >= 30, y <= 0); a tile left it
+        // stands on the meadow
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 22, -4, 0) }.template)
         // on the build grid's tiles only (14 October, pass 3): a top-left cell even both ways
-        assertEquals("Off the build grid", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 21, -4, 0) }.template)
-        val academy = place(user, BuildingType.ACADEMY, 22, -4, 0)
-        assertEquals("Outside your land", assertFailsWith<ValidationException> { move(user, academy.id, 24, -4, 0) }.template)
-        assertEquals("Off the build grid", assertFailsWith<ValidationException> { move(user, academy.id, 20, -3, 0) }.template)
-        move(user, academy.id, 20, -4, 0)
+        assertEquals("Off the build grid", assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 19, -4, 0) }.template)
+        val academy = place(user, BuildingType.ACADEMY, 20, -4, 0)
+        assertEquals("Outside your land", assertFailsWith<ValidationException> { move(user, academy.id, 22, -4, 0) }.template)
+        assertEquals("Off the build grid", assertFailsWith<ValidationException> { move(user, academy.id, 18, -3, 0) }.template)
+        move(user, academy.id, 18, -4, 0)
         // roads and fences tile by tile
         assertEquals("Outside your land", assertFailsWith<ValidationException> { draw(user, listOf(28 to 2, 30 to 0), BuildingType.ROAD) }.template)
         assertEquals(1, draw(user, listOf(28 to 2), BuildingType.ROAD).size)
@@ -172,7 +173,7 @@ class LandTest {
         assertEquals(90, list.getValue(office.id).rotation)
         assertNotEquals(28 to -6, list.getValue(court.id).let { it.gridX to it.gridY })
         assertEquals(3, list.getValue(academy.id).level)
-        assertEquals(30 to 2, list.getValue(academy.id).let { it.gridX to it.gridY }, "the academy just below the cut corner, the nearest free spot")
+        assertEquals(28 to 2, list.getValue(academy.id).let { it.gridX to it.gridY }, "the academy just below the cut corner, the nearest free spot")
         assertEquals(0 to 30, list.getValue(house.id).let { it.gridX to it.gridY }, "the house onto the nearest tile")
         assertTrue(tree.id in list, "decor moves too")
         // the road and fence tiles in the sea go, refunded at what their levels cost (not left as stray tiles at the shore)
@@ -204,7 +205,7 @@ class LandTest {
         val small = service(tiny)
         val club = newClub()
         val training = at(club.id, BuildingType.TRAINING_CENTER, 22, 30)
-        val academy = at(club.id, BuildingType.ACADEMY, 30, 30)
+        val academy = at(club.id, BuildingType.HALL_OF_FAME, 30, 30)   // 8 deep (the academy, 10×6, fits a 6-deep strip)
         val st = small.state(user)
         val parked = st.buildings.filter { Lands.isParked(it.gridY) }.associateBy { it.id }
         assertEquals(setOf(training.id, academy.id), parked.keys)

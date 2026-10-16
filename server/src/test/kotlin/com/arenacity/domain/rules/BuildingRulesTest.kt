@@ -45,7 +45,7 @@ class BuildingRulesTest {
         // 16 October: the big buildings a tile or two bigger each way (the owner: far too small beside the 16×16 stadium),
         // the houses 10 at the top, the ticket offices 2, the yard courts 2; the recovery centre and the coaching HQ merged away
         val list = mapOf(
-            BuildingType.PITCH to Row(16, 16, 1, 1), BuildingType.ACADEMY to Row(8, 8, 1, 1), BuildingType.TRAINING_CENTER to Row(12, 8, 1, 1),
+            BuildingType.PITCH to Row(16, 16, 1, 1), BuildingType.ACADEMY to Row(10, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(12, 8, 1, 1),
             BuildingType.MEDICAL_CENTER to Row(8, 6, 2, 1), BuildingType.TICKET_OFFICE to Row(6, 6, 1, 2), BuildingType.HOUSE to Row(6, 4, 1, 10),
             BuildingType.SHOPPING_CENTER to Row(8, 8, 2, 2), BuildingType.HALL_OF_FAME to Row(8, 8, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 2),
             BuildingType.FAN_ZONE to Row(8, 8, 2, 1), BuildingType.MEDIA_CENTER to Row(8, 6, 6, 1), BuildingType.SPONSOR_OFFICE to Row(6, 6, 6, 1),

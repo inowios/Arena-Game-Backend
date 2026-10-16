@@ -297,7 +297,7 @@ object BuildingCatalog {
     // stadium is the city's colossal centrepiece, make it bigger; 12×12 before; the island arenas went on 15 October); DECOR,
     // FENCE and ROAD one tile each. 16 October, later (the owner: next to the 16×16 stadium the buildings are far too small —
     // more cells, wider, much taller): most buildings a tile bigger each way where the island still holds the whole
-    // showcase town (the academy 8×8, the training centre 12×8, the hall of fame, shopping centre and fan zone 8×8, the
+    // showcase town (the academy 10×6, the training centre 12×8, the hall of fame, shopping centre and fan zone 8×8, the
     // others 8×6 or 6×6; the house, the school, the yard court and the transport hub as they were or near it), the
     // recovery centre and the coaching HQ merged away (V46), and to make room the houses 10 at the top (20), the ticket
     // offices 2 (3), the yard courts 2 (4) and the fences 20 (40); the roads 120 tiles (the ring round the bigger stadium
@@ -306,7 +306,7 @@ object BuildingCatalog {
     // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %).
     val specs: Map<BuildingType, BuildingSpec> = (listOf(
         BuildingSpec(PITCH, 16, 16, true, levelTable.getValue(PITCH)),
-        BuildingSpec(ACADEMY, 8, 8, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
+        BuildingSpec(ACADEMY, 10, 6, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
         BuildingSpec(TRAINING_CENTER, 12, 8, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
         BuildingSpec(MEDICAL_CENTER, 8, 6, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
         BuildingSpec(TICKET_OFFICE, 6, 6, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 2, 2, 2), CAP10),
