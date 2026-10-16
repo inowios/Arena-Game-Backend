@@ -282,17 +282,23 @@ object Showcase {
         }
         val sx = spans(xs, bx0, bx1); val sy = spans(ys, by0, by1)
         val plazaX = sx.filter { it.first > xr0 && it.last < xr1 }; val plazaY = sy.filter { it.first > yr0 && it.last < yr1 }
-        // the plaza: four quadrants round the stadium, each a lot facing the stands and a smaller one by the stadium's end
+        // the plaza: four quadrants round the stadium, each a lot facing the stands and a smaller one by the stadium's end —
+        // the stadium-city's picture rises far above its footprint and hides what stands on its far sides (the camera looks
+        // from high x and y; 16 October, the owner missed the hall of fame and the media centre there), so the club's
+        // buildings take the lots in sight and the far side only what is left of the town
         val quadrants = listOf(0 to 0, 1 to 0, 1 to 1, 0 to 1)
-        val front = quadrants.mapNotNull { (i, j) ->
+        val frontAll = quadrants.mapNotNull { (i, j) ->
             val qx = plazaX[i]; val qy = plazaY[j]
             if (j == 0) lot(qx.first, qx.last + 1, qy.first, py - 1) else lot(qx.first, qx.last + 1, py + ph + 1, qy.last + 1)
         }
-        val ends = quadrants.mapNotNull { (i, j) ->
+        val endsAll = quadrants.mapNotNull { (i, j) ->
             val qx = plazaX[i]; val qy = plazaY[j]
             lot(if (i == 0) qx.first else px + pw + 1, if (i == 0) px - 1 else qx.last + 1,
                 if (j == 0) py else qy.first, if (j == 0) qy.last + 1 else py + ph)   // a lawn tile off the front lots
         }
+        val hidden = { l: Lot -> l.y1 <= py || l.x1 <= px }
+        // the lots in sight first: the plaza's trade, the press and the campus go there, the far side takes the town's leftovers
+        val front = frontAll.sortedBy(hidden); val ends = endsAll.sortedBy(hidden)
         // the blocks round the plaza going clockwise from the top, every other one first (a pinwheel), then the outer ones
         // ring by ring, each ring clockwise from the top-left corner
         val px0 = sx.indexOf(plazaX.first()); val px1 = sx.indexOf(plazaX.last()); val py0 = sy.indexOf(plazaY.first()); val py1 = sy.indexOf(plazaY.last())
@@ -317,9 +323,9 @@ object Showcase {
             return out
         }
         val plaza = turns(PLAZA)
-        deal(front, plaza)
+        deal(front.filterNot(hidden), plaza)
         val press = turns(ENDS).apply { addAll(plaza) }
-        deal(ends, press)
+        deal(ends.filterNot(hidden), press)
         // the campus takes as few blocks as hold two each, the town the other blocks beside the plaza, then the outer ones
         // the biggest first (16 October: the grown footprints — the academy no longer found a lot once the smaller ones took them)
         val campus = turns(CAMPUS.sortedByDescending { BuildingCatalog.spec(it).let { s -> s.width * s.height } }).apply { addAll(press) }
