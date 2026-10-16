@@ -295,7 +295,7 @@ class ApiIT {
         assertEquals(500, rei["spent"]!!.jsonPrimitive.int); assertEquals(1500, rei["club"]!!.o()["gold"]!!.jsonPrimitive.int)
         assertEquals("CRYSTALS", rei["hero"]!!.o()["source"]!!.jsonPrimitive.content)
         assertEquals(0, call(HttpMethod.Post, "/club/heroes/p006/unlock", t).data.o()["spent"]!!.jsonPrimitive.int)   // idempotent
-        call(HttpMethod.Post, "/club/heroes/p012/unlock", t, expect = 400)   // the beasts need stadium 3
+        call(HttpMethod.Post, "/club/heroes/p012/unlock", t, expect = 400)   // the beasts need stadium 4
         call(HttpMethod.Post, "/club/heroes/p999/unlock", t, expect = 404)
         assertEquals(7, call(HttpMethod.Get, "/club/heroes", t).data.o()["owned"]!!.jsonPrimitive.int)
         // a card match result: the heroes who played earn by the result

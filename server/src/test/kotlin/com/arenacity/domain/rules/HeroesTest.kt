@@ -48,7 +48,7 @@ class HeroesTest {
     @Test
     fun `peoples open with the stadium and cost by rarity`() {
         assertEquals(listOf(300, 500, 900, 1500), HeroGroup.entries.map { Heroes.price(it) })
-        val stadium = mapOf(People.BEAST to 3, People.STONE to 3, People.ANDROID to 5, People.SHADOW to 7)
+        val stadium = mapOf(People.BEAST to 4, People.STONE to 5, People.ANDROID to 7, People.SHADOW to 10)
         for (h in HeroCatalog.ALL.filter { it.people != null }) {
             val rule = Heroes.rule(h)
             assertEquals(UnlockKind.FOLK, rule.kind); assertNull(rule.chapter)
@@ -59,7 +59,7 @@ class HeroesTest {
             assertTrue(Heroes.canBuy(rule, rule.stadium, rule.gold))
         }
         assertEquals(1500, Heroes.rule(hero("p042")).gold)   // Noctis Vale, a shadow legend
-        assertEquals(7, Heroes.rule(hero("p042")).stadium)
+        assertEquals(10, Heroes.rule(hero("p042")).stadium)
     }
 
     @Test

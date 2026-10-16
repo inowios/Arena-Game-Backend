@@ -25,8 +25,8 @@ object Heroes {
     /** The humans the story «Іскра» brings, by chapter (the chapter missions come later; for now they are bought for gold). */
     val STORY = mapOf("p004" to 2, "p005" to 3, "p006" to 4, "p008" to 5, "p002" to 6)
 
-    /** The stadium level at which a people's heroes can be opened (its island's era). */
-    val FOLK_STADIUM = mapOf(People.BEAST to 3, People.STONE to 3, People.ANDROID to 5, People.SHADOW to 7)
+    /** The stadium level at which a people's heroes can be opened: the one its island's bridge needs (rules.Zones: 4 / 5 / 7 / 10). */
+    val FOLK_STADIUM: Map<People, Int> get() = Zones.specs.mapValues { it.value.requiredStadium }
 
     /** The price in gold by rarity (story heroes too: Mirai, Raiga 900, Rei, Jun 500, Toya 1 500). */
     fun price(group: HeroGroup): Int = when (group) {

@@ -47,7 +47,7 @@ class HeroesUseCasesTest {
         assertNull(mirai.owned); assertEquals(UnlockKind.STORY, mirai.rule.kind); assertEquals(2, mirai.rule.chapter)
         assertTrue(mirai.available); assertFalse(mirai.canBuy)   // 50 gold at the start
         val beast = r.heroes.single { it.spec.id == "p012" }
-        assertFalse(beast.available); assertFalse(beast.canBuy); assertEquals(3, beast.rule.stadium)
+        assertFalse(beast.available); assertFalse(beast.canBuy); assertEquals(4, beast.rule.stadium)
     }
 
     @Test
@@ -71,13 +71,13 @@ class HeroesUseCasesTest {
         val again = use.unlock(u1, "p006")
         assertEquals(0, again.spent); assertEquals(1500, again.club.gold)
         assertEquals(0, use.unlock(u1, "p001").spent)   // a start hero
-        // the beasts need stadium 3
+        // the beasts need stadium 4 (their island's bridge)
         val e = assertFailsWith<ValidationException> { use.unlock(u1, "p018") }
-        assertEquals("Requires stadium level 3", e.message)
-        stadium(club.id, 3)
+        assertEquals("Requires stadium level 4", e.message)
+        stadium(club.id, 4)
         assertTrue(use.roster(u1).heroes.single { it.spec.id == "p018" }.canBuy)
         assertEquals(300, use.unlock(u1, "p018").spent)   // Bryn Dask, common
-        assertFailsWith<ValidationException> { use.unlock(u1, "p032") }   // androids: stadium 5
+        assertFailsWith<ValidationException> { use.unlock(u1, "p032") }   // androids: stadium 7
         assertFailsWith<NotFoundException> { use.unlock(u1, "p999") }
         assertEquals(1200, clubs.findById(club.id)!!.gold)
         assertEquals(8, use.roster(u1).heroes.count { it.owned != null })
