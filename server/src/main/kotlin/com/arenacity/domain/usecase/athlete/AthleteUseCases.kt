@@ -71,15 +71,16 @@ class ClaimAcademyUseCase(private val service: ClubService, private val clubs: C
     suspend operator fun invoke(userId: UUID, sport: Sport = Sport.FOOTBALL): Athlete = tx {
         val st = service.state(userId, lock = true)
         if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club, clubBuildings = st.buildings)) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + sport.name))
-        val academy = st.buildings.firstOrNull { it.type == BuildingType.ACADEMY && it.state == BuildingState.IDLE } ?: throw ValidationException("Build an academy first")
+        // the youth sports school's graduates (16 October: the academy's before, the owner's building system)
+        val school = st.buildings.firstOrNull { it.type == BuildingType.YOUTH_SPORTS_SCHOOL && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a youth sports school first")
         val now = clock.now()
         val next = st.club.academyNextAt
-        if (next != null && now.isBefore(next)) throw ConflictException("Next academy graduate in {0}", java.time.Duration.between(now, next))
+        if (next != null && now.isBefore(next)) throw ConflictException("Next graduate in {0}", java.time.Duration.between(now, next))
         if (athletes.listByClub(st.club.id).count { it.sport == sport } >= com.arenacity.domain.rules.Careers.squadMax(sport)) throw ConflictException("The squad is full — release someone first")
-        val q = TrainingRules.academyQuality(academy.level)
+        val q = TrainingRules.graduateQuality(school.level)
         val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, sport, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
-        clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.ACADEMY_INTERVAL_SECONDS), updatedAt = now))
+        clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.graduateIntervalSeconds(school.level)), updatedAt = now))
         progress.record(st.club.id, com.arenacity.domain.rules.ProgressEvent.ACADEMY_GRADUATE)
         athlete
     }

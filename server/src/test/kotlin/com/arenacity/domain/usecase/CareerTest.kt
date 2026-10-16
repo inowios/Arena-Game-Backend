@@ -93,7 +93,8 @@ class CareerTest {
     fun `scouting needs an academy and signs one player a day`() = runBlocking<Unit> {
         setup()
         assertFailsWith<ValidationException> { scouting.report(user) }
-        place(user, BuildingType.ACADEMY, 8, 28, 0).let { speed(user, it.id) }
+        buildings.setStadium(club().id, 2)   // the scouting office (the academy's reports until 16 October) opens at stadium 2
+        place(user, BuildingType.SCOUTING_OFFICE, 8, 28, 0).let { speed(user, it.id) }
         val r = scouting.report(user)
         assertEquals(listOf("PROSPECT", "PRIME", "VETERAN"), r.offers.map { it.kind })
         assertTrue(r.offers[0].athlete.age in 17..19 && r.offers[2].athlete.age in 30..32)

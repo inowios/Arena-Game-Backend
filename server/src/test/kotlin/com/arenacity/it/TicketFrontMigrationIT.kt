@@ -61,8 +61,8 @@ class TicketFrontMigrationIT {
         // at 3, 22 — on the main island, beside the stadium on the screen with lawn round it (at 16, 21 it touched the
         // stadium and its drawing covered the near stand) — and the start-up sweep moves an office V37 left under it
         // (on the build grid's tiles since 14 October, pass 3: the office 4×4 at 4, 22, the 12×12 stadium at 10, 10)
-        assertEquals(4 to 22, Lands.MAP.ticket)
-        val office = footprint(BuildingType.TICKET_OFFICE, 4, 22, 0)
+        assertEquals(2 to 22, Lands.MAP.ticket)
+        val office = footprint(BuildingType.TICKET_OFFICE, 2, 22, 0)
         assertTrue(Lands.MAP.main.fits(office))
         val pitch = footprint(BuildingType.PITCH, Lands.MAP.stadium.first, Lands.MAP.stadium.second, 0)
         assertFalse(Footprint(office.x - 1, office.y - 1, office.w + 2, office.h + 2).overlaps(pitch))

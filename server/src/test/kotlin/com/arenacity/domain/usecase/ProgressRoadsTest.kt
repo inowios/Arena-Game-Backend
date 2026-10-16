@@ -94,8 +94,8 @@ class ProgressRoadsTest {
         val office = buildings.listByClub(club().id).first { it.type == BuildingType.TICKET_OFFICE }
         val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.HALL_OF_FAME, 1, office.gridX, office.gridY + 4, 0, BuildingState.IDLE, null, now, now, now))
         val v = museum.of(club().id)
-        assertEquals(1, v.level); assertEquals(6, v.capacity)
-        assertTrue(v.exhibits.size <= 6)
+        assertEquals(1, v.level); assertEquals(3, v.capacity)   // ten levels since 16 October: the old first level's 6 at the second
+        assertTrue(v.exhibits.size <= 3)
         assertEquals(MuseumRules.atmospherePct(1), Atmosphere.of(buildings.listByClub(club().id)).getValue(office.id).museum)
         assertEquals(0, Atmosphere.of(buildings.listByClub(club().id)).getValue(m.id).museum)
     }

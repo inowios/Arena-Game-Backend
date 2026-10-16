@@ -37,6 +37,9 @@ Only decorations have looks	Only decorations have looks	Solo las decoraciones ti
 Emblem too large	The emblem is too large	El escudo es demasiado grande	O escudo é grande demais	Эмблема слишком большая	Емблема завелика
 # --- athletes & lineups
 Athlete not found	Athlete not found	Atleta no encontrado	Atleta não encontrado	Спортсмен не найден	Спортсмена не знайдено
+Build a youth sports school first	Build a youth sports school first	Primero construye una escuela deportiva infantil	Construa uma escolinha de esportes primeiro	Сначала постройте детскую спортшколу	Спершу збудуйте дитячу спортшколу
+Build a scouting office first	Build a scouting office first	Primero construye una oficina de ojeadores	Construa uma central de olheiros primeiro	Сначала постройте скаутский центр	Спершу збудуйте скаутський центр
+Next graduate in {0}	Next graduate in {0}	Próximo canterano en {0}	Próximo formado em {0}	Следующий выпускник через {0}	Наступний випускник через {0}
 Build an academy first	Build an academy first	Primero construye una academia	Construa uma academia primeiro	Сначала постройте академию	Спершу збудуйте академію
 Build a training centre first	Build a training centre first	Primero construye un centro de entrenamiento	Construa um centro de treinamento primeiro	Сначала постройте тренировочный центр	Спершу збудуйте тренувальний центр
 Build a medical centre first	Build a medical centre first	Primero construye un centro médico	Construa um centro médico primeiro	Сначала постройте медцентр	Спершу збудуйте медцентр
@@ -261,6 +264,7 @@ building.RECOVERY_CENTER	Recovery Center	Centro de recuperación	Centro de recup
 building.ANALYTICS_CENTER	Analytics Center	Centro de análisis	Centro de análise	Аналитический центр	Аналітичний центр
 building.COACHING_HQ	Coaching HQ	Sede técnica	Sede técnica	Тренерский штаб	Тренерський штаб
 building.ATHLETES_RESIDENCE.about	Your athletes will live here between matches.	Aquí vivirán tus atletas entre partidos.	Seus atletas vão morar aqui entre as partidas.	Здесь будут жить ваши спортсмены между матчами.	Тут житимуть ваші спортсмени між матчами.
+building.ACADEMY.about	Will teach your players' advanced skills.	Enseñará a tus jugadores habilidades avanzadas.	Vai ensinar habilidades avançadas aos seus jogadores.	Будет учить игроков продвинутым приёмам.	Навчатиме гравців просунутих прийомів.
 building.YOUTH_SPORTS_SCHOOL.about	Will bring up young athletes for every section.	Formará a jóvenes atletas para cada sección.	Vai formar jovens atletas para cada seção.	Будет растить юных спортсменов для всех секций.	Ростиме юних спортсменів для всіх секцій.
 building.SPORTS_SCIENCE_LAB.about	Will study your athletes to make training pay off more.	Estudiará a tus atletas para que los entrenamientos rindan más.	Vai estudar seus atletas para que os treinos rendam mais.	Будет изучать спортсменов, чтобы тренировки давали больше.	Вивчатиме спортсменів, щоб тренування давали більше.
 building.SCHOOL.about	Will teach the town's children and draw new families to the town.	Educará a los niños del pueblo y atraerá nuevas familias.	Vai ensinar as crianças da cidade e atrair novas famílias.	Будет учить детей города и привлекать в него новые семьи.	Навчатиме дітей міста й приваблюватиме нові родини.

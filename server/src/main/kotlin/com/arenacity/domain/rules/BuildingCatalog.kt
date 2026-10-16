@@ -84,6 +84,8 @@ object BuildingCatalog {
 
     private val CAP10 = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
     private val CAP8 = listOf(1, 2, 3, 4, 4, 5, 6, 6, 7, 8)
+    /** The academy's, training centre's and medical centre's ten levels (16 October; eight before, [CAP8]): 7 and 8 a stadium earlier, 9 and 10 at the top. */
+    private val CAP10X = listOf(1, 2, 3, 4, 4, 5, 6, 7, 8, 10)
     private fun countsFrom(vararg c: Int) = c.toList()
     /** One copy from stadium [unlock] on. */
     private fun oneFrom(unlock: Int) = List(Stadium.MAX_LEVEL) { if (it + 1 >= unlock) 1 else 0 }
@@ -214,15 +216,20 @@ object BuildingCatalog {
             L(1_080_000, 57 * H, stadium = 10, incomePerHour = 5_300, capHours = 16),
             L(1_400_000, 66 * H, stadium = 10, incomePerHour = 6_000, capHours = 16),
         ),
+        // the academy teaches the cards' advanced skills (docs/claude/BUILDINGS-SYSTEM.md, 16 October): «soon» until the card
+        // game has them; its graduates went to the youth sports school, its scouting to the scouting office. Ten levels
+        // (eight before): levels 7 and 8 a stadium earlier, 9 and 10 at the top, each about half again the one before
         ACADEMY to listOf(
-            L(1_500, 10 * M, stadium = 1, effect = 40),
-            L(3_400, 25 * M, stadium = 2, effect = 44),
-            L(7_700, 55 * M, stadium = 3, effect = 48),
-            L(17_000, 2 * H, stadium = 4, effect = 52),
-            L(39_000, 5 * H, stadium = 6, effect = 57),
-            L(88_000, 11 * H, stadium = 7, effect = 62),
-            L(200_000, 26 * H, stadium = 9, effect = 67),
-            L(450_000, 60 * H, stadium = 10, effect = 72),
+            L(1_500, 10 * M, stadium = 1),
+            L(3_400, 25 * M, stadium = 2),
+            L(7_700, 55 * M, stadium = 3),
+            L(17_000, 2 * H, stadium = 4),
+            L(39_000, 5 * H, stadium = 6),
+            L(88_000, 11 * H, stadium = 7),
+            L(200_000, 26 * H, stadium = 8),
+            L(450_000, 60 * H, stadium = 9),
+            L(680_000, 63 * H, stadium = 10),
+            L(1_000_000, 66 * H, stadium = 10),
         ),
         TRAINING_CENTER to listOf(
             L(2_400, 20 * M, stadium = 1, effect = 1, effect2 = 1),
@@ -231,8 +238,10 @@ object BuildingCatalog {
             L(23_000, 3 * H, stadium = 4, effect = 2, effect2 = 2),
             L(50_000, 6 * H, stadium = 6, effect = 3, effect2 = 3),
             L(110_000, 14 * H, stadium = 7, effect = 3, effect2 = 3),
-            L(230_000, 29 * H, stadium = 9, effect = 4, effect2 = 3),
-            L(480_000, 60 * H, stadium = 10, effect = 4, effect2 = 4),
+            L(230_000, 29 * H, stadium = 8, effect = 4, effect2 = 3),
+            L(480_000, 60 * H, stadium = 9, effect = 4, effect2 = 4),
+            L(720_000, 63 * H, stadium = 10, effect = 5, effect2 = 4),
+            L(1_050_000, 66 * H, stadium = 10, effect = 5, effect2 = 5),
         ),
         MEDICAL_CENTER to listOf(
             L(1_800, 15 * M, stadium = 2, effect = 1, effect2 = 5),
@@ -241,18 +250,26 @@ object BuildingCatalog {
             L(19_000, 150 * M, stadium = 4, effect = 2, effect2 = 3),
             L(41_000, 330 * M, stadium = 6, effect = 2, effect2 = 3),
             L(88_000, 13 * H, stadium = 7, effect = 3, effect2 = 3),
-            L(190_000, 27 * H, stadium = 9, effect = 3, effect2 = 2),
-            L(420_000, 60 * H, stadium = 10, effect = 4, effect2 = 2),
+            L(190_000, 27 * H, stadium = 8, effect = 3, effect2 = 2),
+            L(420_000, 60 * H, stadium = 9, effect = 4, effect2 = 2),
+            L(630_000, 63 * H, stadium = 10, effect = 4, effect2 = 1),
+            L(950_000, 66 * H, stadium = 10, effect = 5, effect2 = 1),
         ),
         DECOR to listOf(L(200, 0)),
-        // the hall of fame (the old trophy museum, its levels and effect): effect = exhibits on its shelves, effect2 =
-        // atmosphere % to earning buildings around it
+        // the hall of fame (the old trophy museum): effect = exhibits on its shelves, effect2 = atmosphere % to earning
+        // buildings around it (MuseumRules). Ten levels since 16 October (five before, V47 doubled the built ones: the old
+        // level k is the new 2k, the same exhibits and atmosphere), 9 000 → 1 000 000 coins, 4 → 66 hours
         HALL_OF_FAME to listOf(
-            L(9_000, 4 * H, stadium = 3, effect = 6, effect2 = 2),
-            L(25_000, 10 * H, stadium = 5, effect = 12, effect2 = 4),
-            L(70_000, 20 * H, stadium = 6, effect = 20, effect2 = 6),
-            L(180_000, 36 * H, stadium = 8, effect = 30, effect2 = 8),
-            L(450_000, 60 * H, stadium = 10, effect = 45, effect2 = 10),
+            L(9_000, 4 * H, stadium = 3, effect = 3, effect2 = 1),
+            L(15_000, 5 * H, stadium = 4, effect = 6, effect2 = 2),
+            L(26_000, 7 * H, stadium = 5, effect = 9, effect2 = 3),
+            L(43_000, 10 * H, stadium = 6, effect = 12, effect2 = 4),
+            L(73_000, 14 * H, stadium = 7, effect = 16, effect2 = 5),
+            L(120_000, 19 * H, stadium = 7, effect = 20, effect2 = 6),
+            L(210_000, 26 * H, stadium = 8, effect = 25, effect2 = 7),
+            L(350_000, 35 * H, stadium = 9, effect = 30, effect2 = 8),
+            L(590_000, 48 * H, stadium = 10, effect = 37, effect2 = 9),
+            L(1_000_000, 66 * H, stadium = 10, effect = 45, effect2 = 10),
         ),
         // fences: drawn along the plot by dragging, instant to build and to upgrade (no builder) — a coin sink that
         // changes the look: wooden picket → hedge → brick → stone → steel → glass with an LED rail
@@ -285,7 +302,11 @@ object BuildingCatalog {
         ),
         // roads: drawn by dragging like fences, instant; a coin sink that joins the town up
         ROAD to listOf(L(40, 0, stadium = 4), L(200, 0, stadium = 7), L(800, 0, stadium = 10)),
-    ) + SOON.associateWith { soonLevels(SOON_UNLOCK.getValue(it)) }
+    ) + SOON.associateWith { soonLevels(SOON_UNLOCK.getValue(it)) } +
+        // the youth sports school brings up a graduate (16 October, from the academy): effect = the graduate's lowest
+        // quality (the highest 15 above), effect2 = hours to the next one
+        mapOf(YOUTH_SPORTS_SCHOOL to soonLevels(SOON_UNLOCK.getValue(YOUTH_SPORTS_SCHOOL)).mapIndexed { i, l ->
+            l.copy(effect = listOf(40, 44, 48, 52, 57, 62, 67, 72, 76, 80)[i], effect2 = listOf(12, 11, 10, 9, 8, 8, 7, 7, 6, 6)[i]) })
 
     // Footprints (cells of 10 m) are fixed for all ten levels and generous — the owner, 12 October: a building never
     // changes its plot, growth is in height and richness; the plots differ by type (the sport town's list, 14 October).
@@ -306,9 +327,9 @@ object BuildingCatalog {
     // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %).
     val specs: Map<BuildingType, BuildingSpec> = (listOf(
         BuildingSpec(PITCH, 16, 16, true, levelTable.getValue(PITCH)),
-        BuildingSpec(ACADEMY, 10, 6, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
-        BuildingSpec(TRAINING_CENTER, 12, 8, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
-        BuildingSpec(MEDICAL_CENTER, 8, 6, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
+        BuildingSpec(ACADEMY, 10, 6, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP10X, soon = true),
+        BuildingSpec(TRAINING_CENTER, 12, 8, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP10X),
+        BuildingSpec(MEDICAL_CENTER, 8, 6, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP10X),
         BuildingSpec(TICKET_OFFICE, 6, 6, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 2, 2, 2), CAP10),
         BuildingSpec(DECOR, 2, 2, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
         BuildingSpec(FENCE, 2, 2, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
@@ -316,13 +337,13 @@ object BuildingCatalog {
         // in tiles since 14 October, pass 3 (one road tile is 2×2 cells): stadium 5: 80, the showcase's ring round the 8×8-tile stadium with its approaches is 80
         BuildingSpec(ROAD, 2, 2, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 30, 90, 100, 105, 110, 115, 120), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
         BuildingSpec(SHOPPING_CENTER, 8, 8, true, levelTable.getValue(SHOPPING_CENTER), countsFrom(0, 1, 1, 1, 2, 2, 2, 2, 2, 2), CAP10),
-        BuildingSpec(HALL_OF_FAME, 8, 8, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
+        BuildingSpec(HALL_OF_FAME, 8, 8, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), capsFrom(3)),
         BuildingSpec(BACKYARD_COURT, 4, 4, true, levelTable.getValue(BACKYARD_COURT), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), capsFrom(3)),
         BuildingSpec(FAN_ZONE, 8, 8, true, levelTable.getValue(FAN_ZONE), oneFrom(2), CAP10),
         BuildingSpec(MEDIA_CENTER, 8, 6, true, levelTable.getValue(MEDIA_CENTER), oneFrom(6), capsFrom(6)),
         BuildingSpec(SPONSOR_OFFICE, 6, 6, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
         BuildingSpec(HOTEL, 8, 6, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
-    ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = true) })
+    ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = t !in WORKING) })
         .associateBy { it.type }
 
     fun spec(type: BuildingType): BuildingSpec = specs.getValue(type)
@@ -343,8 +364,10 @@ object BuildingCatalog {
 
 /** The buildings with no mechanic yet (the sport town, 14 October), the stadium each opens at and its footprint. */
 private val SOON = listOf(ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, ANALYTICS_CENTER)
-private val SOON_UNLOCK = mapOf(ATHLETES_RESIDENCE to 2, YOUTH_SPORTS_SCHOOL to 3, SPORTS_SCIENCE_LAB to 4, SCHOOL to 4, TRANSPORT_HUB to 4,
-    SCOUTING_OFFICE to 5, ANALYTICS_CENTER to 7)
+private val SOON_UNLOCK = mapOf(ATHLETES_RESIDENCE to 2, YOUTH_SPORTS_SCHOOL to 3, SPORTS_SCIENCE_LAB to 4, SCHOOL to 3, TRANSPORT_HUB to 4,
+    SCOUTING_OFFICE to 2, ANALYTICS_CENTER to 3)
+/** Of those, the ones with a mechanic since 16 October: the youth school's graduates and the scouting office's reports (from the academy). */
+private val WORKING = setOf(YOUTH_SPORTS_SCHOOL, SCOUTING_OFFICE)
 private val SOON_SIZE = mapOf(ATHLETES_RESIDENCE to (8 to 6), YOUTH_SPORTS_SCHOOL to (8 to 6), SPORTS_SCIENCE_LAB to (8 to 6), SCHOOL to (6 to 6), TRANSPORT_HUB to (4 to 4),
     SCOUTING_OFFICE to (6 to 6), ANALYTICS_CENTER to (8 to 6))
 

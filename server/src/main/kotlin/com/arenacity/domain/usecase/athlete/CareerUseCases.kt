@@ -66,8 +66,9 @@ data class ScoutOffer(val slot: Int, val athlete: Athlete, val kind: String)
 data class ScoutReport(val offers: List<ScoutOffer>, val signedToday: Boolean, val nextAt: Instant)
 
 /**
- * Scouting (needs an academy): three players a day — a young prospect, a player in his prime and a veteran — from the
- * club's sections, quality by division and academy level. One may be signed per day, free (athletes are never sold).
+ * Scouting (needs a scouting office — the academy's until 16 October): three players a day — a young prospect, a player
+ * in his prime and a veteran — from the club's sections, quality by division and the office's level. One may be signed
+ * per day, free (athletes are never sold).
  */
 class ScoutingUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val sections: SectionService, private val clock: Clock, private val tx: Tx = NoTx) {
     private fun today(club: Club) = clock.now().atZone(ZoneId.of(club.timezone)).toLocalDate()
@@ -86,8 +87,8 @@ class ScoutingUseCases(private val service: ClubService, private val clubs: Club
 
     private suspend fun academyLevel(userId: UUID): Pair<ClubState, Int> {
         val st = service.state(userId)
-        val academy = st.buildings.firstOrNull { it.type == BuildingType.ACADEMY && it.state == BuildingState.IDLE } ?: throw ValidationException("Build an academy first")
-        return st to academy.level
+        val office = st.buildings.firstOrNull { it.type == BuildingType.SCOUTING_OFFICE && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a scouting office first")
+        return st to office.level
     }
 
     suspend fun report(userId: UUID): ScoutReport {

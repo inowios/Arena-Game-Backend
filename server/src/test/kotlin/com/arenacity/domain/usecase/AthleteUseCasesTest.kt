@@ -47,12 +47,12 @@ class AthleteUseCasesTest {
 
     @Test
     fun `academy claim respects cooldown`() = runBlocking<Unit> {
-        setup(BuildingType.ACADEMY)
+        setup(BuildingType.YOUTH_SPORTS_SCHOOL)   // the graduates' school since 16 October (the academy's before)
         clubs.update(clubs.rows.values.first().copy(academyNextAt = null))
         val a = claim(user)
         assertEquals(15, athletes.rows.size); assertTrue(a.overall in 30..70)
         assertFailsWith<ConflictException> { claim(user) }
-        clock.advanceSeconds(8 * 3600)
+        clock.advanceSeconds(12 * 3600)   // the school's first level: a graduate every 12 hours
         claim(user); assertEquals(16, athletes.rows.size)
     }
 

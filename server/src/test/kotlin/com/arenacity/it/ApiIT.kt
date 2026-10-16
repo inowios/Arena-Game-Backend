@@ -59,11 +59,10 @@ class ApiIT {
         call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 402)   // 2 400 coins, 1 000 left
         val (mx, my) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "ACADEMY")
         call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":$mx,"y":$my,"rotation":0}""")
-        val graduate = call(HttpMethod.Post, "/club/academy/claim", t, expect = 201).data.o()
-        assertTrue(graduate["overall"]!!.jsonPrimitive.int > 0)
-        call(HttpMethod.Post, "/club/academy/claim", t, expect = 409)
+        // graduates come from the youth sports school since 16 October (it opens at stadium 3): the academy alone has none
+        call(HttpMethod.Post, "/club/academy/claim", t, expect = 400)
         val squad = call(HttpMethod.Get, "/club/athletes", t).data.o()
-        assertEquals(15, squad["athletes"]!!.jsonArray.size)
+        assertEquals(14, squad["athletes"]!!.jsonArray.size)
         val lineup = call(HttpMethod.Get, "/club/lineup/football", t).data.o()["lineup"]!!.o()
         assertEquals(11, lineup["starters"]!!.jsonArray.size)
     }
@@ -91,7 +90,7 @@ class ApiIT {
         // the catalog names the buildings in the caller's language and marks the ones to come
         val catalog = call(HttpMethod.Get, "/catalog/buildings", lang = "ru").data.jsonArray.map { it.o() }.associateBy { it["type"]!!.jsonPrimitive.content }
         assertEquals("Зал славы", catalog.getValue("HALL_OF_FAME")["name"]!!.jsonPrimitive.content)
-        assertEquals("Скоро", catalog.getValue("SCOUTING_OFFICE")["soonText"]!!.jsonPrimitive.content)
+        assertEquals("Скоро", catalog.getValue("TRANSPORT_HUB")["soonText"]!!.jsonPrimitive.content)
         assertTrue(catalog.keys.none { it.endsWith("_ARENA") })
         // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
         val state = call(HttpMethod.Get, "/club", t).data.o()

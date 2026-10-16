@@ -88,8 +88,9 @@ object Collections {
  */
 object MuseumRules {
     const val RANGE = 3
-    fun capacity(level: Int) = listOf(0, 6, 12, 20, 30, 45).getOrElse(level.coerceIn(0, 5)) { 45 }
-    fun atmospherePct(level: Int) = 2 * level.coerceIn(0, 5)
+    // ten levels since 16 October (V47 doubled the built ones: the old level k gives what the new 2k gives)
+    fun capacity(level: Int) = listOf(0, 3, 6, 9, 12, 16, 20, 25, 30, 37, 45)[level.coerceIn(0, 10)]
+    fun atmospherePct(level: Int) = level.coerceIn(0, 10)
 }
 
 /**

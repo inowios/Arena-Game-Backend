@@ -8,7 +8,7 @@ class BuildingRulesTest {
         assertEquals(10, BuildingCatalog.spec(BuildingType.PITCH).maxLevel)
         for (t in BuildingType.values().filter { it !in Stadium.COSMETIC }) {
             val s = BuildingCatalog.spec(t)
-            assertTrue(s.maxLevel in (if (t == BuildingType.HALL_OF_FAME) 5..5 else 8..10), "$t has ${s.maxLevel} levels")
+            assertEquals(10, s.maxLevel, "$t has ${s.maxLevel} levels")   // every building ten levels since 16 October
             assertTrue(s.levels.zipWithNext().all { (a, b) -> b.cost > a.cost && b.buildSeconds >= a.buildSeconds && b.requiredStadium >= a.requiredStadium && b.requiredTrophies >= a.requiredTrophies }, "$t curves")
             // every level is reachable: the cap at the top stadium is the max level, and caps never go down
             assertEquals(s.maxLevel, s.capAt(Stadium.MAX_LEVEL), "$t top cap")
@@ -50,8 +50,8 @@ class BuildingRulesTest {
             BuildingType.SHOPPING_CENTER to Row(8, 8, 2, 2), BuildingType.HALL_OF_FAME to Row(8, 8, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 2),
             BuildingType.FAN_ZONE to Row(8, 8, 2, 1), BuildingType.MEDIA_CENTER to Row(8, 6, 6, 1), BuildingType.SPONSOR_OFFICE to Row(6, 6, 6, 1),
             BuildingType.HOTEL to Row(8, 6, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(8, 6, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(8, 6, 3, 1),
-            BuildingType.SPORTS_SCIENCE_LAB to Row(8, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
-            BuildingType.SCOUTING_OFFICE to Row(6, 6, 5, 1), BuildingType.ANALYTICS_CENTER to Row(8, 6, 7, 1),
+            BuildingType.SPORTS_SCIENCE_LAB to Row(8, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 3, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
+            BuildingType.SCOUTING_OFFICE to Row(6, 6, 2, 1), BuildingType.ANALYTICS_CENTER to Row(8, 6, 3, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -66,8 +66,9 @@ class BuildingRulesTest {
         assertEquals(listOf(com.arenacity.domain.model.Sport.FOOTBALL), Sections.ORDER)
         assertEquals(BuildingType.PITCH, Sections.venue(com.arenacity.domain.model.Sport.FOOTBALL))
         // the ones with no mechanic yet: nothing to collect, no effect, «soon»
-        val soon = setOf(BuildingType.ATHLETES_RESIDENCE, BuildingType.YOUTH_SPORTS_SCHOOL, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB,
-            BuildingType.SCOUTING_OFFICE, BuildingType.ANALYTICS_CENTER)
+        // the academy waits for the cards' skills; the youth school's graduates and the scouting office's reports work (16 October)
+        val soon = setOf(BuildingType.ACADEMY, BuildingType.ATHLETES_RESIDENCE, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB,
+            BuildingType.ANALYTICS_CENTER)
         assertEquals(soon, BuildingCatalog.specs.values.filter { it.soon }.map { it.type }.toSet())
         for (t in soon) assertTrue(BuildingCatalog.spec(t).levels.all { it.incomePerHour == 0L && it.effect == 0 && it.effect2 == 0 }, "$t has no effect yet")
         // the earners: the shopping centre pays the best of the old shop's, café's and car park's incomes, the fan zone the café's

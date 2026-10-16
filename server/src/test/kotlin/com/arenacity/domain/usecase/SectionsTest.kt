@@ -50,8 +50,8 @@ class SectionsTest {
         assertEquals(listOf(Sport.FOOTBALL), Sections.ORDER)
         // bots field football at every division
         for (d in 1..8) assertEquals(listOf(Sport.FOOTBALL), Sections.botSections(d))
-        // the academy graduates footballers only
-        place(user, BuildingType.ACADEMY, 8, 28, 0).let { speed(user, it.id) }
+        // the youth sports school (the academy until 16 October) graduates footballers only
+        place(user, BuildingType.YOUTH_SPORTS_SCHOOL, 8, 28, 0).let { speed(user, it.id) }
         assertFailsWith<ValidationException> { academy(user, Sport.BASKETBALL) }
         assertEquals(Sport.FOOTBALL, academy(user, Sport.FOOTBALL).sport)
     }

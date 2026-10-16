@@ -74,14 +74,16 @@ object TrainingRules {
     const val DRILL_POINTS = 1
     const val FATIGUE_PER_TRAINING = 15
     const val MAX_FATIGUE_TO_TRAIN = 80
-    const val ACADEMY_INTERVAL_SECONDS = 8 * 3600L
 
     fun slots(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect
     fun delta(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect2
     fun attributeCap(pitchLevel: Int) = BuildingCatalog.level(BuildingType.PITCH, pitchLevel).effect
     /** Cap for a sport's athletes: the level of that section's venue (the stadium). */
     fun attributeCap(sport: Sport, venueLevel: Int) = BuildingCatalog.level(Sections.venue(sport), venueLevel).effect
-    fun academyQuality(academyLevel: Int): IntRange { val lo = BuildingCatalog.level(BuildingType.ACADEMY, academyLevel).effect; return lo..(lo + 15) }
+    /** A graduate of the youth sports school at [level] (the academy's until 16 October): its quality range. */
+    fun graduateQuality(level: Int): IntRange { val lo = BuildingCatalog.level(BuildingType.YOUTH_SPORTS_SCHOOL, level).effect; return lo..(lo + 15) }
+    /** Seconds to the youth sports school's next graduate at [level] (12 hours at the first, 6 at the top). */
+    fun graduateIntervalSeconds(level: Int) = BuildingCatalog.level(BuildingType.YOUTH_SPORTS_SCHOOL, level).effect2 * 3600L
     fun medicalCooldownSeconds(medicalLevel: Int) = BuildingCatalog.level(BuildingType.MEDICAL_CENTER, medicalLevel).effect2 * 3600L
 }
 
