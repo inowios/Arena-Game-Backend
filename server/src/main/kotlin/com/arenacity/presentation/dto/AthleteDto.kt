@@ -60,6 +60,9 @@ fun com.arenacity.domain.usecase.athlete.PackShelf.toDto() = PackShelfDto(
 fun com.arenacity.domain.usecase.athlete.PackResult.toDto(now: Instant) = PackOpenResponse(open.kind.name, open.tiers.map { it.name }, athletes.map { it.toDto(now) }, club.toDto())
 
 @Serializable data class CardXpDto(val id: String, val xp: Int)
-@Serializable data class CardMatchResultRequest(val seed: Int, val won: Boolean, val draw: Boolean = false, val goalsFor: Int = 0, val goalsAgainst: Int = 0, val cards: List<CardXpDto> = emptyList(), val stake: Int = 1, val conceded: Boolean = false)
+/** [heroes] = the ids of the club's heroes who played ("p001"…), at most 10; the server sets their experience by the result. */
+@Serializable data class CardMatchResultRequest(val seed: Int, val won: Boolean, val draw: Boolean = false, val goalsFor: Int = 0, val goalsAgainst: Int = 0, val cards: List<CardXpDto> = emptyList(), val stake: Int = 1, val conceded: Boolean = false,
+                                                val heroes: List<String> = emptyList())
 @Serializable data class CardOpponentResponse(val club: ClubRefDto, val athletes: List<AthleteDto>)
-@Serializable data class CardMatchResultResponse(val coins: Long, val club: ClubDto, val athletes: List<AthleteDto>)
+/** [heroes] = the heroes who played as they are now, [heroXp] = the experience each was given (less once a hero hits the daily cap). */
+@Serializable data class CardMatchResultResponse(val coins: Long, val club: ClubDto, val athletes: List<AthleteDto>, val heroes: List<HeroDto> = emptyList(), val heroXp: Int = 0)

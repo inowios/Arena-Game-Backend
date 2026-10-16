@@ -39,6 +39,7 @@ fun Route.apiRoutes() {
     meRoutes()
     clubRoutes()
     athleteRoutes()
+    heroRoutes()
     leagueRoutes()
     economyRoutes()
     storeNotificationRoutes()

@@ -218,6 +218,8 @@ The collection is full — release someone first	The collection is full — rele
 Too many cards	Too many cards	Demasiadas cartas	Cartas demais	Слишком много карт	Забагато карт
 Bad score	Bad score	Resultado no válido	Placar inválido	Неверный счёт	Неправильний рахунок
 Bad stake	Bad stake	Apuesta no válida	Aposta inválida	Неверная ставка	Неправильна ставка
+No such hero	No such hero	No existe ese héroe	Não existe esse herói	Такого героя нет	Такого героя немає
+Too many heroes	Too many heroes	Demasiados héroes	Heróis demais	Слишком много героев	Забагато героїв
 No opponent around	No opponent around	No hay rivales cerca	Não há adversários por perto	Соперников рядом нет	Суперників поруч немає
 # --- admin dashboards
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120

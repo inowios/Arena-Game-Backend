@@ -272,6 +272,42 @@ class ApiIT {
     }
 
     @Test
+    fun `heroes - the start six, unlocking for gold and match experience over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val t = guestWithClub("it-device-heroes", "Hero FC")
+        val roster = call(HttpMethod.Get, "/club/heroes", t).data.o()
+        val list = roster["heroes"]!!.jsonArray.map { it.o() }
+        assertEquals(51, list.size); assertEquals(6, roster["owned"]!!.jsonPrimitive.int); assertEquals(1, roster["stadium"]!!.jsonPrimitive.int)
+        assertEquals(setOf("p001", "p003", "p007", "p009", "p010", "p011"), list.filter { it["owned"]!!.jsonPrimitive.boolean }.map { it["id"]!!.jsonPrimitive.content }.toSet())
+        val kai = list.first { it["id"]!!.jsonPrimitive.content == "p001" }
+        assertEquals("START", kai["source"]!!.jsonPrimitive.content); assertEquals(1, kai["level"]!!.jsonPrimitive.int); assertEquals(100, kai["xpToNext"]!!.jsonPrimitive.int)
+        assertEquals(3, kai["skills"]!!.jsonArray.size); assertEquals(0, kai["unlockedSkills"]!!.jsonArray.size); assertEquals(4, kai["nextSkillLevel"]!!.jsonPrimitive.int)
+        val mirai = list.first { it["id"]!!.jsonPrimitive.content == "p004" }
+        assertEquals("STORY", mirai["unlock"]!!.o()["kind"]!!.jsonPrimitive.content); assertEquals(2, mirai["unlock"]!!.o()["chapter"]!!.jsonPrimitive.int)
+        assertEquals(900, mirai["unlock"]!!.o()["price"]!!.jsonPrimitive.int); assertEquals(false, mirai["canBuy"]!!.jsonPrimitive.boolean)
+        val beast = list.first { it["id"]!!.jsonPrimitive.content == "p012" }
+        assertEquals("BEAST", beast["folk"]!!.jsonPrimitive.content); assertEquals(3, beast["unlock"]!!.o()["stadium"]!!.jsonPrimitive.int)
+        assertEquals(false, beast["available"]!!.jsonPrimitive.boolean)
+        call(HttpMethod.Post, "/club/heroes/p006/unlock", t, expect = 402)   // 500 gold, 50 owned
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET gold = 2000 WHERE name = 'Hero FC'") }
+        val rei = call(HttpMethod.Post, "/club/heroes/p006/unlock", t).data.o()
+        assertEquals(500, rei["spent"]!!.jsonPrimitive.int); assertEquals(1500, rei["club"]!!.o()["gold"]!!.jsonPrimitive.int)
+        assertEquals("CRYSTALS", rei["hero"]!!.o()["source"]!!.jsonPrimitive.content)
+        assertEquals(0, call(HttpMethod.Post, "/club/heroes/p006/unlock", t).data.o()["spent"]!!.jsonPrimitive.int)   // idempotent
+        call(HttpMethod.Post, "/club/heroes/p012/unlock", t, expect = 400)   // the beasts need stadium 3
+        call(HttpMethod.Post, "/club/heroes/p999/unlock", t, expect = 404)
+        assertEquals(7, call(HttpMethod.Get, "/club/heroes", t).data.o()["owned"]!!.jsonPrimitive.int)
+        // a card match result: the heroes who played earn by the result
+        val result = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p004"]}""").data.o()
+        assertEquals(50, result["heroXp"]!!.jsonPrimitive.int)
+        assertEquals(listOf("p001", "p006"), result["heroes"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
+        assertEquals(50, result["heroes"]!!.jsonArray[0].o()["xp"]!!.jsonPrimitive.int)
+        val eleven = (1..11).joinToString(",") { "\"p%03d\"".format(it) }
+        call(HttpMethod.Post, "/club/cards/result", t, """{"seed":6,"won":true,"heroes":[$eleven]}""", expect = 400)
+    }
+
+    @Test
     fun `leagues, friendlies and economy over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
