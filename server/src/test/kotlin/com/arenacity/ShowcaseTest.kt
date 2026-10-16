@@ -69,7 +69,10 @@ class ShowcaseTest {
         for (type in BuildingType.values()) {
             val spec = BuildingCatalog.spec(type)
             if (type == BuildingType.FENCE || spec.countAt(stadium) == 0) continue
-            assertTrue((counts[type] ?: 0) >= 1, "$type at stadium $stadium")
+            // the town's homes and yard courts as many as fit: the 16×16 stadium (16 October) leaves the smaller test meadows
+            // no room for them at the top; the shipped land keeps at least one of each
+            val spare = type in setOf(BuildingType.HOUSE, BuildingType.BACKYARD_COURT) && lands !== Lands.MAP
+            if (!spare) assertTrue((counts[type] ?: 0) >= 1, "$type at stadium $stadium")
             if (type !in setOf(BuildingType.HOUSE, BuildingType.BACKYARD_COURT, BuildingType.ROAD, BuildingType.DECOR))
                 assertEquals(spec.countAt(stadium), counts[type], "every $type at stadium $stadium")
         }
@@ -121,7 +124,9 @@ class ShowcaseTest {
     @Test fun `top showcase fits the shipped land`() = check(10, Lands.MAP)
     @Test fun `stadium 5 showcase fits an organic meadow`() = check(5, TestLand.ORGANIC)
     @Test fun `top showcase fits an organic meadow`() = check(10, TestLand.ORGANIC)
-    @Test fun `both showcases fit the old square with a corner cut off`() { check(5, TestLand.NOTCHED); check(10, TestLand.NOTCHED) }
+    // the old square (not the shipped land) holds the stadium-5 town; a full top town no longer fits it beside the 16×16
+    // stadium (16 October) — the shipped land and the organic meadow keep the top showcase
+    @Test fun `the stadium 5 showcase fits the old square with a corner cut off`() = check(5, TestLand.NOTCHED)
 
     @Test
     fun `the showcases are rebuilt on a new land mask and need no migration`() = kotlinx.coroutines.runBlocking {

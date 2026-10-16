@@ -292,13 +292,14 @@ object BuildingCatalog {
     // the build grid's tile is 2×2 cells (20 m, [Grid.TILE]) — every footprint a whole number of tiles, every building on
     // a tile ([Grid.aligned], the server checks it) — and each footprint's proportions come from its own ChatGPT drawing
     // (art/scripts/cut_sprites.py fits the drawing's ground inside the footprint's diamond and town_sprites.py lists the
-    // fill each candidate gets): the ticket office square as drawn, the stadium 12×12 the biggest (the island arenas,
-    // 12×12 and the like on their islands, went on 15 October); DECOR, FENCE and ROAD one tile each. A stadium-10 town (every type at its count,
-    // the decor, the fences and the roads at their allowance) covers ~76 % of the main island's tiles (2108 of 2780 cells;
+    // fill each candidate gets): the ticket office square as drawn, the stadium the biggest — 16×16 since 16 October (the owner: the
+    // stadium is the city's colossal centrepiece, make it bigger; 12×12 before; the island arenas went on 15 October); DECOR,
+    // FENCE and ROAD one tile each. A stadium-10 town (every type at its count,
+    // the decor, the fences and the roads at their allowance) covers ~80 % of the main island's tiles (2220 of 2780 cells;
     // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %): the houses 20 at the top (30 of 4×4
     // before), the roads 140 tiles (600 cells before; 180 left no room for the 40 fence tiles, the review of pass 3).
     val specs: Map<BuildingType, BuildingSpec> = (listOf(
-        BuildingSpec(PITCH, 12, 12, true, levelTable.getValue(PITCH)),
+        BuildingSpec(PITCH, 16, 16, true, levelTable.getValue(PITCH)),
         BuildingSpec(ACADEMY, 8, 6, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
         BuildingSpec(TRAINING_CENTER, 10, 6, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
         BuildingSpec(MEDICAL_CENTER, 6, 4, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
@@ -306,7 +307,7 @@ object BuildingCatalog {
         BuildingSpec(DECOR, 2, 2, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
         BuildingSpec(FENCE, 2, 2, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
         BuildingSpec(HOUSE, 6, 4, true, levelTable.getValue(HOUSE), countsFrom(2, 3, 4, 6, 8, 10, 12, 14, 17, 20), CAP10),
-        // in tiles since 14 October, pass 3 (one road tile is 2×2 cells): stadium 5: 80, the showcase's ring round the 6×6-tile stadium is 76
+        // in tiles since 14 October, pass 3 (one road tile is 2×2 cells): stadium 5: 80, the showcase's ring round the 8×8-tile stadium with its approaches is 80
         BuildingSpec(ROAD, 2, 2, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 30, 80, 95, 105, 115, 130, 140), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
         BuildingSpec(SHOPPING_CENTER, 6, 6, true, levelTable.getValue(SHOPPING_CENTER), countsFrom(0, 1, 1, 1, 2, 2, 2, 2, 2, 2), CAP10),
         BuildingSpec(HALL_OF_FAME, 6, 6, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),

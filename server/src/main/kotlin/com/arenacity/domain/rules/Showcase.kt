@@ -42,13 +42,12 @@ object Showcase {
     data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<People> = emptySet())
 
     /**
-     * Tiles from the stadium's middle to the ring's lines: c − 8 and c + 7 (tiles 0 and 15 round the 6×6-tile stadium's
-     * middle c = (8, 8) at the anchor cell (10, 10); the plaza's lots between the ring and the stands, a lawn tile off the
-     * stadium, are 3 tiles deep: the 3×3-tile hall of fame and shopping centre fit; a ring further out left the outer
-     * blocks too thin for the campus on the 26 × 33-tile meadow). Its 8·RING − 4 = 60 tiles are within the stadium-5 road
-     * allowance (BuildingCatalog: 80).
+     * Tiles from the stadium's middle to the ring's lines: c − RING and c + RING − 1, the stadium's half width and 5 more
+     * (16 October: the stadium grew to 8×8 tiles, RING 9; it was 8 round the 6×6-tile one), so the plaza's lots between
+     * the ring and the stands, a lawn tile off the stadium, stay 3 tiles deep: the 3×3-tile hall of fame and shopping
+     * centre fit. Its 8·RING − 4 = 68 tiles and the 12 of the approaches are the stadium-5 road allowance (BuildingCatalog: 80).
      */
-    internal const val RING = 8
+    internal val RING = BuildingCatalog.spec(BuildingType.PITCH).width / Grid.TILE / 2 + 5
     /** Tiles between two parallel lines: a 9-tile block (180 m: a 20 m road takes twice a 10 m one's meadow). */
     private const val BLOCK = 9
     /** Another avenue beyond the ring only where the island reaches at least this many tiles past it. */

@@ -139,7 +139,20 @@ class ClubService(private val clubs: ClubRepository, private val buildings: Buil
         val stays = HashSet<UUID>()
         val order = compareBy<Building>({ it.type != BuildingType.PITCH }, { it.type in Stadium.COSMETIC }, { -fp(it).let { f -> f.w * f.h } }, { it.createdAt }, { it.id })
         for (b in list.sortedWith(order)) {
-            val f = fp(b)
+            var f = fp(b)
+            if (b.type == BuildingType.PITCH && !(Grid.aligned(f.x, f.y) && lands.allows(land, b.type, f))) {
+                // the stadium grew (16 October, V45: 12×12 → 16×16): one that no longer fits where it stood (by the shore)
+                // moves the least it can, up to 4 cells either way on the tiles, before it counts as lost — it stays the
+                // town's centre and the buildings round it make room
+                val near = (-4..4 step 2).flatMap { dx -> (-4..4 step 2).map { dy -> dx to dy } }.sortedBy { (dx, dy) -> dx * dx + dy * dy }
+                    .map { (dx, dy) -> Footprint(f.x + dx, f.y + dy, f.w, f.h) }
+                    .firstOrNull { Grid.aligned(it.x, it.y) && lands.allows(land, b.type, it) }
+                if (near != null) {
+                    buildings.move(b.copy(gridX = near.x, gridY = near.y, updatedAt = now))
+                    log += RehomeMove(club.id, b.id, RehomeMove.BUILDING, b.type.name, b.gridX, b.gridY, b.rotation, near.x, near.y, b.rotation, 0, lands.id, now)
+                    f = near
+                }
+            }
             if (Grid.aligned(f.x, f.y) && lands.allows(land, b.type, f) && kept.none { it.overlaps(f) }) { kept += f; stays += b.id }
         }
         val keptObstacles = mutableListOf<Footprint>()
@@ -300,7 +313,7 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val buildings
             val now = clock.now()
             val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), null, 1, 0, 2_500, 50, timezone, now, null, now, now,
                 landMask = lands.id))
-            // the stadium (12×12) in the middle of the main island's meadow, the ticket office by its corner: the mask's anchors (on tiles)
+            // the stadium (16×16 since V45) in the middle of the main island's meadow, the ticket office by its corner: the mask's anchors (on tiles)
             buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.PITCH, 1, lands.stadium.first, lands.stadium.second, 0, BuildingState.IDLE, null, now, now, now))
             buildings.create(Building(UUID.randomUUID(), club.id, BuildingType.TICKET_OFFICE, 1, lands.ticket.first, lands.ticket.second, 0, BuildingState.IDLE, null, now, now, now))
             initializers.forEach { it.onClubCreated(club) }

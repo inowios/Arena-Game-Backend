@@ -36,11 +36,11 @@ class ObstacleTest {
         assertEquals(emptyList(), get(user).obstacles)
         assertEquals(emptyList(), obstacles.listByClub(club.id), "nothing spawned behind the scenes")
         // a row from before V40: not shown, a building may stand there, it cannot be cleared
-        val old = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.ROCK, 24, 24, ObstacleState.IDLE, null, 3, clock.now(), clock.now())
+        val old = Obstacle(UUID.randomUUID(), club.id, ObstacleKind.ROCK, 28, 28, ObstacleState.IDLE, null, 3, clock.now(), clock.now())
         obstacles.create(old)
         assertEquals(emptyList(), get(user).obstacles)
         clubs.update(clubs.rows.getValue(club.id).copy(coins = 10_000))
-        place(user, BuildingType.DECOR, 24, 24, 0)
+        place(user, BuildingType.DECOR, 28, 28, 0)
         assertFailsWith<NotFoundException> { clear(user, old.id) }
     }
 }

@@ -199,7 +199,7 @@ class LandTest {
     @Test
     fun `a building the land has no room for waits parked, listed, never in the way of an edit, hidden from visitors`() = runBlocking<Unit> {
         // a tiny meadow: the stadium, the ticket office and a few strips of lawn round them, nowhere 6 cells deep
-        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 8, 8, List(18) { "#".repeat(18) })), 10 to 10, 22 to 8)
+        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 8, 8, List(22) { "#".repeat(22) })), 10 to 10, 26 to 8)
         val small = service(tiny)
         val club = newClub()
         val training = at(club.id, BuildingType.TRAINING_CENTER, 22, 30)
@@ -214,7 +214,7 @@ class LandTest {
         assertEquals(2, log.rows.count { it.newX == null })
         // an edit that does not move them saves (they used to make every save fail), one onto the sea does not
         val office = st.buildings.single { it.type == BuildingType.TICKET_OFFICE }
-        ApplyLayoutUseCase(small, buildings, clock)(user, listOf(Placement(office.id, 22, 14, 0)))
+        ApplyLayoutUseCase(small, buildings, clock)(user, listOf(Placement(office.id, 26, 14, 0)))
         assertEquals(14, buildings.findById(office.id)!!.gridY)
         assertEquals("Outside your land", assertFailsWith<ValidationException> { MoveBuildingUseCase(small, buildings, clock)(user, academy.id, 30, 30, 0) }.template)
         // a visitor sees the stadium and the office only, and the land they stand on

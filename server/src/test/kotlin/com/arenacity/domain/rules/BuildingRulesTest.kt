@@ -43,7 +43,7 @@ class BuildingRulesTest {
         data class Row(val w: Int, val h: Int, val unlock: Int, val top: Int)
         // the footprints from each building's own drawing on the build grid's 20 m tiles (14 October, pass 3): whole tiles
         val list = mapOf(
-            BuildingType.PITCH to Row(12, 12, 1, 1), BuildingType.ACADEMY to Row(8, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(10, 6, 1, 1),
+            BuildingType.PITCH to Row(16, 16, 1, 1), BuildingType.ACADEMY to Row(8, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(10, 6, 1, 1),
             BuildingType.MEDICAL_CENTER to Row(6, 4, 2, 1), BuildingType.TICKET_OFFICE to Row(4, 4, 1, 3), BuildingType.HOUSE to Row(6, 4, 1, 20),
             BuildingType.SHOPPING_CENTER to Row(6, 6, 2, 2), BuildingType.HALL_OF_FAME to Row(6, 6, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 4),
             BuildingType.FAN_ZONE to Row(6, 6, 2, 1), BuildingType.MEDIA_CENTER to Row(6, 4, 6, 1), BuildingType.SPONSOR_OFFICE to Row(4, 4, 6, 1),
@@ -134,10 +134,10 @@ class BuildingRulesTest {
 
     @Test
     fun `footprints rotate and overlap`() {
-        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 12x12
-        assertEquals(Footprint(0, 0, 12, 12), a)
+        val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 16x16
+        assertEquals(Footprint(0, 0, 16, 16), a)
         assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.ACADEMY, 0, 0, 90))
-        assertTrue(a.overlaps(Footprint(10, 10, 2, 2))); assertFalse(a.overlaps(Footprint(12, 0, 2, 2)))
+        assertTrue(a.overlaps(Footprint(14, 14, 2, 2))); assertFalse(a.overlaps(Footprint(16, 0, 2, 2)))
         // every footprint is whole tiles of the build grid (14 October, pass 3), DECOR, FENCE and ROAD one tile each
         for (t in BuildingType.values()) { val s = BuildingCatalog.spec(t); assertTrue(s.width % Grid.TILE == 0 && s.height % Grid.TILE == 0, "$t ${s.width}x${s.height}") }
         for (t in Stadium.COSMETIC) assertEquals(Grid.TILE to Grid.TILE, BuildingCatalog.spec(t).let { it.width to it.height }, "$t")
