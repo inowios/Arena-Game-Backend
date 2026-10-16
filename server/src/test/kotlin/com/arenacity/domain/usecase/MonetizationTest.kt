@@ -49,7 +49,7 @@ class MonetizationTest {
     private fun setup(gold: Int = 1_000, level: Int = 3, vararg types: BuildingType) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         clubs.update(club().copy(coins = 50_000, gold = gold, level = level)); buildings.setStadium(club().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, i * 10, 26, 0); speed(user, b.id) }   // the big footprints: a row below the ticket office
+        types.forEachIndexed { i, t -> val b = place(user, t, i * 14, 28, 0); speed(user, b.id) }   // the big footprints: a row below the ticket office
         clubs.update(club().copy(gold = gold))
     }
 

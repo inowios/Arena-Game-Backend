@@ -89,7 +89,7 @@ class AthleteUseCasesTest {
         setup()
         val a = athletes.rows.values.first()
         assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.ATTACK) }
-        val tc = place(user, BuildingType.TRAINING_CENTER, 0, 26, 0); speed(user, tc.id)
+        val tc = place(user, BuildingType.TRAINING_CENTER, 0, 28, 0); speed(user, tc.id)
         athletes.update(a.copy(fatigue = 90, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { start(user, a.id, AttributeKind.MENTAL) }
         athletes.update(a.copy(fatigue = 0, mental = 68))

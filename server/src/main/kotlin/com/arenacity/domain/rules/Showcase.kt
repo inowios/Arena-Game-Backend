@@ -37,7 +37,8 @@ import kotlin.math.abs
  * a street, a tree — is in tiles, and the slots come out in cells, every one on a tile.
  */
 object Showcase {
-    data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int)
+    /** [rot]: 0 or 90 — a building turned a quarter where only that fits its lot (16 October: the grown footprints). */
+    data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int, val rot: Int = 0)
     /** [regions]: the land mask's regions the town stands on (the main island and the open side islands); [zones]: the zones open. */
     data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<People> = emptySet())
 
@@ -47,7 +48,7 @@ object Showcase {
      * the ring and the stands, a lawn tile off the stadium, stay 3 tiles deep: the 3×3-tile hall of fame and shopping
      * centre fit. Its 8·RING − 4 = 68 tiles and the 12 of the approaches are the stadium-5 road allowance (BuildingCatalog: 80).
      */
-    internal val RING = BuildingCatalog.spec(BuildingType.PITCH).width / Grid.TILE / 2 + 5
+    internal val RING = BuildingCatalog.spec(BuildingType.PITCH).width / Grid.TILE / 2 + 6
     /** Tiles between two parallel lines: a 9-tile block (180 m: a 20 m road takes twice a 10 m one's meadow). */
     private const val BLOCK = 9
     /** Another avenue beyond the ring only where the island reaches at least this many tiles past it. */
@@ -66,8 +67,8 @@ object Showcase {
     /** The press and the sponsors at the stadium's ends. */
     private val ENDS = listOf(BuildingType.MEDIA_CENTER, BuildingType.SPONSOR_OFFICE)
     /** The club's campus in the blocks next to the plaza. */
-    private val CAMPUS = listOf(BuildingType.TRAINING_CENTER, BuildingType.ACADEMY, BuildingType.MEDICAL_CENTER, BuildingType.RECOVERY_CENTER,
-        BuildingType.ATHLETES_RESIDENCE, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.YOUTH_SPORTS_SCHOOL, BuildingType.COACHING_HQ,
+    private val CAMPUS = listOf(BuildingType.TRAINING_CENTER, BuildingType.ACADEMY, BuildingType.MEDICAL_CENTER,
+        BuildingType.ATHLETES_RESIDENCE, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.YOUTH_SPORTS_SCHOOL,
         BuildingType.ANALYTICS_CENTER, BuildingType.SCOUTING_OFFICE)
     /** Downtown along the boulevards: the hotel, the school and the transport hub in turn. */
     private val DOWNTOWN = listOf(BuildingType.HOTEL, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB)
@@ -108,11 +109,14 @@ object Showcase {
      * side, each building in the first row with room, a lawn cell at least between neighbours and between rows, the spare
      * lawn spread evenly; the first row, and the first building of a row, nearest the stadium.
      */
-    private fun arrange(lot: Lot, types: List<BuildingType>): List<Pair<Int, Int>>? {
+    private fun arrange(lot: Lot, types: List<BuildingType>): List<Triple<Int, Int, Int>>? {
         val alongX = lot.x1 - lot.x0 >= lot.y1 - lot.y0
         val len = if (alongX) lot.x1 - lot.x0 else lot.y1 - lot.y0
         val deep = if (alongX) lot.y1 - lot.y0 else lot.x1 - lot.x0
-        val sizes = types.map { size(it) }
+        // a building turned a quarter when only that fits the lot (its long side along the lot's)
+        val turned = types.map { t -> val (w, h) = size(t); val a = if (alongX) w else h; val c = if (alongX) h else w
+            (a > len || c > deep) && (if (alongX) h else w) <= len && (if (alongX) w else h) <= deep }
+        val sizes = types.mapIndexed { i, t -> size(t).let { if (turned[i]) it.second to it.first else it } }
         val along = sizes.map { if (alongX) it.first else it.second }
         val across = sizes.map { if (alongX) it.second else it.first }
         val rows = mutableListOf<MutableList<Int>>()
@@ -123,7 +127,7 @@ object Showcase {
         }
         val depths = rows.map { r -> r.maxOf { across[it] } }
         val rowAt = spread(deep - depths.sum(), depths) ?: return null
-        val at = arrayOfNulls<Pair<Int, Int>>(types.size)
+        val at = arrayOfNulls<Triple<Int, Int, Int>>(types.size)
         for ((k, r) in rows.withIndex()) {
             val starts = spread(len - r.sumOf { along[it] }, r.map { along[it] }) ?: return null
             for ((j, i) in r.withIndex()) {
@@ -132,7 +136,7 @@ object Showcase {
                 val u = if (alongX) a else b; val v = if (alongX) b else a
                 val x = if (lot.highX) lot.x1 - u - sizes[i].first else lot.x0 + u
                 val y = if (lot.highY) lot.y1 - v - sizes[i].second else lot.y0 + v
-                at[i] = x to y
+                at[i] = Triple(x, y, if (turned[i]) 90 else 0)
             }
         }
         return at.map { it!! }
@@ -317,10 +321,11 @@ object Showcase {
         val press = turns(ENDS).apply { addAll(plaza) }
         deal(ends, press)
         // the campus takes as few blocks as hold two each, the town the other blocks beside the plaza, then the outer ones
-        val campus = turns(CAMPUS).apply { addAll(press) }
+        // the biggest first (16 October: the grown footprints — the academy no longer found a lot once the smaller ones took them)
+        val campus = turns(CAMPUS.sortedByDescending { BuildingCatalog.spec(it).let { s -> s.width * s.height } }).apply { addAll(press) }
         val campusLots = beside.take(minOf(beside.size, (campus.size + 1) / 2))
         deal(campusLots, campus)
-        val town = (campus + turns(DOWNTOWN) + turns(HOMES)).toMutableList()
+        val town = (campus + turns(DOWNTOWN.sortedByDescending { BuildingCatalog.spec(it).let { s -> s.width * s.height } }) + turns(HOMES)).toMutableList()
         deal(beside.drop(campusLots.size), town)
         deal(outer, town)
         // and where the campus left room, then the plaza (the grown footprints of 14 October fill a smaller meadow's blocks
@@ -335,9 +340,9 @@ object Showcase {
             return if (t == BuildingType.HOUSE) (cap - (houseFlip++ % 2)).coerceAtLeast(1) else cap
         }
         val slots = mutableListOf(Slot(BuildingType.PITCH, stadium, px, py))
-        for (lot in front + ends + beside + outer) arrange(lot, lot.types)?.forEachIndexed { k, (x, y) -> slots += Slot(lot.types[k], level(lot.types[k]), x, y) }
+        for (lot in front + ends + beside + outer) arrange(lot, lot.types)?.forEachIndexed { k, (x, y, r) -> slots += Slot(lot.types[k], level(lot.types[k]), x, y, r) }
         val solid = HashSet<Pair<Int, Int>>()
-        for (s in slots) { val (sw, sh) = size(s.type); for (i in s.x until s.x + sw) for (j in s.y until s.y + sh) solid += i to j }
+        for (s in slots) { val (sw, sh) = size(s.type).let { if (s.rot % 180 != 0) it.second to it.first else it }; for (i in s.x until s.x + sw) for (j in s.y until s.y + sh) solid += i to j }
         val pitchCells = cells(px until px + pw, py until py + ph)
 
         // street trees on the kerbs left free (never on a building), every third tile: along the axes
@@ -364,7 +369,7 @@ object Showcase {
         val open = islands(stadium, lands)
         val ground = LandSet(listOf(lands.main) + open)
         val cells = slots.map { it.copy(x = it.x * T, y = it.y * T) }
-        check(cells.all { s -> Grid.aligned(s.x, s.y) && lands.allows(ground, s.type, footprint(s.type, s.x, s.y, 0)) }) { "showcase: a slot off its island" }
+        check(cells.all { s -> Grid.aligned(s.x, s.y) && lands.allows(ground, s.type, footprint(s.type, s.x, s.y, s.rot)) }) { "showcase: a slot off its island" }
         return City(stadium, ground.ids.toSet(), cells, open.mapNotNull { it.people }.toSet())
     }
 }

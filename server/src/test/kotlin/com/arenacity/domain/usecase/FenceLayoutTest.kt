@@ -32,6 +32,7 @@ class FenceLayoutTest {
     @Test
     fun `a dragged line of fence is built at once, paid together, without a builder`() = runBlocking<Unit> {
         newClub()
+        buildings.setStadium(clubs.rows.values.first().id, 2)   // 16 October: two fences a stadium level, four at stadium 2
         val line = (0 until 4).map { 8 + 2 * it to 28 }   // one tile (2×2 cells) each, on tile corners
         val placed = fences(user, line)
         assertEquals(4, placed.size)
@@ -57,27 +58,28 @@ class FenceLayoutTest {
     @Test
     fun `fences upgrade together and instantly up to the stadium's cap`() = runBlocking<Unit> {
         newClub()
-        val ids = fences(user, listOf(8 to 28, 10 to 28, 12 to 28)).map { it.id }
+        val ids = fences(user, listOf(8 to 28, 10 to 28)).map { it.id }   // the two a stadium-1 club may have (16 October)
         assertFailsWith<ValidationException> { upFences(user, ids) }   // level 2 needs stadium 2
         buildings.setStadium(clubs.rows.values.first().id, 3)
         val before = coins
         val up = upFences(user, ids)
         assertTrue(up.all { it.level == 2 && it.state == BuildingState.IDLE })
-        assertEquals(before - 3 * 150L, coins)
+        assertEquals(before - 2 * 150L, coins)
         upgrade(user, ids[0])                                            // one by one works too, still instant
         assertEquals(3, get(user).buildings.first { it.id == ids[0] }.level)
         assertEquals(BuildingState.IDLE, get(user).buildings.first { it.id == ids[0] }.state)
         assertEquals(0, get(user).busyBuilders)
         remove(user, ids[1])
-        assertEquals(2, get(user).buildings.count { it.type == BuildingType.FENCE })
+        assertEquals(1, get(user).buildings.count { it.type == BuildingType.FENCE })
     }
 
     @Test
     fun `a fence line next to an income building adds a little atmosphere`() = runBlocking<Unit> {
         newClub()
-        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (4,22) 4x4
+        buildings.setStadium(clubs.rows.values.first().id, 2)   // four fences need stadium 2 (16 October)
+        val office = get(user).buildings.first { it.type == BuildingType.TICKET_OFFICE }   // (4,22) 6x6, the stadium on its right
         val before = Atmosphere.of(get(user).buildings).getValue(office.id)
-        fences(user, listOf(4 to 20, 6 to 20, 8 to 22, 8 to 24))
+        fences(user, listOf(4 to 20, 6 to 20, 2 to 22, 2 to 24))
         val after = Atmosphere.of(get(user).buildings).getValue(office.id)
         assertEquals(4, after.fence)                                  // all four touching it
         assertEquals(before.total + 4, after.total)

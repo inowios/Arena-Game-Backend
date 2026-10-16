@@ -198,8 +198,9 @@ class LandTest {
 
     @Test
     fun `a building the land has no room for waits parked, listed, never in the way of an edit, hidden from visitors`() = runBlocking<Unit> {
-        // a tiny meadow: the stadium, the ticket office and a few strips of lawn round them, nowhere 6 cells deep
-        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 8, 8, List(22) { "#".repeat(22) })), 10 to 10, 26 to 8)
+        // a tiny meadow: the stadium, the ticket office and a few strips of lawn round them, nowhere 8 cells deep (the strips
+        // 6 deep since the 6×6 ticket office of 16 October)
+        val tiny = LandMap.of(listOf(LandRegion.of("main", null, 8, 8, List(24) { "#".repeat(24) })), 10 to 10, 26 to 8)
         val small = service(tiny)
         val club = newClub()
         val training = at(club.id, BuildingType.TRAINING_CENTER, 22, 30)
@@ -232,9 +233,9 @@ class LandTest {
         val square = service(Lands.SQUARE)
         val layouts = FakeLayoutRepository()
         val tree = at(club.id, BuildingType.DECOR, 34, -6)
-        val bench = at(club.id, BuildingType.DECOR, 4, 26)
+        val bench = at(club.id, BuildingType.DECOR, 4, 28)
         LayoutUseCases(square, layouts, ApplyLayoutUseCase(square, buildings, clock), clock).save(user, 1, "Old")
-        ApplyLayoutUseCase(square, buildings, clock)(user, listOf(Placement(bench.id, 6, 26, 0)))
+        ApplyLayoutUseCase(square, buildings, clock)(user, listOf(Placement(bench.id, 6, 28, 0)))
         // the land becomes the notched mask: the tree moves out of the sea; the old layout puts the bench back, the tree stays
         val moved = get(user).buildings.single { it.id == tree.id }
         assertTrue(TestLand.NOTCHED.main.fits(fp(moved)))

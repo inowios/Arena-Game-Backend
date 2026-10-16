@@ -9,7 +9,8 @@ import kotlin.math.min
  * Gone with it (V36 moved every club onto this set): CLUB_SHOP, CAFE and PARKING (one SHOPPING_CENTER), MUSEUM (the
  * HALL_OF_FAME), PARK (the BACKYARD_COURT), the courts (the island arenas), APARTMENT and OFFICE. The island arenas
  * (BASKETBALL_, VOLLEYBALL_, TENNIS_ and PADEL_ARENA) went on 15 October 2026 (the owner: the side islands are the
- * peoples' homes, the game is football only; V44 refunded them).
+ * peoples' homes, the game is football only; V44 refunded them). The recovery centre and the coaching HQ went on 16 October
+ * (the owner's building system: recovery is part of the medical centre, the coaching HQ of the tactics room; V46 refunded them).
  */
 enum class BuildingType { PITCH, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKET_OFFICE, DECOR, FENCE,
     // the town: homes pay tax, roads join
@@ -17,7 +18,7 @@ enum class BuildingType { PITCH, ACADEMY, TRAINING_CENTER, MEDICAL_CENTER, TICKE
     // earning and pleasing: the shops, the honours, the yard courts, the fans, the press, the sponsors, the guests
     SHOPPING_CENTER, HALL_OF_FAME, BACKYARD_COURT, FAN_ZONE, MEDIA_CENTER, SPONSOR_OFFICE, HOTEL,
     // no mechanic yet: buildable and upgradable, their panel says what they will do and «soon» (BuildingSpec.soon)
-    ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ }
+    ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, ANALYTICS_CENTER }
 
 /**
  * One level of a building. [effect] meaning depends on type:
@@ -69,7 +70,7 @@ object Stadium {
     /** The old plot's size at every level (the eras map, 12 October: buildings grow, the land does not); see [Grid]. */
     fun gridSize(stadium: Int): Int = Grid.PLOT
     fun decorCount(stadium: Int): Int = 4 + 2 * stadium
-    fun fenceCount(stadium: Int): Int = 4 * stadium
+    fun fenceCount(stadium: Int): Int = 2 * stadium
     /** Types that build and upgrade instantly and never occupy a builder (and do not count as "real" buildings). */
     val COSMETIC = setOf(BuildingType.DECOR, BuildingType.FENCE, BuildingType.ROAD)
 }
@@ -294,28 +295,33 @@ object BuildingCatalog {
     // (art/scripts/cut_sprites.py fits the drawing's ground inside the footprint's diamond and town_sprites.py lists the
     // fill each candidate gets): the ticket office square as drawn, the stadium the biggest — 16×16 since 16 October (the owner: the
     // stadium is the city's colossal centrepiece, make it bigger; 12×12 before; the island arenas went on 15 October); DECOR,
-    // FENCE and ROAD one tile each. A stadium-10 town (every type at its count,
-    // the decor, the fences and the roads at their allowance) covers ~80 % of the main island's tiles (2220 of 2780 cells;
-    // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %): the houses 20 at the top (30 of 4×4
-    // before), the roads 140 tiles (600 cells before; 180 left no room for the 40 fence tiles, the review of pass 3).
+    // FENCE and ROAD one tile each. 16 October, later (the owner: next to the 16×16 stadium the buildings are far too small —
+    // more cells, wider, much taller): most buildings a tile bigger each way where the island still holds the whole
+    // showcase town (the academy 8×8, the training centre 12×8, the hall of fame, shopping centre and fan zone 8×8, the
+    // others 8×6 or 6×6; the house, the school, the yard court and the transport hub as they were or near it), the
+    // recovery centre and the coaching HQ merged away (V46), and to make room the houses 10 at the top (20), the ticket
+    // offices 2 (3), the yard courts 2 (4) and the fences 20 (40); the roads 120 tiles (the ring round the bigger stadium
+    // and its approaches take ~90, the boulevards to the bridges the rest). A stadium-10 town (every type at its count,
+    // the decor, the fences and the roads at their allowance) covers ~77 % of the main island's tiles (2148 of 2780 cells;
+    // land_mask c9c2cb41: 695 whole tiles; BuildingRulesTest keeps it under 80 %).
     val specs: Map<BuildingType, BuildingSpec> = (listOf(
         BuildingSpec(PITCH, 16, 16, true, levelTable.getValue(PITCH)),
-        BuildingSpec(ACADEMY, 8, 6, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
-        BuildingSpec(TRAINING_CENTER, 10, 6, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
-        BuildingSpec(MEDICAL_CENTER, 6, 4, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
-        BuildingSpec(TICKET_OFFICE, 4, 4, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), CAP10),
+        BuildingSpec(ACADEMY, 8, 8, true, levelTable.getValue(ACADEMY), List(10) { 1 }, CAP8),
+        BuildingSpec(TRAINING_CENTER, 12, 8, true, levelTable.getValue(TRAINING_CENTER), List(10) { 1 }, CAP8),
+        BuildingSpec(MEDICAL_CENTER, 8, 6, true, levelTable.getValue(MEDICAL_CENTER), countsFrom(0, 1, 1, 1, 1, 1, 1, 1, 1, 1), CAP8),
+        BuildingSpec(TICKET_OFFICE, 6, 6, true, levelTable.getValue(TICKET_OFFICE), countsFrom(1, 1, 1, 2, 2, 2, 2, 2, 2, 2), CAP10),
         BuildingSpec(DECOR, 2, 2, true, levelTable.getValue(DECOR), List(10) { Stadium.decorCount(it + 1) }, List(10) { 1 }),
         BuildingSpec(FENCE, 2, 2, true, levelTable.getValue(FENCE), List(10) { Stadium.fenceCount(it + 1) }, listOf(1, 2, 3, 3, 4, 4, 5, 5, 6, 6)),
-        BuildingSpec(HOUSE, 6, 4, true, levelTable.getValue(HOUSE), countsFrom(2, 3, 4, 6, 8, 10, 12, 14, 17, 20), CAP10),
+        BuildingSpec(HOUSE, 6, 4, true, levelTable.getValue(HOUSE), countsFrom(2, 3, 4, 5, 6, 7, 8, 9, 10, 10), CAP10),
         // in tiles since 14 October, pass 3 (one road tile is 2×2 cells): stadium 5: 80, the showcase's ring round the 8×8-tile stadium with its approaches is 80
-        BuildingSpec(ROAD, 2, 2, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 30, 80, 95, 105, 115, 130, 140), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
-        BuildingSpec(SHOPPING_CENTER, 6, 6, true, levelTable.getValue(SHOPPING_CENTER), countsFrom(0, 1, 1, 1, 2, 2, 2, 2, 2, 2), CAP10),
-        BuildingSpec(HALL_OF_FAME, 6, 6, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
-        BuildingSpec(BACKYARD_COURT, 4, 4, true, levelTable.getValue(BACKYARD_COURT), countsFrom(0, 0, 1, 1, 2, 2, 3, 3, 4, 4), capsFrom(3)),
-        BuildingSpec(FAN_ZONE, 6, 6, true, levelTable.getValue(FAN_ZONE), oneFrom(2), CAP10),
-        BuildingSpec(MEDIA_CENTER, 6, 4, true, levelTable.getValue(MEDIA_CENTER), oneFrom(6), capsFrom(6)),
-        BuildingSpec(SPONSOR_OFFICE, 4, 4, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
-        BuildingSpec(HOTEL, 6, 4, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
+        BuildingSpec(ROAD, 2, 2, true, levelTable.getValue(ROAD), countsFrom(0, 0, 0, 30, 90, 100, 105, 110, 115, 120), listOf(0, 0, 0, 1, 1, 1, 2, 2, 2, 3)),
+        BuildingSpec(SHOPPING_CENTER, 8, 8, true, levelTable.getValue(SHOPPING_CENTER), countsFrom(0, 1, 1, 1, 2, 2, 2, 2, 2, 2), CAP10),
+        BuildingSpec(HALL_OF_FAME, 8, 8, true, levelTable.getValue(HALL_OF_FAME), oneFrom(3), listOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5)),
+        BuildingSpec(BACKYARD_COURT, 4, 4, true, levelTable.getValue(BACKYARD_COURT), countsFrom(0, 0, 1, 1, 1, 1, 2, 2, 2, 2), capsFrom(3)),
+        BuildingSpec(FAN_ZONE, 8, 8, true, levelTable.getValue(FAN_ZONE), oneFrom(2), CAP10),
+        BuildingSpec(MEDIA_CENTER, 8, 6, true, levelTable.getValue(MEDIA_CENTER), oneFrom(6), capsFrom(6)),
+        BuildingSpec(SPONSOR_OFFICE, 6, 6, true, levelTable.getValue(SPONSOR_OFFICE), oneFrom(6), capsFrom(6)),
+        BuildingSpec(HOTEL, 8, 6, true, levelTable.getValue(HOTEL), oneFrom(8), capsFrom(8)),
     ) + SOON.map { t -> val (w, h) = SOON_SIZE.getValue(t); BuildingSpec(t, w, h, true, levelTable.getValue(t), oneFrom(SOON_UNLOCK.getValue(t)), capsFrom(SOON_UNLOCK.getValue(t)), soon = true) })
         .associateBy { it.type }
 
@@ -336,11 +342,11 @@ object BuildingCatalog {
 }
 
 /** The buildings with no mechanic yet (the sport town, 14 October), the stadium each opens at and its footprint. */
-private val SOON = listOf(ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, RECOVERY_CENTER, ANALYTICS_CENTER, COACHING_HQ)
+private val SOON = listOf(ATHLETES_RESIDENCE, YOUTH_SPORTS_SCHOOL, SPORTS_SCIENCE_LAB, SCHOOL, TRANSPORT_HUB, SCOUTING_OFFICE, ANALYTICS_CENTER)
 private val SOON_UNLOCK = mapOf(ATHLETES_RESIDENCE to 2, YOUTH_SPORTS_SCHOOL to 3, SPORTS_SCIENCE_LAB to 4, SCHOOL to 4, TRANSPORT_HUB to 4,
-    SCOUTING_OFFICE to 5, RECOVERY_CENTER to 5, ANALYTICS_CENTER to 7, COACHING_HQ to 8)
-private val SOON_SIZE = mapOf(ATHLETES_RESIDENCE to (6 to 4), YOUTH_SPORTS_SCHOOL to (6 to 4), SPORTS_SCIENCE_LAB to (6 to 6), SCHOOL to (6 to 6), TRANSPORT_HUB to (4 to 4),
-    SCOUTING_OFFICE to (4 to 4), RECOVERY_CENTER to (6 to 4), ANALYTICS_CENTER to (6 to 4), COACHING_HQ to (4 to 4))
+    SCOUTING_OFFICE to 5, ANALYTICS_CENTER to 7)
+private val SOON_SIZE = mapOf(ATHLETES_RESIDENCE to (8 to 6), YOUTH_SPORTS_SCHOOL to (8 to 6), SPORTS_SCIENCE_LAB to (8 to 6), SCHOOL to (6 to 6), TRANSPORT_HUB to (4 to 4),
+    SCOUTING_OFFICE to (6 to 6), ANALYTICS_CENTER to (8 to 6))
 
 object ClubLevels {
     private val thresholds = listOf(0, 100, 300, 700, 1_500, 3_000, 5_500, 9_000, 14_000, 20_000)

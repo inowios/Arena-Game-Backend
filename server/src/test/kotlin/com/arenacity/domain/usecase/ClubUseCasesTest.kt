@@ -52,7 +52,7 @@ class ClubUseCasesTest {
     @Test
     fun `place charges coins starts timer and finalises on read`() = runBlocking<Unit> {
         newClub()
-        val b = place(user, BuildingType.ACADEMY, 8, 26, 0)
+        val b = place(user, BuildingType.ACADEMY, 8, 28, 0)
         assertEquals(BuildingState.UPGRADING, b.state); assertEquals(1_000, clubs.rows.values.first().coins)
         assertFailsWith<ConflictException> { collect(user, b.id) }
         clock.advanceSeconds(10 * 60)
@@ -65,11 +65,11 @@ class ClubUseCasesTest {
         assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 12, 12, 0) }           // overlaps pitch
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 40, 28, 0) }       // outside the plot (cells -9..38)
         assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, -10, 0, 0) }
-        assertFailsWith<ValidationException> { place(user, BuildingType.BACKYARD_COURT, 8, 26, 0) }  // stadium 3 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.SCHOOL, 8, 26, 0) }          // stadium 4 required
-        assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 8, 26, 0) }  // a 2nd office needs stadium 4
-        place(user, BuildingType.ACADEMY, 8, 26, 0)
-        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 18, 26, 0) }          // one academy, ever
+        assertFailsWith<ValidationException> { place(user, BuildingType.BACKYARD_COURT, 8, 28, 0) }  // stadium 3 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.SCHOOL, 8, 28, 0) }          // stadium 4 required
+        assertFailsWith<ValidationException> { place(user, BuildingType.TICKET_OFFICE, 8, 28, 0) }  // a 2nd office needs stadium 4
+        place(user, BuildingType.ACADEMY, 8, 28, 0)
+        assertFailsWith<ConflictException> { place(user, BuildingType.ACADEMY, 18, 28, 0) }          // one academy, ever
         Unit
     }
 
@@ -78,9 +78,9 @@ class ClubUseCasesTest {
         newClub()
         clubs.update(clubs.rows.values.first().copy(coins = 1_000_000, gold = 500, trophies = 100_000))
         // houses from the first stadium (the sport town): a few, then more with every stadium
-        place(user, BuildingType.HOUSE, 8, 26, 0).let { speed(user, it.id) }
-        place(user, BuildingType.HOUSE, 16, 26, 0).let { speed(user, it.id) }
-        assertEquals("Requires stadium level {0}", assertFailsWith<ValidationException> { place(user, BuildingType.HOUSE, 24, 26, 0) }.template)
+        place(user, BuildingType.HOUSE, 8, 28, 0).let { speed(user, it.id) }
+        place(user, BuildingType.HOUSE, 16, 28, 0).let { speed(user, it.id) }
+        assertEquals("Requires stadium level {0}", assertFailsWith<ValidationException> { place(user, BuildingType.HOUSE, 24, 28, 0) }.template)
         // stadium 2: the athletes' residence opens; it builds, earns nothing yet, and upgrades as the stadium grows
         val pitch = get(user).buildings.first { it.type == BuildingType.PITCH }
         upgrade(user, pitch.id).let { speed(user, it.id) }
@@ -131,7 +131,7 @@ class ClubUseCasesTest {
         assertEquals(BuildingState.IDLE, done.state); assertEquals(before - 1, clubs.rows.values.first().gold)   // 9 min left = 1 gold
         val coins = clubs.rows.values.first().coins
         clubs.update(clubs.rows.values.first().copy(coins = 0))
-        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.FAN_ZONE, 8, 26, 0) }  // the fan zone opens at stadium 2
+        assertFailsWith<InsufficientFundsException> { place(user, BuildingType.FAN_ZONE, 8, 28, 0) }  // the fan zone opens at stadium 2
         clubs.update(clubs.rows.values.first().copy(coins = coins))
         assertFailsWith<ValidationException> { upgrade(user, pitch.id) }                     // stadium 3 needs 300 trophies
         clubs.update(clubs.rows.values.first().copy(trophies = 300))

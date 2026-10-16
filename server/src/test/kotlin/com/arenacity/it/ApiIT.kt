@@ -91,7 +91,7 @@ class ApiIT {
         // the catalog names the buildings in the caller's language and marks the ones to come
         val catalog = call(HttpMethod.Get, "/catalog/buildings", lang = "ru").data.jsonArray.map { it.o() }.associateBy { it["type"]!!.jsonPrimitive.content }
         assertEquals("Зал славы", catalog.getValue("HALL_OF_FAME")["name"]!!.jsonPrimitive.content)
-        assertEquals("Скоро", catalog.getValue("COACHING_HQ")["soonText"]!!.jsonPrimitive.content)
+        assertEquals("Скоро", catalog.getValue("SCOUTING_OFFICE")["soonText"]!!.jsonPrimitive.content)
         assertTrue(catalog.keys.none { it.endsWith("_ARENA") })
         // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
         val state = call(HttpMethod.Get, "/club", t).data.o()

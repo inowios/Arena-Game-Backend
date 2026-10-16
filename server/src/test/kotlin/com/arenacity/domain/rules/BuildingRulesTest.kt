@@ -42,15 +42,16 @@ class BuildingRulesTest {
     fun `the sport town's buildings follow the owner's list`() {
         data class Row(val w: Int, val h: Int, val unlock: Int, val top: Int)
         // the footprints from each building's own drawing on the build grid's 20 m tiles (14 October, pass 3): whole tiles
+        // 16 October: the big buildings a tile or two bigger each way (the owner: far too small beside the 16×16 stadium),
+        // the houses 10 at the top, the ticket offices 2, the yard courts 2; the recovery centre and the coaching HQ merged away
         val list = mapOf(
-            BuildingType.PITCH to Row(16, 16, 1, 1), BuildingType.ACADEMY to Row(8, 6, 1, 1), BuildingType.TRAINING_CENTER to Row(10, 6, 1, 1),
-            BuildingType.MEDICAL_CENTER to Row(6, 4, 2, 1), BuildingType.TICKET_OFFICE to Row(4, 4, 1, 3), BuildingType.HOUSE to Row(6, 4, 1, 20),
-            BuildingType.SHOPPING_CENTER to Row(6, 6, 2, 2), BuildingType.HALL_OF_FAME to Row(6, 6, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 4),
-            BuildingType.FAN_ZONE to Row(6, 6, 2, 1), BuildingType.MEDIA_CENTER to Row(6, 4, 6, 1), BuildingType.SPONSOR_OFFICE to Row(4, 4, 6, 1),
-            BuildingType.HOTEL to Row(6, 4, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(6, 4, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(6, 4, 3, 1),
-            BuildingType.SPORTS_SCIENCE_LAB to Row(6, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
-            BuildingType.SCOUTING_OFFICE to Row(4, 4, 5, 1), BuildingType.RECOVERY_CENTER to Row(6, 4, 5, 1), BuildingType.ANALYTICS_CENTER to Row(6, 4, 7, 1),
-            BuildingType.COACHING_HQ to Row(4, 4, 8, 1),
+            BuildingType.PITCH to Row(16, 16, 1, 1), BuildingType.ACADEMY to Row(8, 8, 1, 1), BuildingType.TRAINING_CENTER to Row(12, 8, 1, 1),
+            BuildingType.MEDICAL_CENTER to Row(8, 6, 2, 1), BuildingType.TICKET_OFFICE to Row(6, 6, 1, 2), BuildingType.HOUSE to Row(6, 4, 1, 10),
+            BuildingType.SHOPPING_CENTER to Row(8, 8, 2, 2), BuildingType.HALL_OF_FAME to Row(8, 8, 3, 1), BuildingType.BACKYARD_COURT to Row(4, 4, 3, 2),
+            BuildingType.FAN_ZONE to Row(8, 8, 2, 1), BuildingType.MEDIA_CENTER to Row(8, 6, 6, 1), BuildingType.SPONSOR_OFFICE to Row(6, 6, 6, 1),
+            BuildingType.HOTEL to Row(8, 6, 8, 1), BuildingType.ATHLETES_RESIDENCE to Row(8, 6, 2, 1), BuildingType.YOUTH_SPORTS_SCHOOL to Row(8, 6, 3, 1),
+            BuildingType.SPORTS_SCIENCE_LAB to Row(8, 6, 4, 1), BuildingType.SCHOOL to Row(6, 6, 4, 1), BuildingType.TRANSPORT_HUB to Row(4, 4, 4, 1),
+            BuildingType.SCOUTING_OFFICE to Row(6, 6, 5, 1), BuildingType.ANALYTICS_CENTER to Row(8, 6, 7, 1),
         )
         assertEquals(BuildingType.values().toSet() - Stadium.COSMETIC, list.keys)
         for ((t, r) in list) {
@@ -66,7 +67,7 @@ class BuildingRulesTest {
         assertEquals(BuildingType.PITCH, Sections.venue(com.arenacity.domain.model.Sport.FOOTBALL))
         // the ones with no mechanic yet: nothing to collect, no effect, «soon»
         val soon = setOf(BuildingType.ATHLETES_RESIDENCE, BuildingType.YOUTH_SPORTS_SCHOOL, BuildingType.SPORTS_SCIENCE_LAB, BuildingType.SCHOOL, BuildingType.TRANSPORT_HUB,
-            BuildingType.SCOUTING_OFFICE, BuildingType.RECOVERY_CENTER, BuildingType.ANALYTICS_CENTER, BuildingType.COACHING_HQ)
+            BuildingType.SCOUTING_OFFICE, BuildingType.ANALYTICS_CENTER)
         assertEquals(soon, BuildingCatalog.specs.values.filter { it.soon }.map { it.type }.toSet())
         for (t in soon) assertTrue(BuildingCatalog.spec(t).levels.all { it.incomePerHour == 0L && it.effect == 0 && it.effect2 == 0 }, "$t has no effect yet")
         // the earners: the shopping centre pays the best of the old shop's, café's and car park's incomes, the fan zone the café's
@@ -136,7 +137,7 @@ class BuildingRulesTest {
     fun `footprints rotate and overlap`() {
         val a = footprint(BuildingType.PITCH, 0, 0, 0)   // 16x16
         assertEquals(Footprint(0, 0, 16, 16), a)
-        assertEquals(Footprint(0, 0, 6, 8), footprint(BuildingType.ACADEMY, 0, 0, 90))
+        assertEquals(Footprint(0, 0, 8, 12), footprint(BuildingType.TRAINING_CENTER, 0, 0, 90))   // 12x8 turned (the academy is square since 16 October)
         assertTrue(a.overlaps(Footprint(14, 14, 2, 2))); assertFalse(a.overlaps(Footprint(16, 0, 2, 2)))
         // every footprint is whole tiles of the build grid (14 October, pass 3), DECOR, FENCE and ROAD one tile each
         for (t in BuildingType.values()) { val s = BuildingCatalog.spec(t); assertTrue(s.width % Grid.TILE == 0 && s.height % Grid.TILE == 0, "$t ${s.width}x${s.height}") }
