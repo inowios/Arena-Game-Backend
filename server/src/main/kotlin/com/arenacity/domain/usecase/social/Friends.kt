@@ -60,10 +60,10 @@ class ShowcaseService(
         }
         // the buildings: replaced only when the layout differs from what is stored
         val have = buildings.listByClub(d.id)
-        val want = city.slots.map { Triple(it.type, it.level, Triple(it.x, it.y, it.rot)) }.toSet()
-        if (have.size == city.slots.size && have.map { Triple(it.type, it.level, Triple(it.gridX, it.gridY, it.rotation)) }.toSet() == want) return
+        val want = city.slots.map { Triple(it.type, it.level, listOf(it.x, it.y, it.rot, it.variant)) }.toSet()
+        if (have.size == city.slots.size && have.map { Triple(it.type, it.level, listOf(it.gridX, it.gridY, it.rotation, it.variant)) }.toSet() == want) return
         for (b in have) buildings.delete(b.id)
-        for (s in city.slots) buildings.create(Building(UUID.randomUUID(), d.id, s.type, s.level, s.x, s.y, s.rot, BuildingState.IDLE, null, now, now, now))
+        for (s in city.slots) buildings.create(Building(UUID.randomUUID(), d.id, s.type, s.level, s.x, s.y, s.rot, BuildingState.IDLE, null, now, now, now, variant = s.variant))
     }
 }
 

@@ -38,7 +38,7 @@ import kotlin.math.abs
  */
 object Showcase {
     /** [rot]: 0 or 90 — a building turned a quarter where only that fits its lot (16 October: the grown footprints). */
-    data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int, val rot: Int = 0)
+    data class Slot(val type: BuildingType, val level: Int, val x: Int, val y: Int, val rot: Int = 0, val variant: String? = null)
     /** [regions]: the land mask's regions the town stands on (the main island and the open side islands); [zones]: the zones open. */
     data class City(val stadium: Int, val regions: Set<String>, val slots: List<Slot>, val zones: Set<People> = emptySet())
 
@@ -362,11 +362,22 @@ object Showcase {
         }
         val shore = land.cells.filter { p -> around(p).any { !on(it) } && p !in roads }.sortedBy(::near)
         val planted = HashSet<Pair<Int, Int>>()
+        // the decorations of the game's shop and roads (16 October, the owner: the showcase town dressed up nicely): the
+        // ones nearest the stadium its parade — fountains, the footballer's statue, the trophy, flags, and in the city of
+        // the future a holographic ball and a drone pad — then the streets lamps (LED poles from stadium 5), blossoming
+        // trees, flower beds, benches and hedges in turn
+        val parade = listOf("decor_fountain", "decor_statue", "decor_fountain", "decor_trophy", "decor_flagpole", "decor_flagpole") +
+            (if (stadium >= 7) listOf("decor_holo_ball", "decor_holo_ball") else emptyList()) + (if (stadium >= 10) listOf("decor_drone_pad") else emptyList())
+        val lamp = if (stadium >= 5) "decor_led_pole" else "decor_lamp"
+        val street = listOf(lamp, "decor_blossom", "decor_flowerbed", lamp, "decor_bench", "decor_hedge")
+        var dressed = 0
         for (p in kerbs + shore) {
             if (trees <= 0) break
             if (Math.floorMod(p.first + p.second, 3) != 0 || p in planted) continue
             if (p in solid || (p.first - 1..p.first + 1).any { i -> (p.second - 1..p.second + 1).any { j -> (i to j) in pitchCells } }) continue
-            planted += p; slots += Slot(BuildingType.DECOR, decor.capAt(stadium), p.first, p.second); trees--
+            val look = if (dressed < parade.size) parade[dressed] else street[(dressed - parade.size) % street.size]
+            dressed++
+            planted += p; slots += Slot(BuildingType.DECOR, decor.capAt(stadium), p.first, p.second, variant = look); trees--
         }
         val roadLevel = BuildingCatalog.spec(BuildingType.ROAD).capAt(stadium).coerceAtLeast(1)
         for ((x, y) in roads) slots += Slot(BuildingType.ROAD, roadLevel, x, y)
