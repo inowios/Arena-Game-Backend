@@ -278,3 +278,8 @@ building.SCOUTING_OFFICE.about	Will search the world for talented players for yo
 building.RECOVERY_CENTER.about	Will help your athletes recover after matches and training.	Ayudará a tus atletas a recuperarse tras partidos y entrenamientos.	Vai ajudar seus atletas a se recuperar depois de jogos e treinos.	Поможет спортсменам восстанавливаться после матчей и тренировок.	Допомагатиме спортсменам відновлюватися після матчів і тренувань.
 building.ANALYTICS_CENTER.about	Will study your rivals before every match.	Analizará a tus rivales antes de cada partido.	Vai analisar seus adversários antes de cada partida.	Будет разбирать соперников перед каждым матчем.	Розбиратиме суперників перед кожним матчем.
 building.COACHING_HQ.about	Will bring in coaches to sharpen your tactics.	Traerá entrenadores que afinarán tu táctica.	Vai trazer técnicos para afiar a sua tática.	Будет приглашать тренеров, которые отточат вашу тактику.	Запрошуватиме тренерів, які відточать вашу тактику.
+# --- the story «Іскра» (rules.Story)
+No such chapter	No such chapter	No existe ese capítulo	Esse capítulo não existe	Такой главы нет	Такої глави немає
+The chapter is already claimed	The chapter's reward is already claimed	La recompensa del capítulo ya se reclamó	A recompensa do capítulo já foi resgatada	Награда за главу уже получена	Нагороду за главу вже забрано
+The chapter is not open yet	The chapter is not open yet	El capítulo aún no está abierto	O capítulo ainda não está aberto	Глава ещё не открыта	Глава ще не відкрита
+Complete the chapter's goals first	Complete the chapter's goals first	Primero cumple los objetivos del capítulo	Primeiro cumpra os objetivos do capítulo	Сначала выполните цели главы	Спершу виконайте цілі глави

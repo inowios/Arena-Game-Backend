@@ -112,7 +112,9 @@ val appModule = module {
     single<HeroRepository> { HeroRepositoryImpl() }
     single { com.arenacity.domain.usecase.hero.HeroUseCases(get(), get(), get(), tx = get()) }
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("heroes")) { com.arenacity.domain.usecase.hero.StartHeroesInitializer(get()) }
-    single { CardMatchUseCases(get(), get(), get(), get(), tx = get(), heroes = get()) }
+    single<com.arenacity.domain.repository.StoryRepository> { com.arenacity.data.repository.StoryRepositoryImpl() }
+    single { com.arenacity.domain.usecase.story.StoryUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single { CardMatchUseCases(get(), get(), get(), get(), tx = get(), heroes = get(), stories = get()) }
     single { com.arenacity.domain.usecase.club.EnergyUseCases(get(), get(), get(), tx = get()) }
     single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
     single { GetClubHistoryUseCase(get(), get()) }

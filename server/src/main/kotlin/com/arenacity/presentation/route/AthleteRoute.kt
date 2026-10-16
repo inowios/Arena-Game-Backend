@@ -65,9 +65,9 @@ fun Route.athleteRoutes() {
             post("/cards/result") {
                 val r = call.receive<CardMatchResultRequest>()
                 val cards = r.cards.associate { (runCatching { UUID.fromString(it.id) }.getOrElse { throw ValidationException("Bad athlete id") }) to it.xp }
-                val o = cardMatch.report(call.userId(), com.arenacity.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards, r.stake, r.conceded, r.heroes))
+                val o = cardMatch.report(call.userId(), com.arenacity.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards, r.stake, r.conceded, r.heroes, r.story))
                 val now = clock.now()
-                call.respond(CardMatchResultResponse(o.coins, o.club.toDto(), o.athletes.map { it.toDto(now) }, o.heroes.map { it.toDto() }, o.heroXp).toSuccessResponse())
+                call.respond(CardMatchResultResponse(o.coins, o.club.toDto(), o.athletes.map { it.toDto(now) }, o.heroes.map { it.toDto() }, o.heroXp, o.story?.toDto()).toSuccessResponse())
             }
             post("/academy/claim") {
                 val sport = runCatching { call.receive<AcademyClaimRequest>() }.getOrNull()?.sport?.let { parseEnum<Sport>(it, "sport") } ?: Sport.FOOTBALL

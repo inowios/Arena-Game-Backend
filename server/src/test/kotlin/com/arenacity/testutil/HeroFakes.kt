@@ -18,3 +18,9 @@ class FakeHeroRepository : HeroRepository {
     override suspend fun lineup(clubId: UUID) = lineups[clubId]
     override suspend fun saveLineup(lineup: HeroLineup): HeroLineup { lineups[lineup.clubId] = lineup; return lineup }
 }
+
+class FakeStoryRepository : com.arenacity.domain.repository.StoryRepository {
+    val rows = linkedMapOf<UUID, com.arenacity.domain.model.StoryProgress>()
+    override suspend fun get(clubId: UUID) = rows[clubId]
+    override suspend fun save(progress: com.arenacity.domain.model.StoryProgress): com.arenacity.domain.model.StoryProgress { rows[progress.clubId] = progress; return progress }
+}

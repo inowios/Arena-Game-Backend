@@ -338,6 +338,46 @@ class ApiIT {
     }
 
     @Test
+    fun `story - chapter goals from card match reports, claiming a chapter, the story hero over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
+        application { module() }
+        val t = guestWithClub("it-device-story", "Story FC")
+        val s0 = call(HttpMethod.Get, "/club/story", t).data.o()
+        assertEquals("spark", s0["season"]!!.jsonPrimitive.content); assertEquals(1, s0["chapter"]!!.jsonPrimitive.int); assertEquals(false, s0["finished"]!!.jsonPrimitive.boolean)
+        val chapters = s0["chapters"]!!.jsonArray.map { it.o() }
+        assertEquals(6, chapters.size)
+        assertEquals(listOf("ACTIVE", "LOCKED", "LOCKED", "LOCKED", "LOCKED", "LOCKED"), chapters.map { it["state"]!!.jsonPrimitive.content })
+        assertEquals("story.c1.intro", chapters[0]["introKey"]!!.jsonPrimitive.content)
+        assertEquals("p002", chapters[5]["rival"]!!.o()["star"]!!.jsonPrimitive.content)
+        assertEquals("p004", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
+        // a match with Kai and Itsuki, 3 goals; then the chapter's story match
+        val r1 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":1,"won":true,"goalsFor":3,"goalsAgainst":1,"heroes":["p001","p003"]}""").data.o()
+        assertEquals(listOf("c1.o2"), r1["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
+        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"goalsFor":1,"goalsAgainst":0,"heroes":["p001","p003"],"story":1}""").data.o()
+        assertEquals(listOf("c1.o1", "c1.o3"), r2["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(true, r2["story"]!!.o()["chapterDone"]!!.jsonPrimitive.boolean)
+        assertEquals("DONE", r2["story"]!!.o()["chapter"]!!.o()["state"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/club/story/2/claim", t, expect = 409)
+        call(HttpMethod.Post, "/club/story/x/claim", t, expect = 404)
+        val c1 = call(HttpMethod.Post, "/club/story/1/claim", t).data.o()
+        assertEquals(500, c1["coins"]!!.jsonPrimitive.int); assertEquals(5, c1["gems"]!!.jsonPrimitive.int)
+        assertEquals(kotlinx.serialization.json.JsonNull, c1["hero"])
+        assertEquals(2, c1["story"]!!.o()["chapter"]!!.jsonPrimitive.int)
+        assertEquals("ACTIVE", c1["story"]!!.o()["chapters"]!!.jsonArray[1].o()["state"]!!.jsonPrimitive.content)
+        call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
+        // chapter 2 finished (as if played): claiming brings Mirai into the club
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use {
+            it.createStatement().executeUpdate("UPDATE club_story SET progress = 'c2.o1=2,c2.o2=5,c2.o3=1' WHERE club_id = (SELECT id FROM clubs WHERE name = 'Story FC')")
+        }
+        val c2 = call(HttpMethod.Post, "/club/story/2/claim", t).data.o()
+        assertEquals("p004", c2["hero"]!!.o()["id"]!!.jsonPrimitive.content); assertEquals(true, c2["newHero"]!!.jsonPrimitive.boolean)
+        assertEquals("STORY", c2["hero"]!!.o()["source"]!!.jsonPrimitive.content)
+        assertEquals(3, call(HttpMethod.Get, "/club/story", t).data.o()["chapter"]!!.jsonPrimitive.int)
+        assertEquals(true, call(HttpMethod.Get, "/club/heroes", t).data.o()["heroes"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == "p004" }["owned"]!!.jsonPrimitive.boolean)
+    }
+
+    @Test
     fun `leagues, friendlies and economy over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }

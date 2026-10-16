@@ -45,7 +45,9 @@ data class HeroLineupView(val field: List<String>, val keeper: String?, val benc
 data class HeroTrainingStatus(val centerLevel: Int?, val slots: Int, val coins: Long, val xp: Int, val seconds: Long, val training: List<HeroView>)
 /** A session started: the hero, the club after paying, the price, and the centre as it is now. */
 data class HeroTrainResult(val hero: HeroView, val club: Club, val spent: Long, val status: HeroTrainingStatus)
-/** A session claimed: the hero after the experience, how much it got ([gained] less than the session's at the level cap), the centre now. */
+/** A story hero given: [joined] = new in the club, else he was owned and got [xp] experience. */
+data class HeroStoryGrant(val hero: HeroView, val joined: Boolean, val xp: Int)
+/** A session claimed:the hero after the experience, how much it got ([gained] less than the session's at the level cap), the centre now. */
 data class HeroClaimResult(val hero: HeroView, val gained: Int, val levelBefore: Int, val status: HeroTrainingStatus)
 
 /**
@@ -113,6 +115,25 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
             val saved = heroes.update(h.copy(level = level, xp = rest, xpDay = today, xpToday = earnedToday + gain))
             view(spec, saved, stadium = 1, gold = 0)   // owned: stadium and gold do not matter
         }
+    }
+
+    /**
+     * The story gives [heroId] (a chapter of «Іскра» claimed, usecase.story.StoryUseCases): a hero the club lacks joins at
+     * level 1 with source STORY ([HeroStoryGrant.joined] true); one it already has (bought for gems before) gets
+     * [ownedXp] experience instead. Runs inside the caller's transaction with the club locked.
+     */
+    suspend fun grantStory(club: Club, heroId: String, stadium: Int, ownedXp: Int): HeroStoryGrant {
+        val spec = HeroCatalog.of(heroId) ?: throw NotFoundException("No such hero")
+        val have = ensureStart(club.id).firstOrNull { it.heroId == heroId }
+        if (have == null) {
+            val hero = ClubHero(club.id, heroId, 1, 0, HeroSource.STORY, clock.now())
+            heroes.insertIgnore(hero)
+            return HeroStoryGrant(view(spec, hero, stadium, club.gold), true, 0)
+        }
+        val (level, rest) = Heroes.grow(have.level, have.xp, ownedXp)
+        val gained = Heroes.totalXp(level, rest) - Heroes.totalXp(have.level, have.xp)
+        val saved = heroes.update(have.copy(level = level, xp = rest))
+        return HeroStoryGrant(view(spec, saved, stadium, club.gold), false, gained)
     }
 
     // ------------------------------------------------------------------ the «Склад» lineup

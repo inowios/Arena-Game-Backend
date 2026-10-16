@@ -62,7 +62,9 @@ fun com.arenacity.domain.usecase.athlete.PackResult.toDto(now: Instant) = PackOp
 @Serializable data class CardXpDto(val id: String, val xp: Int)
 /** [heroes] = the ids of the club's heroes who played ("p001"…), at most 10; the server sets their experience by the result. */
 @Serializable data class CardMatchResultRequest(val seed: Int, val won: Boolean, val draw: Boolean = false, val goalsFor: Int = 0, val goalsAgainst: Int = 0, val cards: List<CardXpDto> = emptyList(), val stake: Int = 1, val conceded: Boolean = false,
-                                                val heroes: List<String> = emptyList())
+                                                val heroes: List<String> = emptyList(), val story: Int? = null)
 @Serializable data class CardOpponentResponse(val club: ClubRefDto, val athletes: List<AthleteDto>)
 /** [heroes] = the heroes who played as they are now, [heroXp] = the experience each was given (less once a hero hits the daily cap). */
-@Serializable data class CardMatchResultResponse(val coins: Long, val club: ClubDto, val athletes: List<AthleteDto>, val heroes: List<HeroDto> = emptyList(), val heroXp: Int = 0)
+/** [story] = the story «Іскра»'s current chapter after the match (null once the season is over). */
+@Serializable data class CardMatchResultResponse(val coins: Long, val club: ClubDto, val athletes: List<AthleteDto>, val heroes: List<HeroDto> = emptyList(), val heroXp: Int = 0,
+                                                 val story: StoryMatchDto? = null)
