@@ -287,7 +287,7 @@ class ApiIT {
         assertEquals("STORY", mirai["unlock"]!!.o()["kind"]!!.jsonPrimitive.content); assertEquals(2, mirai["unlock"]!!.o()["chapter"]!!.jsonPrimitive.int)
         assertEquals(900, mirai["unlock"]!!.o()["price"]!!.jsonPrimitive.int); assertEquals(false, mirai["canBuy"]!!.jsonPrimitive.boolean)
         val beast = list.first { it["id"]!!.jsonPrimitive.content == "p012" }
-        assertEquals("BEAST", beast["folk"]!!.jsonPrimitive.content); assertEquals(3, beast["unlock"]!!.o()["stadium"]!!.jsonPrimitive.int)
+        assertEquals("BEAST", beast["folk"]!!.jsonPrimitive.content); assertEquals(4, beast["unlock"]!!.o()["stadium"]!!.jsonPrimitive.int)
         assertEquals(false, beast["available"]!!.jsonPrimitive.boolean)
         call(HttpMethod.Post, "/club/heroes/p006/unlock", t, expect = 402)   // 500 gold, 50 owned
         java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET gold = 2000 WHERE name = 'Hero FC'") }
@@ -305,6 +305,36 @@ class ApiIT {
         assertEquals(50, result["heroes"]!!.jsonArray[0].o()["xp"]!!.jsonPrimitive.int)
         val eleven = (1..11).joinToString(",") { "\"p%03d\"".format(it) }
         call(HttpMethod.Post, "/club/cards/result", t, """{"seed":6,"won":true,"heroes":[$eleven]}""", expect = 400)
+        // the «Склад» lineup: none saved, then saved and validated
+        val none = call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()
+        assertEquals(false, none["saved"]!!.jsonPrimitive.boolean); assertEquals(0, none["field"]!!.jsonArray.size); assertEquals(5, none["maxField"]!!.jsonPrimitive.int)
+        val saved = call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p001","p003","p007","p009","p010"],"keeper":"p011","bench":["p006"]}""").data.o()
+        assertEquals(true, saved["saved"]!!.jsonPrimitive.boolean); assertEquals("p011", saved["keeper"]!!.jsonPrimitive.content)
+        assertEquals(listOf("p006"), call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()["bench"]!!.jsonArray.map { it.jsonPrimitive.content })
+        call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p004"],"keeper":"p011"}""", expect = 400)   // not owned
+        call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p003"],"keeper":"p001"}""", expect = 400)   // not a goalkeeper
+        call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p001"],"bench":["p001"]}""", expect = 400)   // twice
+        // training: no centre yet, then one for coins and the experience after the timer
+        assertEquals(false, call(HttpMethod.Get, "/club/heroes/training", t).data.o()["available"]!!.jsonPrimitive.boolean)
+        call(HttpMethod.Post, "/club/heroes/p001/train", t, expect = 400)
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET coins = 50000 WHERE name = 'Hero FC'") }
+        val (tx, ty) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "TRAINING_CENTER")
+        val tc = call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 201).data.o()["id"]!!.jsonPrimitive.content
+        call(HttpMethod.Post, "/club/buildings/$tc/speedup", t)
+        val offer = call(HttpMethod.Get, "/club/heroes/training", t).data.o()
+        assertEquals(true, offer["available"]!!.jsonPrimitive.boolean); assertEquals(1, offer["slots"]!!.jsonPrimitive.int)
+        assertEquals(200, offer["coins"]!!.jsonPrimitive.int); assertEquals(80, offer["xp"]!!.jsonPrimitive.int)
+        val started = call(HttpMethod.Post, "/club/heroes/p003/train", t, expect = 201).data.o()
+        assertEquals(200, started["spent"]!!.jsonPrimitive.int); assertEquals(1, started["training"]!!.o()["busy"]!!.jsonPrimitive.int)
+        assertEquals(7200, started["hero"]!!.o()["training"]!!.o()["secondsLeft"]!!.jsonPrimitive.int)
+        call(HttpMethod.Post, "/club/heroes/p001/train", t, expect = 409)   // the one slot is busy
+        call(HttpMethod.Post, "/club/heroes/p003/train/claim", t, expect = 409)   // still running
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE club_heroes SET training_ends_at = now() - interval '1 minute' WHERE hero_id = 'p003'") }
+        val p003 = call(HttpMethod.Get, "/club/heroes", t).data.o()["heroes"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == "p003" }
+        assertEquals(true, p003["training"]!!.o()["done"]!!.jsonPrimitive.boolean)
+        val claimed = call(HttpMethod.Post, "/club/heroes/p003/train/claim", t).data.o()
+        assertEquals(80, claimed["gained"]!!.jsonPrimitive.int); assertEquals(80, claimed["hero"]!!.o()["xp"]!!.jsonPrimitive.int)
+        assertEquals(kotlinx.serialization.json.JsonNull, claimed["hero"]!!.o()["training"]); assertEquals(0, claimed["training"]!!.o()["busy"]!!.jsonPrimitive.int)
     }
 
     @Test

@@ -96,4 +96,35 @@ class HeroesTest {
         assertEquals(0, Heroes.matchXp(won = false, draw = false, conceded = true))
         assertTrue(Heroes.MAX_MATCH_XP_PER_DAY % Heroes.matchXp(true, false) == 0)
     }
+
+    @Test
+    fun `a lineup takes owned heroes once, a goalkeeper in goal, at most five, four and ten`() {
+        val owned = (Heroes.START + "p006").associateWith { hero(it) }
+        val five = listOf("p001", "p003", "p007", "p009", "p010")
+        assertNull(Heroes.lineupError(five, "p011", listOf("p006"), owned))
+        assertNull(Heroes.lineupError(emptyList(), null, emptyList(), owned))   // the academy's pupils fill everything
+        assertNull(Heroes.lineupError(listOf("p001"), null, emptyList(), owned))
+        assertEquals("Too many heroes" to null, Heroes.lineupError(five + "p006", "p011", emptyList(), owned))
+        assertEquals("Too many heroes" to null, Heroes.lineupError(emptyList(), null, listOf("p001", "p003", "p007", "p009", "p010"), owned))
+        assertEquals("Hero {0} is not in your club" to "p004", Heroes.lineupError(listOf("p001", "p004"), "p011", emptyList(), owned))
+        assertEquals("Hero {0} is not in your club" to "p999", Heroes.lineupError(emptyList(), null, listOf("p999"), owned))
+        assertEquals("A hero can only be picked once" to null, Heroes.lineupError(listOf("p001"), "p011", listOf("p001"), owned))
+        assertEquals("The keeper must be a goalkeeper" to null, Heroes.lineupError(listOf("p003"), "p001", emptyList(), owned))
+        assertEquals("A goalkeeper only plays in goal" to null, Heroes.lineupError(listOf("p011"), null, emptyList(), owned))
+        assertEquals("A goalkeeper only plays in goal" to null, Heroes.lineupError(emptyList(), null, listOf("p011"), owned))
+        assertEquals(Heroes.MAX_HEROES_PER_MATCH, Heroes.LINEUP_FIELD + 1 + Heroes.LINEUP_BENCH)
+    }
+
+    @Test
+    fun `training pays more and gives more with the training centre's level`() {
+        assertEquals(8, Heroes.TRAINING_XP.size); assertEquals(8, Heroes.TRAINING_COINS.size)
+        assertEquals(BuildingCatalog.spec(BuildingType.TRAINING_CENTER).levels.size, Heroes.TRAINING_XP.size)
+        assertTrue(Heroes.TRAINING_XP.zipWithNext().all { (a, b) -> b > a }); assertTrue(Heroes.TRAINING_COINS.zipWithNext().all { (a, b) -> b > a })
+        assertEquals(80, Heroes.trainingXp(1)); assertEquals(200L, Heroes.trainingCoins(1))
+        assertEquals(300, Heroes.trainingXp(8)); assertEquals(6_000L, Heroes.trainingCoins(8))
+        assertEquals(300, Heroes.trainingXp(12)); assertEquals(80, Heroes.trainingXp(0))   // clamped to the centre's levels
+        assertEquals(listOf(1, 1, 2, 2, 3, 3, 4, 4), (1..8).map { Heroes.trainingSlots(it) })
+        assertEquals(7200L, Heroes.TRAINING_SECONDS)
+        assertEquals(0, Heroes.totalXp(1, 0)); assertEquals(250 + 20, Heroes.totalXp(3, 20)); assertEquals(4170, Heroes.totalXp(10, 0))
+    }
 }

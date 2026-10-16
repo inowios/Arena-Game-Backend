@@ -43,6 +43,7 @@ fun Route.athleteRoutes() {
                 val s = list(call.userId()); val now = clock.now()
                 call.respond(SquadResponse(s.athletes.map { it.toDto(now) }, s.trainings.map { it.toDto(now) }, s.slots, now.toString()).toSuccessResponse())
             }
+            // deprecated (heroes instead of cards): the client dropped packs and the day's offer on 17 October 2026; kept for older app versions
             get("/packs") { call.respond(packs.shelf(call.userId()).toDto().toSuccessResponse()) }
             post("/packs/{kind}/open") {
                 val kind = parseEnum<com.arenacity.domain.model.CardKind>(call.parameters["kind"] ?: "", "pack")

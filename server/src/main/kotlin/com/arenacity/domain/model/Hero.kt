@@ -20,7 +20,16 @@ enum class HeroSource { START, STORY, CRYSTALS, MISSION }
 /**
  * A hero the club owns (one of each, for good; docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo). [level] 1..10,
  * [xp] = experience into the current level (0 at the top level); [xpDay] / [xpToday] = the UTC day the hero
- * last earned match experience and how much that day (the daily cap, rules.Heroes.MAX_MATCH_XP_PER_DAY).
+ * last earned match experience and how much that day (the daily cap, rules.Heroes.MAX_MATCH_XP_PER_DAY);
+ * [trainingEndsAt] / [trainingXp] = a session in the training centre (null = not training) and what it will give.
  */
 data class ClubHero(val clubId: UUID, val heroId: String, val level: Int, val xp: Int, val source: HeroSource, val unlockedAt: Instant,
-                    val xpDay: LocalDate? = null, val xpToday: Int = 0)
+                    val xpDay: LocalDate? = null, val xpToday: Int = 0, val trainingEndsAt: Instant? = null, val trainingXp: Int = 0) {
+    val training: Boolean get() = trainingEndsAt != null
+}
+
+/**
+ * The club's «Стрілка» lineup («Склад»): up to five field heroes, the keeper (null = an academy pupil in goal) and up to
+ * four on the bench; the places left empty are the academy's pupils (rules.Heroes.lineupError).
+ */
+data class HeroLineup(val clubId: UUID, val field: List<String>, val keeper: String?, val bench: List<String>, val updatedAt: Instant)

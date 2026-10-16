@@ -17,7 +17,7 @@ data class PackSpec(val kind: CardKind, val coins: Long, val gold: Int, val chan
  * has opened, so money speeds up and offers choice but cannot buy a kind the club has not grown into.
  *
  * DEPRECATED (16 October 2026): heroes replace cards and packs (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo;
- * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged, while the current client still opens packs.
+ * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged: the client dropped packs on 17 October 2026, but an older app version in production may still call them.
  */
 object Packs {
     const val CARDS_PER_PACK = 3

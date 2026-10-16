@@ -68,6 +68,9 @@ object Heroes {
         return l to if (l >= MAX_LEVEL) 0 else x
     }
 
+    /** All the experience a hero of [level] with [xp] into it has earned since level 1. */
+    fun totalXp(level: Int, xp: Int): Int = XP_TO_NEXT.take(level.coerceIn(1, MAX_LEVEL) - 1).sum() + xp
+
     /** The advanced skills (ids) a hero of [level] has opened, in order. */
     fun unlockedSkills(hero: HeroSpec, level: Int): List<String> = hero.skills.filterIndexed { i, _ -> i < SKILL_LEVELS.size && level >= SKILL_LEVELS[i] }
 
@@ -94,4 +97,41 @@ object Heroes {
         draw -> XP_PLAYED + XP_DRAW
         else -> XP_PLAYED
     }
+
+    // --- the lineup («Склад»: GET / PUT /club/heroes/lineup)
+
+    /** Field heroes of the «Стрілка» squad (the keeper apart) and its bench; [MAX_HEROES_PER_MATCH] = 5 + 1 + 4. */
+    const val LINEUP_FIELD = 5
+    const val LINEUP_BENCH = 4
+
+    /**
+     * What is wrong with a lineup (an error template and its argument), null when it is fine: at most [LINEUP_FIELD] field
+     * heroes and [LINEUP_BENCH] on the bench (10 with the keeper), every hero owned ([owned]: id → spec) and picked once,
+     * the keeper a goalkeeper and no goalkeeper in the field or on the bench (the match's bench holds field players only).
+     * Fewer heroes is fine: the academy's pupils fill the empty places.
+     */
+    fun lineupError(field: List<String>, keeper: String?, bench: List<String>, owned: Map<String, HeroSpec>): Pair<String, String?>? {
+        val all = field + bench + listOfNotNull(keeper)
+        if (field.size > LINEUP_FIELD || bench.size > LINEUP_BENCH || all.size > MAX_HEROES_PER_MATCH) return "Too many heroes" to null
+        all.firstOrNull { it !in owned }?.let { return "Hero {0} is not in your club" to it }
+        if (all.toSet().size != all.size) return "A hero can only be picked once" to null
+        if (keeper != null && owned.getValue(keeper).position != "GK") return "The keeper must be a goalkeeper" to null
+        if ((field + bench).any { owned.getValue(it).position == "GK" }) return "A goalkeeper only plays in goal" to null
+        return null
+    }
+
+    // --- training in the training centre (POST /club/heroes/{id}/train)
+
+    /** One session is two hours: the timer, not a daily cap, is the limit (the match cap [MAX_MATCH_XP_PER_DAY] does not apply). */
+    const val TRAINING_SECONDS = 2 * 3600L
+    /** Experience of one session by the training centre's level 1..8. */
+    val TRAINING_XP = listOf(80, 100, 120, 150, 180, 220, 260, 300)
+    /** Its price in coins by the same level. */
+    val TRAINING_COINS = listOf(200, 350, 600, 1_000, 1_600, 2_500, 4_000, 6_000)
+
+    private fun tcIndex(trainingCenterLevel: Int) = trainingCenterLevel.coerceIn(1, TRAINING_XP.size) - 1
+    fun trainingXp(trainingCenterLevel: Int): Int = TRAINING_XP[tcIndex(trainingCenterLevel)]
+    fun trainingCoins(trainingCenterLevel: Int): Long = TRAINING_COINS[tcIndex(trainingCenterLevel)].toLong()
+    /** Heroes training at once: the centre's slots (1, 1, 2, 2, 3, 3, 4, 4), as many as its athletes get (rules.TrainingRules.slots). */
+    fun trainingSlots(trainingCenterLevel: Int): Int = TrainingRules.slots(trainingCenterLevel)
 }

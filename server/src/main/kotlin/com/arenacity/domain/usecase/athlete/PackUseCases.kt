@@ -32,7 +32,7 @@ data class DailyOfferView(val offer: DailyOffer, val open: Boolean, val bought: 
  * The pack shop: what is on the shelf and the opening itself (plan §3b).
  *
  * DEPRECATED (16 October 2026): heroes replace cards and packs (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo;
- * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged, while the current client still opens packs.
+ * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged: the client dropped packs on 17 October 2026, but an older app version in production may still call them.
  */
 class PackUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val packs: PackRepository,
                    private val clock: Clock, private val tx: Tx = NoTx) {

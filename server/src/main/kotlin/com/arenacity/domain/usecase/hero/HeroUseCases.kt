@@ -3,19 +3,25 @@ package com.arenacity.domain.usecase.hero
 import com.arenacity.common.time.Clock
 import com.arenacity.common.tx.NoTx
 import com.arenacity.common.tx.Tx
+import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.ClubHero
+import com.arenacity.domain.model.HeroLineup
 import com.arenacity.domain.model.HeroSource
 import com.arenacity.domain.model.HeroSpec
 import com.arenacity.domain.repository.HeroRepository
+import com.arenacity.domain.rules.BuildingType
 import com.arenacity.domain.rules.HeroCatalog
 import com.arenacity.domain.rules.HeroUnlock
 import com.arenacity.domain.rules.Heroes
+import com.arenacity.domain.rules.Sections
 import com.arenacity.domain.rules.UnlockKind
 import com.arenacity.domain.usecase.club.ClubInitializer
 import com.arenacity.domain.usecase.club.ClubService
+import com.arenacity.domain.usecase.club.ClubState
+import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -23,10 +29,24 @@ import java.util.UUID
  * A catalog hero as one club sees it: [owned] = the club's row (null = still locked), [available] = owned, or the
  * stadium has reached the rule's level, [canBuy] = locked, available and enough gold to open it now.
  */
-data class HeroView(val spec: HeroSpec, val rule: HeroUnlock, val owned: ClubHero?, val available: Boolean, val canBuy: Boolean)
+data class HeroView(val spec: HeroSpec, val rule: HeroUnlock, val owned: ClubHero?, val available: Boolean, val canBuy: Boolean, val now: Instant? = null) {
+    /** Seconds left of the hero's training session (0 = done, ready to claim); null when it is not training. */
+    val trainingLeft: Long? get() = owned?.trainingEndsAt?.let { end -> maxOf(0L, end.epochSecond - (now ?: end).epochSecond) }
+}
 data class HeroRoster(val heroes: List<HeroView>, val club: Club, val stadium: Int)
 /** An unlock: the hero, the club after paying, and what it cost ([spent] 0 when the club already had the hero). */
 data class HeroUnlockResult(val hero: HeroView, val club: Club, val spent: Int)
+/** The «Склад» lineup: [saved] false = none saved yet (empty lists; the match then picks the best heroes itself). */
+data class HeroLineupView(val field: List<String>, val keeper: String?, val bench: List<String>, val saved: Boolean, val updatedAt: Instant?)
+/**
+ * Hero training in the training centre: [centerLevel] null = no working centre (nothing can train), then [coins] and
+ * [xp] of a session at that level, [seconds] its length, [slots] heroes at once, [training] = the heroes in a session now.
+ */
+data class HeroTrainingStatus(val centerLevel: Int?, val slots: Int, val coins: Long, val xp: Int, val seconds: Long, val training: List<HeroView>)
+/** A session started: the hero, the club after paying, the price, and the centre as it is now. */
+data class HeroTrainResult(val hero: HeroView, val club: Club, val spent: Long, val status: HeroTrainingStatus)
+/** A session claimed: the hero after the experience, how much it got ([gained] less than the session's at the level cap), the centre now. */
+data class HeroClaimResult(val hero: HeroView, val gained: Int, val levelBefore: Int, val status: HeroTrainingStatus)
 
 /**
  * Heroes instead of cards (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo; the rules in rules.Heroes): the
@@ -46,7 +66,7 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
 
     private fun view(spec: HeroSpec, owned: ClubHero?, stadium: Int, gold: Int): HeroView {
         val rule = Heroes.rule(spec)
-        return HeroView(spec, rule, owned, owned != null || Heroes.available(rule, stadium), owned == null && Heroes.canBuy(rule, stadium, gold))
+        return HeroView(spec, rule, owned, owned != null || Heroes.available(rule, stadium), owned == null && Heroes.canBuy(rule, stadium, gold), clock.now())
     }
 
     /** Every catalog hero, owned or locked, in catalog order. */
@@ -93,6 +113,81 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
             val saved = heroes.update(h.copy(level = level, xp = rest, xpDay = today, xpToday = earnedToday + gain))
             view(spec, saved, stadium = 1, gold = 0)   // owned: stadium and gold do not matter
         }
+    }
+
+    // ------------------------------------------------------------------ the «Склад» lineup
+
+    /** The saved lineup, or empty lists with [HeroLineupView.saved] false. */
+    suspend fun lineup(userId: UUID): HeroLineupView {
+        val club = service.clubOf(userId)
+        ensureStart(club.id)
+        return heroes.lineup(club.id)?.let { HeroLineupView(it.field, it.keeper, it.bench, true, it.updatedAt) } ?: HeroLineupView(emptyList(), null, emptyList(), false, null)
+    }
+
+    /** Saves the lineup after rules.Heroes.lineupError (owned heroes only, the keeper a goalkeeper, no one twice, at most 10). */
+    suspend fun saveLineup(userId: UUID, field: List<String>, keeper: String?, bench: List<String>): HeroLineupView = tx {
+        val club = service.lockedClubOf(userId)
+        val owned = ensureStart(club.id).mapNotNull { h -> HeroCatalog.of(h.heroId)?.let { h.heroId to it } }.toMap()
+        val k = keeper?.takeIf { it.isNotBlank() }
+        Heroes.lineupError(field, k, bench, owned)?.let { (template, arg) -> throw ValidationException(template, *listOfNotNull(arg).toTypedArray()) }
+        val saved = heroes.saveLineup(HeroLineup(club.id, field, k, bench, clock.now()))
+        HeroLineupView(saved.field, saved.keeper, saved.bench, true, saved.updatedAt)
+    }
+
+    // ------------------------------------------------------------------ training in the training centre
+
+    /** The level the club's training centre works at: built (an upgrade in progress trains at the previous level); null = none. */
+    private fun centerLevel(st: ClubState): Int? = st.buildings.filter { it.type == BuildingType.TRAINING_CENTER && Sections.venueOperational(it) }
+        .maxOfOrNull { Sections.effectiveLevel(it) }
+
+    private fun status(st: ClubState, owned: List<ClubHero>): HeroTrainingStatus {
+        val level = centerLevel(st)
+        val busy = owned.filter { it.training }.mapNotNull { h -> HeroCatalog.of(h.heroId)?.let { view(it, h, 1, 0) } }
+        return HeroTrainingStatus(level, level?.let(Heroes::trainingSlots) ?: 0, level?.let(Heroes::trainingCoins) ?: 0, level?.let(Heroes::trainingXp) ?: 0,
+            Heroes.TRAINING_SECONDS, busy)
+    }
+
+    suspend fun trainingStatus(userId: UUID): HeroTrainingStatus {
+        val st = service.state(userId)
+        return status(st, ensureStart(st.club.id))
+    }
+
+    /**
+     * Starts a session for [heroId]: the club needs a working training centre, a free slot (heroes at once = its slots),
+     * a hero it owns that is not training and below the top level, and the coins of the centre's level. The experience
+     * is fixed now (the centre's level today) and given by [claimTraining] after [Heroes.TRAINING_SECONDS].
+     */
+    suspend fun train(userId: UUID, heroId: String): HeroTrainResult = tx {
+        val spec = HeroCatalog.of(heroId) ?: throw NotFoundException("No such hero")
+        val st = service.state(userId, lock = true)
+        val level = centerLevel(st) ?: throw ValidationException("Build a training centre first")
+        val owned = ensureStart(st.club.id)
+        val hero = owned.firstOrNull { it.heroId == heroId } ?: throw ValidationException("Hero {0} is not in your club", heroId)
+        if (hero.training) throw ConflictException("The hero is already training")
+        if (hero.level >= Heroes.MAX_LEVEL) throw ValidationException("The hero is at the top level")
+        if (owned.count { it.training } >= Heroes.trainingSlots(level)) throw ConflictException("All training slots are busy")
+        val price = Heroes.trainingCoins(level)
+        val club = service.charge(st.club, coins = price)
+        val now = clock.now()
+        val saved = heroes.update(hero.copy(trainingEndsAt = now.plusSeconds(Heroes.TRAINING_SECONDS), trainingXp = Heroes.trainingXp(level)))
+        HeroTrainResult(view(spec, saved, st.stadium, club.gold), club, price, status(st.copy(club = club), owned.map { if (it.heroId == heroId) saved else it }))
+    }
+
+    /**
+     * Claims a finished session: the hero grows by its experience up to level 10 (the rest is dropped; the match day
+     * cap does not count training). 409 while the timer runs or when the hero is not training.
+     */
+    suspend fun claimTraining(userId: UUID, heroId: String): HeroClaimResult = tx {
+        val spec = HeroCatalog.of(heroId) ?: throw NotFoundException("No such hero")
+        val st = service.state(userId, lock = true)
+        val owned = ensureStart(st.club.id)
+        val hero = owned.firstOrNull { it.heroId == heroId } ?: throw ValidationException("Hero {0} is not in your club", heroId)
+        val ends = hero.trainingEndsAt ?: throw ConflictException("The hero is not training")
+        if (clock.now().isBefore(ends)) throw ConflictException("Training still in progress")
+        val (level, rest) = Heroes.grow(hero.level, hero.xp, hero.trainingXp)
+        val gained = Heroes.totalXp(level, rest) - Heroes.totalXp(hero.level, hero.xp)
+        val saved = heroes.update(hero.copy(level = level, xp = rest, trainingEndsAt = null, trainingXp = 0))
+        HeroClaimResult(view(spec, saved, st.stadium, st.club.gold), gained, hero.level, status(st, owned.map { if (it.heroId == heroId) saved else it }))
     }
 }
 

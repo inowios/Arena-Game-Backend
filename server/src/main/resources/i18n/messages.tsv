@@ -220,6 +220,13 @@ Bad score	Bad score	Resultado no válido	Placar inválido	Неверный сч�
 Bad stake	Bad stake	Apuesta no válida	Aposta inválida	Неверная ставка	Неправильна ставка
 No such hero	No such hero	No existe ese héroe	Não existe esse herói	Такого героя нет	Такого героя немає
 Too many heroes	Too many heroes	Demasiados héroes	Heróis demais	Слишком много героев	Забагато героїв
+Hero {0} is not in your club	Hero {0} is not in your club	El héroe {0} no está en tu club	O herói {0} não está no seu clube	Героя {0} нет в вашем клубе	Героя {0} немає у вашому клубі
+A hero can only be picked once	A hero can only be picked once	Un héroe solo puede elegirse una vez	Um herói só pode ser escolhido uma vez	Героя можно выбрать только один раз	Героя можна вибрати лише один раз
+The keeper must be a goalkeeper	The keeper must be a goalkeeper	En la portería debe estar un portero	No gol precisa estar um goleiro	В воротах должен стоять вратарь	У воротах має стояти воротар
+A goalkeeper only plays in goal	A goalkeeper only plays in goal	Un portero solo juega en la portería	Um goleiro só joga no gol	Вратарь играет только в воротах	Воротар грає лише у воротах
+The hero is already training	The hero is already training	El héroe ya está entrenando	O herói já está treinando	Герой уже тренируется	Герой уже тренується
+The hero is at the top level	The hero is at the top level	El héroe ya está en el nivel máximo	O herói já está no nível máximo	Герой уже на максимальном уровне	Герой уже на найвищому рівні
+The hero is not training	The hero is not training	El héroe no está entrenando	O herói não está treinando	Герой не тренируется	Герой не тренується
 No opponent around	No opponent around	No hay rivales cerca	Não há adversários por perto	Соперников рядом нет	Суперників поруч немає
 # --- admin dashboards
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
