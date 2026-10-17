@@ -17,7 +17,6 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/arenacity
       KTOR_DEVELOPMENT: "false"
       IAP_DEV_MODE: "false"
-      ADS_CLIENT_REWARDS: "false"
     volumes:
       - ./secrets:/app/secrets:ro
     mem_limit: 1g            # the JVM takes 75 % of it (-XX:MaxRAMPercentage=75)

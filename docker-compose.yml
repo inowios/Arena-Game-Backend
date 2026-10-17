@@ -44,8 +44,6 @@ services:
       APPSTORE_KEY_ID: ${APPSTORE_KEY_ID:-}
       APPSTORE_PRIVATE_KEY: ${APPSTORE_PRIVATE_KEY:-}
       APPSTORE_ROOT_CERT_PATH: ${APPSTORE_ROOT_CERT_PATH:-}
-      # rewarded ads (production: AdMob server-side verification only)
-      ADS_CLIENT_REWARDS: ${ADS_CLIENT_REWARDS:-false}
       # push
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}

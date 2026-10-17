@@ -86,7 +86,7 @@ class ClubUseCasesTest {
         assertEquals(1_000, clubs.rows.values.first().coins)
         // the response is GET /club's shape
         val body = get(user).toResponse(listOf("FOOTBALL"), 0, null)
-        assertEquals(3, body.stadium); assertEquals(listOf("stadium", "academy", "hospital"), body.spots); assertTrue(body.buildings.isEmpty())
+        assertEquals(3, body.stadium); assertEquals(listOf("stadium", "academy", "hospital"), body.spots)
         assertEquals(listOf("main"), body.land!!.regions)
     }
 

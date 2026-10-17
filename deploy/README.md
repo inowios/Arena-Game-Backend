@@ -71,8 +71,8 @@ Database migrations (Flyway, `server/src/main/resources/db/migration`) run on st
 | `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY` (+ optional `APPSTORE_ROOT_CERT_PATH`) | App Store purchase verification (App Store Server API key) |
 | `FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID` | push notifications |
 | `ADMIN_TOKEN` (≥ 16 chars, e.g. `openssl rand -hex 24`) | `/admin/*` and `/metrics`; empty disables them |
-| `IAP_DEV_MODE=false`, `ADS_CLIENT_REWARDS=false`, `KTOR_DEVELOPMENT=false` | must stay false in production |
-| `CLIENT_MIN_VERSION` | force-update older apps; at least `Lands.MIN_CLIENT` (0.2.0: the land mask — an older client validates the old square) wherever the land mask is served, and only once a client that enforces it is in the stores |
+| `IAP_DEV_MODE=false`, `KTOR_DEVELOPMENT=false` | must stay false in production |
+| `CLIENT_MIN_VERSION` | force-update older apps, only once a client that enforces it is in the stores |
 
 Files such as the Apple root certificate go to `./secrets/` (mounted read-only at `/app/secrets`).
 

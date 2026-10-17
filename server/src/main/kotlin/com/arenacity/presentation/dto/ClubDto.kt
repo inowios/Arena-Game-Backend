@@ -9,7 +9,6 @@ import com.arenacity.domain.rules.Zones
 import com.arenacity.domain.usecase.club.ClubSpots
 import com.arenacity.domain.usecase.club.ClubState
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable data class CreateClubRequest(val name: String, val primaryColor: String, val secondaryColor: String, val timezone: String = "UTC")
 @Serializable data class UpdateClubRequest(val name: String? = null, val primaryColor: String? = null, val secondaryColor: String? = null, val emblemJson: String? = null)
@@ -35,16 +34,14 @@ fun MapSpot.toDto() = SpotDto(id, island, cost, people?.name)
 
 /**
  * GET /club. [stadium] = the stadium level: the number of open spots (1..10); [spots] = the open spot ids; [land] = the
- * islands (see [LandDto]). [buildings] is always empty: the city builder went (17 October 2026), the field stays for the
- * clients that still read it.
+ * islands (see [LandDto]).
  */
 @Serializable data class ClubStateResponse(val club: ClubDto, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
                                           val stadium: Int = 1,
                                           val spots: List<String> = listOf("stadium"),
                                           val land: LandDto? = null,
                                           /** The club's energy now (rules.Energy). */
-                                          val energy: EnergyDto? = null,
-                                          val buildings: List<JsonElement> = emptyList())
+                                          val energy: EnergyDto? = null)
 /**
  * Energy (rules.Energy): [current] of [max], +1 every [regenSeconds]; [nextAt] = the next +1, [fullAt] = full again (both
  * null when full); [refillPrice] = gems to fill it up; [cardMatchCost] / [friendlyCost] = what a card match and a

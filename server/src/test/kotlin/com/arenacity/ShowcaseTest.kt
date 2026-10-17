@@ -36,7 +36,7 @@ class ShowcaseTest {
         assertEquals(MapSpots.ALL.map { it.id }, top.spots.open); assertEquals(10, top.spots.stadium)
         val dto = top.toDto()
         assertEquals(10, dto.stadium); assertEquals(listOf("main", "beast", "stone", "android", "shadow"), dto.land!!.regions)
-        assertTrue(dto.buildings.isEmpty()); assertTrue(dto.land!!.locked.isEmpty())
+        assertTrue(dto.land!!.locked.isEmpty())
         // one zone too many (an older showcase) is locked again
         zones.open(ShowcaseService.DEFS[0].id, People.SHADOW)
         showcase.ensure()

@@ -50,7 +50,7 @@ class ApiIT {
         val club = call(HttpMethod.Get, "/club", t).data.o()
         assertEquals(2500, club["club"]!!.o()["coins"]!!.jsonPrimitive.int)
         assertEquals(1, club["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), club["spots"]!!.strings())
-        assertTrue(club["buildings"]!!.jsonArray.isEmpty())
+        assertTrue("buildings" !in club)   // the city builder's field went (V49)
         // the map's ten spots: five bought on the main island, one on each people's island
         val catalog = call(HttpMethod.Get, "/catalog/spots").data.jsonArray.map { it.o() }
         assertEquals(listOf("stadium", "academy", "hospital", "mall", "lighthouse", "marina", "android_stadium", "stone_arena", "beast_dome", "shadow_ruins"), catalog.map { it["id"]!!.jsonPrimitive.content })
@@ -93,7 +93,7 @@ class ApiIT {
         assertEquals(listOf("main", "beast", "stone", "android", "shadow"), g["land"]!!.o()["regions"]!!.strings())
         assertEquals(listOf("BEAST", "STONE", "ANDROID", "SHADOW"), g["land"]!!.o()["peoples"]!!.strings())
         assertTrue(g["land"]!!.o()["locked"]!!.jsonArray.isEmpty()); assertEquals(JsonNull, g["land"]!!.o()["maskId"])
-        assertTrue(g["buildings"]!!.jsonArray.isEmpty())
+        assertTrue("buildings" !in g)
         // the stadium-5 one: the academy, the hospital and the mall, the beastfolk's island
         val m = call(HttpMethod.Get, "/clubs/$mid/grounds", t).data.o()
         assertEquals(5, m["stadium"]!!.jsonPrimitive.int)

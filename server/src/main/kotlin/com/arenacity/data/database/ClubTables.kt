@@ -51,9 +51,7 @@ object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases")
 }
 
 /**
- * The main-island spots a club opened (V48, rules.MapSpots). The builder's old columns (land_mask, builder_slots, the ads'
- * double income and free speed-up) and tables (buildings, obstacles, club_layouts, rehome_log) are still in the database
- * but no longer mapped: dropping them is a later step.
+ * The main-island spots a club opened (V48, rules.MapSpots). The builder's old tables and columns went with V49.
  */
 object ClubSpotTable : org.jetbrains.exposed.sql.Table("club_spots") {
     val clubId = uuid("club_id").references(ClubTable.id)

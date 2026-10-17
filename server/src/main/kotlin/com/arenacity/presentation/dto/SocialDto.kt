@@ -12,11 +12,10 @@ import kotlinx.serialization.json.Json
 @Serializable data class HeadToHeadDto(val me: ClubRefDto, val other: ClubRefDto, val won: Int, val drawn: Int, val lost: Int, val fixtures: List<FixtureDto>)
 /**
  * A visited club (GET /clubs/{id}/grounds): [stadium] its stadium level (open spots), [spots] the open spot ids, [land] its
- * islands (as GET /club's); [buildings] always empty (the city builder went, 17 October 2026; kept for the clients that read it).
+ * islands (as GET /club's).
  */
 @Serializable data class GroundsDto(val club: ClubRefDto, val reputation: Int, val division: Int, val sections: List<String>,
-                                    val stadium: Int = 1, val land: LandDto? = null, val spots: List<String> = listOf("stadium"),
-                                    val buildings: List<kotlinx.serialization.json.JsonElement> = emptyList())
+                                    val stadium: Int = 1, val land: LandDto? = null, val spots: List<String> = listOf("stadium"))
 @Serializable data class FriendDto(val club: ClubRefDto, val stadium: Int, val showcase: Boolean, val level: Int, val reputation: Int)
 @Serializable data class ChallengeDto(val code: String, val status: String, val expiresAt: String, val challenger: ClubRefDto?, val acceptedBy: ClubRefDto? = null, val fixtureId: String? = null, val link: String, val appLink: String)
 @Serializable data class LeagueInviteDto(val league: LeagueDto, val owner: ClubRefDto?, val alreadyMember: Boolean)
