@@ -15,8 +15,9 @@ import java.util.UUID
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Live game (GAME-PLAN phase 5): events the server switches on without a build — a calendar of recurring and seasonal
-// events plus any the admin adds — with modifiers (shorter constructions, more income, more gold in obstacles) and a
-// goal with a reward; mail from the developers with gifts; the store's starter pack and daily offers.
+// events plus any the admin adds — with a goal and a reward; mail from the developers with gifts; the store's starter
+// pack and daily offers. The modifiers (shorter constructions, more income, more gold in obstacles) are kept as data
+// (stored admin events have them) but act on nothing since the city builder went (17 October 2026).
 
 /** An event: [id] stable ("weekend-2026-10-10", "halloween-2026", or an admin event's UUID). Percentages: 100 = no change. */
 data class GameEvent(
@@ -61,14 +62,14 @@ object EventCalendar {
         while (!d.isAfter(end)) {
             if (d.dayOfWeek == DayOfWeek.SATURDAY)
                 out += GameEvent("weekend-$d", "city_weekend", day(d), day(d.plusDays(2)), incomePct = 150,
-                    goal = ProgressEvent.INCOME_COLLECTED, goalTarget = 10, rewardCoins = 1_000, rewardGold = 10)
+                    goal = ProgressEvent.LIVE_PLAYED, goalTarget = 10, rewardCoins = 1_000, rewardGold = 10)
             if (d.dayOfWeek == DayOfWeek.WEDNESDAY)
-                // the goals that were obstacles to clear (none turn up since 14 October, pass 3, Obstacles.ENABLED): collections
+                // the goals that were income collections and obstacles (gone with the city builder): trainings, goals
                 out += GameEvent("builders-$d", "builders_day", day(d), day(d.plusDays(1)), buildTimePct = 70,
-                    goal = if (Obstacles.ENABLED) ProgressEvent.OBSTACLE_CLEARED else ProgressEvent.INCOME_COLLECTED, goalTarget = if (Obstacles.ENABLED) 3 else 6, rewardGold = 15)
+                    goal = ProgressEvent.TRAINING_STARTED, goalTarget = 3, rewardGold = 15)
             if (d.monthValue == 10 && d.dayOfMonth == 24)
                 out += GameEvent("halloween-${d.year}", "halloween", day(d), day(d.plusDays(10)), obstacleGoldPct = 200,
-                    goal = if (Obstacles.ENABLED) ProgressEvent.OBSTACLE_CLEARED else ProgressEvent.INCOME_COLLECTED, goalTarget = if (Obstacles.ENABLED) 5 else 15,
+                    goal = ProgressEvent.GOAL_SCORED, goalTarget = 15,
                     rewardGold = 30, rewardItem = "decor_pumpkins")
             if (d.monthValue == 12 && d.dayOfMonth == 24)
                 out += GameEvent("newyear-${d.year}", "new_year", day(d), day(d.plusDays(15)), incomePct = 125,
@@ -182,7 +183,7 @@ class LiveOps(
      * builder's rush (gold for a fixed chunk of coins at the best rate). */
     suspend fun offers(userId: UUID): OffersView {
         val st = service.state(userId); val now = clock.now(); val day = dayKey(now)
-        val coinsK = Stadium.MAX_LEVEL.let { 1L shl (st.stadium - 1).coerceIn(0, 9) }.coerceAtMost(256)
+        val coinsK = (1L shl (st.stadium - 1).coerceIn(0, MapSpots.MAX_STADIUM - 1)).coerceAtMost(256)
         val pack = Offer("coins-$day", "COINS", 60, coins = 6_000L * coinsK.coerceAtLeast(1), oldGold = 100)
         val rush = Offer("rush-$day", "COINS", 150, coins = 20_000L * coinsK.coerceAtLeast(1), oldGold = 250)
         val list = listOf(pack, rush).map { it.copy(bought = repo.offerBought(st.club.id, day, it.id)) }

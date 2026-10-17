@@ -7,11 +7,9 @@ import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.Athlete
-import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.Sport
 import com.arenacity.domain.repository.AthleteRepository
-import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.rules.*
 import com.arenacity.domain.usecase.club.ClubService
@@ -82,15 +80,14 @@ class CollectionsUseCases(private val service: ClubService, private val cosmetic
 data class Exhibit(val id: String, val tier: Int, val value: Long)
 data class MuseumView(val level: Int, val capacity: Int, val exhibits: List<Exhibit>, val total: Int)
 
-/** The museum (the hall of fame) of a club, own or visited: the honours that fit its shelves, the rarest first. */
-class MuseumService(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val achievements: AchievementService) {
-    private val order = listOf("champion", "cup_winner", "arena", "climber", "promoted", "stadium", "winner", "striker", "showman", "master_builder", "growing_club",
-        "all_rounder", "multisport", "talent_spotter", "coach", "tycoon", "clearer", "loyal", "friendly_face", "social")
+/** The hall of fame of a club, own or visited: the honours that fit its shelves (by its stadium level), the rarest first. */
+class MuseumService(private val clubs: ClubRepository, private val service: ClubService, private val achievements: AchievementService) {
+    private val order = listOf("champion", "cup_winner", "arena", "climber", "promoted", "stadium", "winner", "striker", "showman", "growing_club",
+        "all_rounder", "multisport", "talent_spotter", "coach", "loyal", "friendly_face", "social")
 
     suspend fun of(clubId: UUID): MuseumView {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        val museum = buildings.listByClub(club.id).firstOrNull { it.type == BuildingType.HALL_OF_FAME }
-        val level = museum?.let { if (it.state == BuildingState.UPGRADING) it.level - 1 else it.level } ?: 0
+        val level = service.stadiumOf(club.id)
         val values = achievements.values(club)
         val all = Achievements.ALL.sortedBy { order.indexOf(it.id).let { i -> if (i < 0) 99 else i } }.flatMap { a ->
             val v = values[a.metric] ?: 0L

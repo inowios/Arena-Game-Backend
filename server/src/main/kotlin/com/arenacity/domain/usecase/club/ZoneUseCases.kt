@@ -17,14 +17,6 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * The peoples whose island is open now (the bridge to it built): each island is the club's land then, its dome gone and
- * its people returned (rules.LandMap.of, rules.Peoples; ClubService.openZones and GetGroundsUseCase.openZones in DI), so
- * GET /club and GET /club/zones agree.
- */
-suspend fun openPeoples(zones: ZoneRepository, clubId: UUID, now: Instant): Set<People> =
-    zones.listByClub(clubId).filter { it.stateAt(now) == ZoneState.OPEN }.map { it.people }.toSet()
-
-/**
  * A people's island as the client sees it: the bridge's spec, its state now (LOCKED: no bridge; RESTORING: being built;
  * OPEN: the people returned), the seconds the bridge still needs and the stadium this club needs to start it.
  */
@@ -50,8 +42,8 @@ class ZoneUseCases(private val service: ClubService, private val clubs: ClubRepo
     }
 
     /**
-     * Pays the bridge's price and starts building it; needs the stadium of the people's era ([Zones]). A people with no
-     * island on the map is not sold: the bridge would lead nowhere.
+     * Pays the bridge's price and starts building it; needs the stadium of the people's era ([Zones]): the club's open spots
+     * (rules.MapSpots). Once it stands, the island and its spot are open (one more open spot).
      */
     suspend fun buy(userId: UUID, people: People): ZoneView = tx {
         val st = service.state(userId, lock = true)
@@ -59,7 +51,6 @@ class ZoneUseCases(private val service: ClubService, private val clubs: ClubRepo
         val now = clock.now()
         val existing = zones.listByClub(st.club.id).firstOrNull { it.people == people }
         if (existing != null && existing.stateAt(now) != ZoneState.LOCKED) throw ConflictException("The zone is already yours")
-        if (service.lands.island(people) == null) throw ValidationException("This zone has no island yet")
         if (st.stadium < spec.requiredStadium) throw ValidationException("Needs stadium level {0}", spec.requiredStadium)
         if (st.club.coins < spec.priceCoins) throw InsufficientFundsException("Not enough coins")
         clubs.update(st.club.copy(coins = st.club.coins - spec.priceCoins, updatedAt = now))

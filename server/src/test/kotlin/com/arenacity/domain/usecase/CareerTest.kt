@@ -17,16 +17,15 @@ import kotlin.test.*
 
 class CareerTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val sections = SectionService(buildings, athletes)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
+    private val sections = SectionService(athletes)
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val place = PlaceBuildingUseCase(service, buildings, clock)
-    private val speed = SpeedUpUseCase(service, buildings, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val careers = CareerService(athletes, trainings, clock)
     private val release = ReleaseAthleteUseCase(service, athletes, trainings, clock)
     private val scouting = ScoutingUseCases(service, clubs, athletes, sections, clock)
@@ -90,11 +89,12 @@ class CareerTest {
     }
 
     @Test
-    fun `scouting needs an academy and signs one player a day`() = runBlocking<Unit> {
+    fun `scouting needs the lighthouse and signs one player a day`() = runBlocking<Unit> {
         setup()
-        assertFailsWith<ValidationException> { scouting.report(user) }
-        buildings.setStadium(club().id, 2)   // the scouting office (the academy's reports until 16 October) opens at stadium 2
-        place(user, BuildingType.SCOUTING_OFFICE, 8, 28, 0).let { speed(user, it.id) }
+        assertEquals("Open the lighthouse first", assertFailsWith<ValidationException> { scouting.report(user) }.template)
+        spots.open(club().id, MapSpots.ACADEMY)
+        assertFailsWith<ValidationException> { scouting.report(user) }   // another spot does not do
+        spots.open(club().id, MapSpots.LIGHTHOUSE)
         val r = scouting.report(user)
         assertEquals(listOf("PROSPECT", "PRIME", "VETERAN"), r.offers.map { it.kind })
         assertTrue(r.offers[0].athlete.age in 17..19 && r.offers[2].athlete.age in 30..32)
@@ -114,8 +114,7 @@ class CareerTest {
 
     @Test
     fun `training stops at potential`() = runBlocking<Unit> {
-        setup()
-        place(user, BuildingType.TRAINING_CENTER, 8, 28, 0).let { speed(user, it.id) }
+        setup()   // training belongs to the stadium: nothing to open
         val a = squad().first { it.position == Position.MID && it.attack < 58 }
         athletes.update(a.copy(potential = a.attributeAverage))
         assertFailsWith<ValidationException> { train(user, a.id, AttributeKind.ATTACK) }

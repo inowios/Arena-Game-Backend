@@ -80,16 +80,15 @@ data class LiveBalance(val kickoffs: Int, val finishes: Int, val finishRate: Dou
 data class BalanceReport(
     val from: LocalDate, val to: LocalDate,
     val live: LiveBalance,
-    val obstaclesCleared: Int, val obstacleGold: Long,
     val purchases: Map<String, Int>, val purchaseStarts: Map<String, Int>, val adRewards: Int,
     val stadiumUps: Map<Int, Int>,
     val activeClubs: Int, val coins: Spread?, val gold: Spread?, val trophies: Spread?, val clubLevel: Spread?, val stadium: Map<Int, Int>,
-    val buildings: Map<String, Map<Int, Int>>,
+    val spots: Map<String, Int>,
 )
 
 /**
- * The balance dashboard (GAME-PLAN Е2): arena matches (finish rate, results, controls), obstacles, purchases and
- * their starts, stadium level-ups, and the economy of the clubs active in the period — to hold against economy.py
+ * The balance dashboard (GAME-PLAN Е2): arena matches (finish rate, results, controls), purchases and their starts,
+ * stadium level-ups, the map spots the clubs have open, and the economy of the clubs active in the period — to hold against economy.py
  * after the closed test.
  */
 class BalanceUseCase(private val repo: AnalyticsRepository, private val clock: Clock) {
@@ -111,20 +110,18 @@ class BalanceUseCase(private val repo: AnalyticsRepository, private val clock: C
         val from = start.atStartOfDay(ZoneOffset.UTC).toInstant(); val until = end.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
         val kick = repo.eventProps("live_kickoff", from, until)
         val fin = repo.eventProps("live_finish", from, until)
-        val obstacles = repo.eventProps("obstacle_cleared", from, until)
         val starts = repo.eventProps("purchase_start", from, until)
         val ups = repo.eventProps("stadium_level", from, until)
         val clubs = repo.activeClubs(start, end)
         return BalanceReport(
             from = start, to = end,
             live = LiveBalance(kick.size, fin.size, Analytics.rate(fin.size, kick.size), count(fin, "outcome"), count(kick, "control"), kick.count { it["bot"] == "1" }),
-            obstaclesCleared = obstacles.size, obstacleGold = obstacles.sumOf { it["gold"]?.toLongOrNull() ?: 0L },
             purchases = repo.purchases(from, until), purchaseStarts = count(starts, "product"), adRewards = repo.adRewards(from, until),
             stadiumUps = ups.mapNotNull { it["level"]?.toIntOrNull() }.groupingBy { it }.eachCount().toSortedMap(),
             activeClubs = clubs.size,
             coins = spread(clubs.map { it.coins }), gold = spread(clubs.map { it.gold.toLong() }), trophies = spread(clubs.map { it.trophies.toLong() }),
             clubLevel = spread(clubs.map { it.level.toLong() }), stadium = clubs.groupingBy { it.stadium }.eachCount().toSortedMap(),
-            buildings = repo.buildingLevels().toSortedMap(),
+            spots = repo.spotCounts().toSortedMap(),
         )
     }
 }

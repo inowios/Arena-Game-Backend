@@ -1,7 +1,7 @@
 package com.arenacity.domain.repository
 
-import com.arenacity.domain.model.Building
 import com.arenacity.domain.model.Club
+import java.time.Instant
 import java.util.UUID
 
 interface ClubRepository {
@@ -15,46 +15,15 @@ interface ClubRepository {
     suspend fun lockByUserId(userId: UUID): Club?
     suspend fun lockById(id: UUID): Club?
     suspend fun create(club: Club): Club
-    /** Writes the club's fields; never [Club.landMask] nor [Club.lastSeenAt] (a stale copy must not move the club back onto an older land mask). */
+    /** Writes the club's fields; never [Club.lastSeenAt] (only [touchSeen] does). */
     suspend fun update(club: Club): Club
-    /** The club's buildings now stand on the land mask [mask] (ClubService.settle). */
-    suspend fun setLandMask(id: UUID, mask: String)
-    /** Clubs whose buildings were last moved onto another land mask than [mask], or never (the start-up sweep). */
-    suspend fun staleLand(mask: String): List<UUID>
     /** The club of user [userId] was seen at [at] (presence; [Club.lastSeenAt]); false when the user has no club yet. */
-    suspend fun touchSeen(userId: UUID, at: java.time.Instant): Boolean
+    suspend fun touchSeen(userId: UUID, at: Instant): Boolean
 }
 
-interface BuildingRepository {
-    suspend fun listByClub(clubId: UUID): List<Building>
-    suspend fun findById(id: UUID): Building?
-    suspend fun create(building: Building): Building
-    suspend fun update(building: Building): Building
-    /** Marks a construction finished only if it is still UPGRADING; true when this call did it (listeners fire once). */
-    suspend fun completeConstruction(building: Building): Boolean
-    /** Updates grid position and rotation only. */
-    suspend fun move(building: Building): Building
-    suspend fun delete(id: UUID)
-}
-
-interface ObstacleRepository {
-    suspend fun listByClub(clubId: UUID): List<com.arenacity.domain.model.Obstacle>
-    suspend fun create(o: com.arenacity.domain.model.Obstacle): com.arenacity.domain.model.Obstacle
-    suspend fun update(o: com.arenacity.domain.model.Obstacle): com.arenacity.domain.model.Obstacle
-    /** Moves CLEARING → READY only if still CLEARING (concurrent readers finish it once). */
-    suspend fun finishClearing(o: com.arenacity.domain.model.Obstacle): Boolean
-    /** Deletes a READY obstacle; false if someone else picked it up first. */
-    suspend fun take(id: UUID): Boolean
-    /** Takes an obstacle away whatever its state (the land migration: it stood where the sea is now). */
-    suspend fun delete(id: UUID)
-    /** When the last obstacle turned up for the club (null: never). */
-    suspend fun spawnClock(clubId: UUID): java.time.Instant?
-    /** Moves the spawn clock from [expected] to [next]; false if another request already did (it spawns, we don't). */
-    suspend fun claimSpawn(clubId: UUID, expected: java.time.Instant?, next: java.time.Instant): Boolean
-}
-
-/** Saved club layouts (edit mode), up to a few slots per club. */
-interface LayoutRepository {
-    suspend fun list(clubId: UUID): List<com.arenacity.domain.usecase.club.LayoutSlot>
-    suspend fun save(clubId: UUID, layout: com.arenacity.domain.usecase.club.LayoutSlot)
+/** The main-island spots a club opened for coins (rules.MapSpots; the stadium and the island spots are never stored here). */
+interface ClubSpotRepository {
+    suspend fun listByClub(clubId: UUID): Set<String>
+    /** Records [spot] as open; false when it already was (the primary key keeps it once). */
+    suspend fun unlock(clubId: UUID, spot: String, at: Instant): Boolean
 }

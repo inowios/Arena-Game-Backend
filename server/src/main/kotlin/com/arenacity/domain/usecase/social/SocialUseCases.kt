@@ -195,23 +195,14 @@ class HeadToHeadUseCase(private val service: ClubService, private val clubs: Clu
     }
 }
 
-/** [land]: the visited club's land (the main island, and the peoples' islands once its bridges to them stand), [lands] its mask. */
-data class Grounds(val club: Club, val buildings: List<Building>, val gridSize: Int, val sections: List<Sport>, val land: com.arenacity.domain.rules.LandSet,
-                   val lands: com.arenacity.domain.rules.LandMap)
+/** A visited club's grounds: the club, what it has open on the map ([spots]) and its sections. */
+data class Grounds(val club: Club, val spots: com.arenacity.domain.usecase.club.ClubSpots, val sections: List<Sport>)
 
 /** Another club's grounds, read-only (spec §5 "прогресс друга": visit the friend's club). */
-class GetGroundsUseCase(private val clubs: ClubRepository, private val buildings: BuildingRepository, private val sections: SectionService,
-                        private val lands: com.arenacity.domain.rules.LandMap = com.arenacity.domain.rules.Lands.MAP) {
-    /** The peoples whose island a club's bridge opened (its OPEN zones; DI), as in ClubService. */
-    var openZones: suspend (UUID) -> Set<com.arenacity.domain.model.People> = { emptySet() }
-
+class GetGroundsUseCase(private val clubs: ClubRepository, private val service: ClubService, private val sections: SectionService) {
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        val land = lands.of(openZones(club.id))
-        // what stands on the club's land: a building still off it (its owner has not opened the club since the land
-        // became a mask, or one the land had no room for, parked) is not shown to a visitor
-        val list = buildings.listByClub(club.id).filter { land.fits(com.arenacity.domain.rules.footprint(it.type, it.gridX, it.gridY, it.rotation)) }
-        return Grounds(club, list, maxOf(com.arenacity.domain.rules.ClubLevels.gridSize(club.level), com.arenacity.domain.rules.Stadium.gridSize(com.arenacity.domain.rules.Stadium.level(list))), sections.active(club, clubBuildings = list), land, lands)
+        return Grounds(club, service.spotsOf(club.id), sections.active(club))
     }
 }
 

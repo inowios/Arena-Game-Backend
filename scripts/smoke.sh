@@ -12,17 +12,14 @@ AT=$(curl -sf -X POST "$B/auth/guest" -H "$H" -d "{\"deviceId\":\"$DEV\"}" | j "
 A="Authorization: Bearer $AT"
 step "create club"
 curl -sf -X POST "$B/club" -H "$H" -H "$A" -d '{"name":"Smoke FC","primaryColor":"#112233","secondaryColor":"#ffffff","timezone":"UTC"}' >/dev/null
-step "club state"
-curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['coins']==2500 and len(d['data']['buildings'])==2"
-step "place academy, speed up, claim graduate"
-# obstacles spawn at random cells, so pick a free 2x2 spot (buildings are kept clear with a generous margin)
-SPOT=$(curl -sf "$B/club" -H "$A" | j "g=d['data']['gridSize']; taken=set()
-for b in d['data']['buildings']: taken.update((b['x']+i,b['y']+j) for i in range(6) for j in range(6))
-for o in d['data']['obstacles']: taken.update((o['x']+i,o['y']+j) for i in range(o.get('w') or o.get('width') or 1) for j in range(o.get('h') or o.get('height') or 1))
-free=[(x,y) for y in range(g-1) for x in range(g-1) if all((x+i,y+j) not in taken for i in range(2) for j in range(2))]
-print(json.dumps({'type':'ACADEMY','x':free[0][0],'y':free[0][1]}))")
-BID=$(curl -sf -X POST "$B/club/buildings" -H "$H" -H "$A" -d "$SPOT" | j "print(d['data']['id'])")
-curl -sf -X POST "$B/club/buildings/$BID/speedup" -H "$A" | j "assert d['data']['state']=='IDLE'"
+step "club state: the stadium open, nothing else"
+curl -sf "$B/club" -H "$A" | j "c=d['data']; assert c['club']['coins']==2500 and c['stadium']==1 and c['spots']==['stadium'] and c['buildings']==[]"
+step "map spots: open the academy (coins for gold first), claim a graduate"
+curl -sf "$B/catalog/spots" | j "assert len(d['data'])==10 and d['data'][1]['id']=='academy'"
+test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/academy/claim" -H "$A")" = "400"
+curl -sf -X POST "$B/club/shop/coins/coins_small" -H "$A" | j "assert d['data']['coins']==5500"
+curl -sf -X POST "$B/club/spots/academy/unlock" -H "$A" | j "assert d['data']['stadium']==2 and d['data']['spots']==['stadium','academy'] and d['data']['club']['coins']==2500"
+test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/spots/academy/unlock" -H "$A")" = "409"
 curl -sf -X POST "$B/club/academy/claim" -H "$A" | j "assert d['data']['overall']>0"
 step "second claim must be 409"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/academy/claim" -H "$A")" = "409"
@@ -30,9 +27,6 @@ step "squad and default lineup"
 curl -sf "$B/club/athletes" -H "$A" | j "assert len(d['data']['athletes'])==15"
 BODY=$(curl -sf "$B/club/lineup/football" -H "$A" | j "l=d['data']['lineup']; assert l['isDefault'] and len(l['starters'])==11; print(json.dumps({'starters':l['starters'],'bench':l['bench'],'tactics':{'style':'DEFEND','tempo':'LOW','plan':'COUNTER'}}))")
 curl -sf -X PUT "$B/club/lineup/football" -H "$H" -H "$A" -d "$BODY" | j "assert d['data']['tactics']['plan']=='COUNTER' and not d['data']['isDefault']"
-step "collect ticket office income (0 right after creation)"
-OID=$(curl -sf "$B/club" -H "$A" | j "print([b['id'] for b in d['data']['buildings'] if b['type']=='TICKET_OFFICE'][0])")
-curl -sf -X POST "$B/club/buildings/$OID/collect" -H "$A" | j "assert d['data']['coins']==0"
 step "update club colours + emblem"
 curl -sf -X PATCH "$B/club" -H "$H" -H "$A" -d '{"primaryColor":"#ff6600","emblemJson":"{\"shape\":\"shield\",\"icon\":\"ball\"}"}' | j "assert d['data']['primaryColor']=='#FF6600' and 'shield' in d['data']['emblemJson']"
 step "my leagues: public league with me in it"
@@ -54,7 +48,7 @@ if [ "${SMOKE_MATCHDAY:-1}" = "1" ] && command -v psql >/dev/null; then
   curl -sf "$B/leagues/$LID/fixtures?round=1" -H "$A" | j "assert len(d['data'])==4 and all(f['status']=='PLAYED' for f in d['data'])"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['reputation']>=1"
 fi
-step "economy: daily reward, pass, dev purchase, ad reward, push token"
+step "economy: daily reward, pass, dev purchase, push token"
 curl -sf -X POST "$B/club/daily/claim" -H "$A" | j "assert d['data']['day']==1 and d['data']['reward']['coins']==150"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/club/daily/claim" -H "$A")" = "409"
 curl -sf "$B/club/pass" -H "$A" | j "assert len(d['data']['tasks'])==3 and len(d['data']['levels'])==30"
@@ -70,7 +64,6 @@ if [ "${SMOKE_MATCHDAY:-1}" = "1" ]; then
   curl -sf -X POST "$B/dev/store/refund" -H "$H" -d '{"externalId":"dev:gold_small:smoke-'$DEV'","action":"RESTORE"}' | j "assert d['data']['outcome']=='APPLIED'"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['gold']==$G1"
 fi
-curl -sf -X POST "$B/ads/reward" -H "$H" -H "$A" -d '{"placement":"DOUBLE_INCOME"}' | j "assert d['data']['id']"
 curl -sf -X POST "$B/push-tokens" -H "$H" -H "$A" -d '{"token":"fcm-smoke-'$DEV'","platform":"android"}' | j "assert d['data']['ok']"
 step "weekly cup tab, analytics batch, legal pages"
 curl -sf "$B/cups/current" -H "$A" | j "assert d['data']['state'] in ('UPCOMING','ACTIVE','FINISHED') and len(d['data']['prizes'])==5"

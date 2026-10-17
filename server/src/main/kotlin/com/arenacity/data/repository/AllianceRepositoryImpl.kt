@@ -14,8 +14,6 @@ class AllianceRepositoryImpl : AllianceRepository {
         this[AllianceTable.open], this[AllianceTable.minTrophies], this[AllianceTable.createdBy], this[AllianceTable.createdAt], this[AllianceTable.updatedAt])
     private fun ResultRow.member() = AllianceMember(this[AllianceMemberTable.allianceId], this[AllianceMemberTable.clubId], AllianceRole.valueOf(this[AllianceMemberTable.role]),
         this[AllianceMemberTable.joinedAt], this[AllianceMemberTable.helpsGiven])
-    private fun ResultRow.help() = HelpRequest(this[AllianceHelpTable.id], this[AllianceHelpTable.allianceId], this[AllianceHelpTable.clubId], this[AllianceHelpTable.buildingId],
-        this[AllianceHelpTable.buildingType], this[AllianceHelpTable.level], this[AllianceHelpTable.helps], this[AllianceHelpTable.maxHelps], this[AllianceHelpTable.createdAt], this[AllianceHelpTable.closed])
 
     override suspend fun create(a: Alliance) = dbQuery {
         AllianceTable.insert { it[id] = a.id; it[name] = a.name; it[tag] = a.tag; it[description] = a.description; it[emblemJson] = a.emblemJson; it[open] = a.open
@@ -57,24 +55,6 @@ class AllianceRepositoryImpl : AllianceRepository {
     }
     override suspend fun removeRequest(allianceId: UUID, clubId: UUID) { dbQuery { AllianceRequestTable.deleteWhere { (AllianceRequestTable.allianceId eq allianceId) and (AllianceRequestTable.clubId eq clubId) } } }
     override suspend fun clearRequests(clubId: UUID) { dbQuery { AllianceRequestTable.deleteWhere { AllianceRequestTable.clubId eq clubId } } }
-
-    override suspend fun openHelps(allianceId: UUID) = dbQuery {
-        AllianceHelpTable.selectAll().where { (AllianceHelpTable.allianceId eq allianceId) and (AllianceHelpTable.closed eq false) }.orderBy(AllianceHelpTable.createdAt, SortOrder.DESC).map { it.help() }
-    }
-    override suspend fun help(id: UUID) = dbQuery { AllianceHelpTable.selectAll().where { AllianceHelpTable.id eq id }.singleOrNull()?.help() }
-    override suspend fun createHelp(h: HelpRequest) = dbQuery {
-        AllianceHelpTable.insert { it[id] = h.id; it[allianceId] = h.allianceId; it[clubId] = h.clubId; it[buildingId] = h.buildingId; it[buildingType] = h.buildingType
-            it[level] = h.level; it[helps] = h.helps; it[maxHelps] = h.maxHelps; it[closed] = h.closed; it[createdAt] = h.createdAt }
-        h
-    }
-    override suspend fun updateHelp(h: HelpRequest) { dbQuery { AllianceHelpTable.update({ AllianceHelpTable.id eq h.id }) { it[helps] = h.helps; it[closed] = h.closed } } }
-    override suspend fun markHelped(helpId: UUID, helper: UUID, at: Instant) = dbQuery {
-        AllianceHelpByTable.insertIgnore { it[this.helpId] = helpId; it[helperId] = helper; it[createdAt] = at }.insertedCount == 1
-    }
-    override suspend fun helpersOf(helpId: UUID) = dbQuery { AllianceHelpByTable.selectAll().where { AllianceHelpByTable.helpId eq helpId }.map { it[AllianceHelpByTable.helperId] }.toSet() }
-    override suspend fun helpsGivenSince(helper: UUID, since: Instant) = dbQuery {
-        AllianceHelpByTable.selectAll().where { (AllianceHelpByTable.helperId eq helper) and (AllianceHelpByTable.createdAt greaterEq since) }.count().toInt()
-    }
 
     override suspend fun addWeekendWin(week: Int, allianceId: UUID, clubId: UUID) {
         dbQuery {

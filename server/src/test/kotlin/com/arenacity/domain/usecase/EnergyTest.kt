@@ -16,9 +16,9 @@ import kotlin.test.*
 
 class EnergyTest {
     private val clock = FixedClock(Instant.parse("2026-10-14T10:00:00Z"))
-    private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository()
+    private val service = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val energy = EnergyUseCases(service, clubs, clock)
     private val cards = CardMatchUseCases(service, clubs, athletes, clock)
     private val u1 = UUID.randomUUID()

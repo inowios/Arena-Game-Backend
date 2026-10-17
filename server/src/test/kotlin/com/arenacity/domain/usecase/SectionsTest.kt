@@ -2,7 +2,7 @@ package com.arenacity.domain.usecase
 
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.*
-import com.arenacity.domain.rules.BuildingType
+import com.arenacity.domain.rules.MapSpots
 import com.arenacity.domain.rules.Sections
 import com.arenacity.domain.rules.Standings
 import com.arenacity.domain.usecase.athlete.*
@@ -17,16 +17,15 @@ import kotlin.test.*
 
 class SectionsTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
-    private val sections = SectionService(buildings, athletes)
-    private val service = ClubService(clubs, buildings, clock)
+    private val sections = SectionService(athletes)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val place = PlaceBuildingUseCase(service, buildings, clock)
-    private val speed = SpeedUpUseCase(service, buildings, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val squads = SquadService(service, athletes, trainings, clock)
     private val academy = ClaimAcademyUseCase(service, clubs, athletes, clock, sections = sections)
     private val getLineup = GetLineupUseCase(service, squads, lineups, clock)
@@ -37,7 +36,7 @@ class SectionsTest {
     /** A club that kept a basketball squad from the sport town (its arena went with V44, 15 October 2026). */
     private fun clubWithHoopers(): Club = runBlocking {
         val c = create(user, "Hoops FC", "#AA0000", "#FFFFFF", "UTC")
-        clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); buildings.setStadium(c.id, 4)
+        clubs.update(clubs.rows.getValue(c.id).copy(level = 4, coins = 50_000, gold = 500)); spots.stadium(c.id, 4)
         athletes.createAll(com.arenacity.domain.rules.AthleteFactory.starterSquad(c.id, Sport.BASKETBALL, clock.now()))
         clubs.rows.getValue(c.id)
     }
@@ -50,8 +49,8 @@ class SectionsTest {
         assertEquals(listOf(Sport.FOOTBALL), Sections.ORDER)
         // bots field football at every division
         for (d in 1..8) assertEquals(listOf(Sport.FOOTBALL), Sections.botSections(d))
-        // the youth sports school (the academy until 16 October) graduates footballers only
-        place(user, BuildingType.YOUTH_SPORTS_SCHOOL, 8, 28, 0).let { speed(user, it.id) }
+        // the academy graduates footballers only (its spot is open: MapSpots.BUYABLE's first)
+        assertTrue(service.state(user).isOpen(MapSpots.ACADEMY))
         assertFailsWith<ValidationException> { academy(user, Sport.BASKETBALL) }
         assertEquals(Sport.FOOTBALL, academy(user, Sport.FOOTBALL).sport)
     }

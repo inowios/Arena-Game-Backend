@@ -11,7 +11,7 @@ import com.arenacity.domain.repository.AthleteRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.TrainingRepository
 import com.arenacity.domain.rules.AthleteFactory
-import com.arenacity.domain.rules.BuildingType
+import com.arenacity.domain.rules.MapSpots
 import com.arenacity.domain.rules.Careers
 import com.arenacity.domain.rules.Sections
 import com.arenacity.domain.rules.Techniques
@@ -66,17 +66,17 @@ data class ScoutOffer(val slot: Int, val athlete: Athlete, val kind: String)
 data class ScoutReport(val offers: List<ScoutOffer>, val signedToday: Boolean, val nextAt: Instant)
 
 /**
- * Scouting (needs a scouting office — the academy's until 16 October): three players a day — a young prospect, a player
- * in his prime and a veteran — from the club's sections, quality by division and the office's level. One may be signed
+ * Scouting (needs the map's lighthouse open): three players a day — a young prospect, a player in his prime and a
+ * veteran — from the club's sections, quality by division and the stadium level. One may be signed
  * per day, free (athletes are never sold).
  */
 class ScoutingUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val sections: SectionService, private val clock: Clock, private val tx: Tx = NoTx) {
     private fun today(club: Club) = clock.now().atZone(ZoneId.of(club.timezone)).toLocalDate()
 
-    private fun offers(club: Club, day: LocalDate, academyLevel: Int, sports: List<Sport>): List<ScoutOffer> {
+    private fun offers(club: Club, day: LocalDate, level: Int, sports: List<Sport>): List<ScoutOffer> {
         val now = clock.now()
         val base = (club.id.mostSignificantBits xor club.id.leastSignificantBits) + day.toEpochDay() * 0x5DEECE66DL
-        val lo = 36 + club.division * 4 + academyLevel * 2
+        val lo = 36 + club.division * 4 + level * 2
         return listOf("PROSPECT", "PRIME", "VETERAN").mapIndexed { slot, kind ->
             val r = Random(base + slot * 7919L)
             val sport = if (slot == 0 || sports.size == 1) sports.first() else sports[r.nextInt(sports.size)]
@@ -85,25 +85,25 @@ class ScoutingUseCases(private val service: ClubService, private val clubs: Club
         }
     }
 
-    private suspend fun academyLevel(userId: UUID): Pair<ClubState, Int> {
+    private suspend fun scoutLevel(userId: UUID): Pair<ClubState, Int> {
         val st = service.state(userId)
-        val office = st.buildings.firstOrNull { it.type == BuildingType.SCOUTING_OFFICE && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a scouting office first")
-        return st to office.level
+        if (!st.isOpen(MapSpots.LIGHTHOUSE)) throw ValidationException("Open the lighthouse first")
+        return st to st.stadium
     }
 
     suspend fun report(userId: UUID): ScoutReport {
-        val (st, level) = academyLevel(userId)
+        val (st, level) = scoutLevel(userId)
         val day = today(st.club)
         val next = day.plusDays(1).atStartOfDay(ZoneId.of(st.club.timezone)).toInstant()
-        return ScoutReport(offers(st.club, day, level, sections.active(st.club, clubBuildings = st.buildings).ifEmpty { listOf(Sport.FOOTBALL) }), st.club.scoutSignedDate == day, next)
+        return ScoutReport(offers(st.club, day, level, sections.active(st.club).ifEmpty { listOf(Sport.FOOTBALL) }), st.club.scoutSignedDate == day, next)
     }
 
     suspend fun sign(userId: UUID, slot: Int): Athlete = tx {
-        val (st, level) = academyLevel(userId)
+        val (st, level) = scoutLevel(userId)
         val club = service.lockedClubOf(userId)
         val day = today(club)
         if (club.scoutSignedDate == day) throw ConflictException("You've already signed a player today — new scouting reports tomorrow")
-        val offer = offers(club, day, level, sections.active(club, clubBuildings = st.buildings).ifEmpty { listOf(Sport.FOOTBALL) }).getOrNull(slot) ?: throw NotFoundException("Unknown offer")
+        val offer = offers(club, day, level, sections.active(club).ifEmpty { listOf(Sport.FOOTBALL) }).getOrNull(slot) ?: throw NotFoundException("Unknown offer")
         if (athletes.listByClub(club.id).count { it.sport == offer.athlete.sport } >= Careers.squadMax(offer.athlete.sport)) throw ConflictException("The squad is full — release someone first")
         val signed = offer.athlete.copy(id = UUID.randomUUID())
         athletes.createAll(listOf(signed))

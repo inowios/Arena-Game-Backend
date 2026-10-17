@@ -15,18 +15,16 @@ import kotlin.test.*
 
 class EconomyUseCasesTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val repo = FakeEconomyRepository()
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val clubService = ClubService(clubs, buildings, clock)
+    private val clubService = ClubService(clubs, clock)
     private val economy = EconomyService(repo, leagues, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val daily = ClaimDailyRewardUseCase(clubService, clubs, economy, clock)
     private val pass = SeasonPassUseCases(clubService, clubs, repo, economy, clock)
-    private val collect = CollectIncomeUseCase(clubService, clubs, buildings, clock, economy)
     private val purchase = VerifyPurchaseUseCase(clubService, clubs, repo, pass, mapOf(Store.DEV to DevReceiptVerifier()), clock)
-    private val ads = AdRewardUseCase(clubService, clubs, buildings, economy, clock)
     private val user = UUID.randomUUID()
 
     @Test
@@ -39,17 +37,16 @@ class EconomyUseCasesTest {
     }
 
     @Test
-    fun `tasks progress through collect and pass levels are claimable`() = runBlocking<Unit> {
-        create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
+    fun `tasks progress through events and pass levels are claimable`() = runBlocking<Unit> {
+        val club = create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val view = pass.view(user)
         assertEquals(3, view.tasks.size); assertEquals(0, view.level)
-        val office = buildings.rows.values.first { it.type == BuildingType.TICKET_OFFICE }
-        repeat(3) { clock.advanceSeconds(3600); collect(user, office.id) }
-        val collectTask = pass.view(user).tasks.firstOrNull { it.task == TaskKind.COLLECT_3.name }
-        if (collectTask != null) {
-            assertEquals(3, collectTask.progress)
-            val after = pass.claimTask(user, TaskKind.COLLECT_3)
-            assertEquals(40, after.pass.xp); assertFailsWith<ConflictException> { pass.claimTask(user, TaskKind.COLLECT_3) }
+        repeat(2) { economy.record(club.id, ProgressEvent.TRAINING_STARTED) }
+        val trainTask = pass.view(user).tasks.firstOrNull { it.task == TaskKind.TRAIN_2.name }
+        if (trainTask != null) {
+            assertEquals(2, trainTask.progress)
+            val after = pass.claimTask(user, TaskKind.TRAIN_2)
+            assertEquals(40, after.pass.xp); assertFailsWith<ConflictException> { pass.claimTask(user, TaskKind.TRAIN_2) }
         }
         repo.upsertPass(repo.passes.values.first().copy(xp = 520))
         val claimed = pass.claimLevels(user); val reward = claimed.reward; val v2 = claimed.view
@@ -71,14 +68,11 @@ class EconomyUseCasesTest {
     }
 
     @Test
-    fun `double income ad doubles the next collect and has a cooldown`() = runBlocking<Unit> {
-        create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        ads(user, AdPlacement.DOUBLE_INCOME, null)
-        assertFailsWith<ConflictException> { ads(user, AdPlacement.DOUBLE_INCOME, null) }
-        val office = buildings.rows.values.first { it.type == BuildingType.TICKET_OFFICE }
-        clock.advanceSeconds(3600)
-        assertEquals(264, collect(user, office.id).coins)   // 132 (120 +10 % by the stadium) doubled
-        clock.advanceSeconds(3600)
-        assertEquals(132, collect(user, office.id).coins)
+    fun `a task that went with the city builder is left out of a day stored before`() = runBlocking<Unit> {
+        val club = create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
+        val today = economy.today("UTC")
+        repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, "COLLECT_3", 1, false))
+        repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, TaskKind.TRAIN_2.name, 0, false))
+        assertEquals(listOf(TaskKind.TRAIN_2.name), pass.view(user).tasks.map { it.task })
     }
 }

@@ -4,7 +4,6 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class TaskKind(val target: Int, val xp: Int, val title: String) {
-    COLLECT_3(3, 40, "Collect income 3 times"),
     TRAIN_2(2, 40, "Start 2 training sessions"),
     PLAY_FRIENDLY(1, 30, "Play a friendly"),
     WIN_MATCH(1, 60, "Win your matchday match"),
@@ -21,12 +20,11 @@ enum class TaskKind(val target: Int, val xp: Int, val title: String) {
 
 /** Gameplay events reported by other modules: they advance daily tasks and achievement counters. */
 enum class ProgressEvent(val task: TaskKind?, val metric: Metric? = null) {
-    INCOME_COLLECTED(TaskKind.COLLECT_3, Metric.INCOME_COLLECTIONS), TRAINING_STARTED(TaskKind.TRAIN_2, Metric.TRAININGS),
+    TRAINING_STARTED(TaskKind.TRAIN_2, Metric.TRAININGS),
     FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY, Metric.FRIENDLIES), MATCH_WON(TaskKind.WIN_MATCH, Metric.MATCHES_WON),
     SECTION_WON(TaskKind.WIN_SECTIONS, Metric.SECTIONS_WON), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null),
     ACADEMY_GRADUATE(null, Metric.ACADEMY_GRADUATES), INVITE_JOINED(null, Metric.INVITES),
     LIVE_PLAYED(TaskKind.PLAY_LIVE_3), LIVE_WON(TaskKind.WIN_LIVE_2), GOAL_SCORED(TaskKind.SCORE_5, Metric.GOALS), SIGNATURE_USED(TaskKind.SIGNATURE_1, Metric.SIGNATURES),
-    OBSTACLE_CLEARED(null, Metric.OBSTACLES_CLEARED),
 }
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
@@ -42,13 +40,8 @@ object Economy {
     const val PASS_LEVELS = 30
     const val XP_PER_LEVEL = 100
     const val TASKS_PER_DAY = 3
-    const val DOUBLE_INCOME_COOLDOWN_SECONDS = 4 * 3600L
-    const val FREE_SPEEDUP_MAX_SECONDS = 30 * 60L
-    const val MAX_BUILDERS = 3
-    const val SECOND_BUILDER_GOLD = 250
-    /** Gold for the next builder when the club has [slots]: the 2nd 250, the 3rd 750 (and a stadium 5). */
-    fun builderGold(slots: Int): Int = if (slots <= 1) SECOND_BUILDER_GOLD else 750
-    const val THIRD_BUILDER_STADIUM = 5
+    /** Gold to finish a timer now (a training, the hospital's rest): 1 per started 10 minutes, at least 1. */
+    fun speedUpGold(remainingSeconds: Long): Int = if (remainingSeconds <= 0) 0 else maxOf(1, kotlin.math.ceil(remainingSeconds / 600.0).toInt())
 
     val PRODUCTS = listOf(
         Product("gold_small", gold = 100), Product("gold_medium", gold = 550), Product("gold_large", gold = 1200), Product("gold_huge", gold = 2600),

@@ -5,7 +5,6 @@ import com.arenacity.common.tx.NoTx
 import com.arenacity.common.tx.Tx
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.Athlete
-import com.arenacity.domain.rules.BuildingType
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.Sport
 import com.arenacity.domain.repository.AthleteRepository
@@ -61,7 +60,7 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
         val st = service.state(userId)
         val club = service.lockedClubOf(userId)
         val now = clock.now()
-        val cap = TrainingRules.attributeCap(Sport.FOOTBALL, st.buildings.firstOrNull { it.type == BuildingType.PITCH }?.level ?: 1)
+        val cap = TrainingRules.attributeCap(st.stadium)
         val rnd = Random(r.seed.toLong() xor now.toEpochMilli())
         val mine = athletes.listByClub(club.id).associateBy { it.id }
         val grown = r.cards.mapNotNull { (id, xp) -> mine[id]?.let { a -> athletes.update(Growth.apply(a, xp.coerceIn(0, MAX_XP_PER_CARD), cap, rnd).athlete.copy(updatedAt = now)) } }

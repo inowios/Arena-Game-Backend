@@ -63,8 +63,8 @@ object Roads {
 }
 
 /**
- * Collections: sets of cosmetics. A complete set lifts the income of every earning building by its bonus, on top of
- * the atmosphere (not under its cap), and shows a badge in the profile.
+ * Collections: sets of cosmetics. A complete set shows a badge in the profile; [CollectionSet.incomePct] lifted the
+ * buildings' income, which went with the city builder (17 October 2026): it is still sent, it acts on nothing for now.
  */
 data class CollectionSet(val id: String, val items: List<String>, val incomePct: Int)
 
@@ -82,15 +82,12 @@ object Collections {
 }
 
 /**
- * The trophy museum (А11), the HALL_OF_FAME since the sport town: a building whose shelves hold the club's honours — every achievement tier reached, league
- * titles, cups, the highest arena. Its level is how many exhibits fit ([MuseumRules.capacity]); visitors draw a crowd
- * that lifts the earning buildings around it ([MuseumRules.atmospherePct] within [MuseumRules.RANGE] cells).
+ * The hall of fame (the trophy museum, А11): the shelves of the club's honours — every achievement tier reached, league
+ * titles, cups, the highest arena. No building since the five islands map (17 October 2026): it belongs to the stadium,
+ * and the stadium level (the club's open spots, rules.MapSpots) is how many exhibits fit ([capacity]).
  */
 object MuseumRules {
-    const val RANGE = 3
-    // ten levels since 16 October (V47 doubled the built ones: the old level k gives what the new 2k gives)
-    fun capacity(level: Int) = listOf(0, 3, 6, 9, 12, 16, 20, 25, 30, 37, 45)[level.coerceIn(0, 10)]
-    fun atmospherePct(level: Int) = level.coerceIn(0, 10)
+    fun capacity(stadium: Int) = listOf(0, 3, 6, 9, 12, 16, 20, 25, 30, 37, 45)[stadium.coerceIn(0, 10)]
 }
 
 /**

@@ -12,10 +12,10 @@ import kotlin.test.*
 class PresenceTest {
     private val clock = FixedClock(Instant.parse("2026-10-14T12:00:00Z"))
     private val clubs = FakeClubRepository()
-    private val buildings = FakeBuildingRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
-    private val alliances = AllianceUseCases(service, clubs, buildings, FakeAllianceRepository(), clock)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
+    private val create = CreateClubUseCase(clubs, clock, emptyList())
+    private val alliances = AllianceUseCases(service, clubs, FakeAllianceRepository(), clock)
     private val presence = PresenceTracker(clubs, clock)
 
     private fun club(u: UUID) = clubs.rows.values.first { it.userId == u }
@@ -54,7 +54,7 @@ class PresenceTest {
     fun `the members list says who is online and when the others were last seen`() = runBlocking<Unit> {
         val a = UUID.randomUUID(); val b = UUID.randomUUID(); val c = UUID.randomUUID()
         for ((u, n) in listOf(a to "Alpha FC", b to "Beta FC", c to "Gamma FC")) { create(u, n, "#AA0000", "#FFFFFF", "UTC"); clubs.update(club(u).copy(coins = 50_000)) }
-        buildings.setStadium(club(a).id, 2)
+        spots.stadium(club(a).id, 2)
         val id = alliances.create(a, "Night Owls", "NO", "", true, 0, null).alliance.id
         alliances.join(b, id); alliances.join(c, id)
         presence.seen(b)                                   // b: seen 10 minutes before the read

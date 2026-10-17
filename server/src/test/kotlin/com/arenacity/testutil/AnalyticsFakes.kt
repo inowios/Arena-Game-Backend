@@ -16,7 +16,7 @@ class FakeAnalyticsRepository : AnalyticsRepository {
     var privateLeague: Pair<Int, Int> = 0 to 0
     var invited = 0
     var markCalls = 0
-    var buildings: Map<String, Map<Int, Int>> = emptyMap()
+    var spots: Map<String, Int> = emptyMap()
     var clubs: List<ClubSnapshot> = emptyList()
 
     override suspend fun markActive(userId: UUID, day: LocalDate): Boolean { markCalls++; return days.add(userId to day) }
@@ -38,6 +38,6 @@ class FakeAnalyticsRepository : AnalyticsRepository {
         return events.filter { it.name in names && it.userId in cohort && !it.at.isBefore(from) && it.at.isBefore(horizon) }.sortedBy { it.at }.take(limit)
     }
     override suspend fun eventProps(name: String, from: Instant, to: Instant, limit: Int) = events.filter { it.name == name && !it.at.isBefore(from) && it.at.isBefore(to) }.map { it.props }.take(limit)
-    override suspend fun buildingLevels() = buildings
+    override suspend fun spotCounts() = spots
     override suspend fun activeClubs(from: LocalDate, to: LocalDate, limit: Int) = clubs
 }

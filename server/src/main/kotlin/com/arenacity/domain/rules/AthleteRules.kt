@@ -75,16 +75,17 @@ object TrainingRules {
     const val FATIGUE_PER_TRAINING = 15
     const val MAX_FATIGUE_TO_TRAIN = 80
 
-    fun slots(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect
-    fun delta(trainingCenterLevel: Int) = BuildingCatalog.level(BuildingType.TRAINING_CENTER, trainingCenterLevel).effect2
-    fun attributeCap(pitchLevel: Int) = BuildingCatalog.level(BuildingType.PITCH, pitchLevel).effect
-    /** Cap for a sport's athletes: the level of that section's venue (the stadium). */
-    fun attributeCap(sport: Sport, venueLevel: Int) = BuildingCatalog.level(Sections.venue(sport), venueLevel).effect
-    /** A graduate of the youth sports school at [level] (the academy's until 16 October): its quality range. */
-    fun graduateQuality(level: Int): IntRange { val lo = BuildingCatalog.level(BuildingType.YOUTH_SPORTS_SCHOOL, level).effect; return lo..(lo + 15) }
-    /** Seconds to the youth sports school's next graduate at [level] (12 hours at the first, 6 at the top). */
-    fun graduateIntervalSeconds(level: Int) = BuildingCatalog.level(BuildingType.YOUTH_SPORTS_SCHOOL, level).effect2 * 3600L
-    fun medicalCooldownSeconds(medicalLevel: Int) = BuildingCatalog.level(BuildingType.MEDICAL_CENTER, medicalLevel).effect2 * 3600L
+    /** Training belongs to the stadium (rules.MapSpots): its slots and the gain per training by the stadium level. */
+    fun slots(stadium: Int) = MapSpots.trainingSlots(stadium)
+    fun delta(stadium: Int) = MapSpots.trainingDelta(stadium)
+    /** The highest an attribute grows at [stadium] (training, matches, card matches). */
+    fun attributeCap(stadium: Int) = MapSpots.attributeCap(stadium)
+    /** An academy graduate's quality range at [stadium] (the academy open). */
+    fun graduateQuality(stadium: Int): IntRange { val lo = MapSpots.graduateLow(stadium); return lo..(lo + 15) }
+    /** Seconds to the academy's next graduate at [stadium] (12 hours at the first, 6 at the top). */
+    fun graduateIntervalSeconds(stadium: Int) = MapSpots.graduateHours(stadium) * 3600L
+    /** The hospital's rest after a treatment at [stadium]. */
+    fun medicalCooldownSeconds(stadium: Int) = MapSpots.medicalHours(stadium) * 3600L
 }
 
 /**
@@ -95,24 +96,11 @@ object TrainingRules {
 object Sections {
     val ORDER = listOf(Sport.FOOTBALL)
 
-    /** The venue that caps a section's attributes: the stadium (the other sports have none since their arenas went). */
-    @Suppress("UNUSED_PARAMETER")
-    fun venue(sport: Sport): BuildingType = BuildingType.PITCH
-    fun sportOfVenue(type: BuildingType): Sport? = if (type == BuildingType.PITCH) Sport.FOOTBALL else null
-
     fun profile(sport: Sport): com.arenacity.engine.model.SportProfile = when (sport) {
         Sport.FOOTBALL -> com.arenacity.engine.model.FOOTBALL
         Sport.BASKETBALL -> com.arenacity.engine.model.BASKETBALL
         Sport.TENNIS -> com.arenacity.engine.model.TENNIS
     }
-
-    /**
-     * A venue counts once its first construction is done; it stays usable while being upgraded to the next level, and
-     * while it waits parked off the land.
-     */
-    fun venueOperational(b: Building): Boolean = b.state == BuildingState.IDLE || b.level > 1
-    /** The level that applies right now (an upgrade in progress still plays at the previous level). */
-    fun effectiveLevel(b: Building): Int = if (b.state == BuildingState.UPGRADING) (b.level - 1).coerceAtLeast(1) else b.level
 
     /** Sections a bot club plays: football at every division (it played basketball from division 3 and tennis from 5). */
     @Suppress("UNUSED_PARAMETER")

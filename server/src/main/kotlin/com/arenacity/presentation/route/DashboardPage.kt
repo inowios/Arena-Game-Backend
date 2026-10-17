@@ -32,7 +32,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:5px 8px;text-align:right
 <section class="card"><h2>Arena matches</h2><div id="live" class="mut">—</div></section>
 <section class="card"><h2>Active clubs</h2><div id="eco" class="mut">—</div></section>
 <section class="card"><h2>Money</h2><div id="money" class="mut">—</div></section>
-<section class="card wide"><h2>Buildings by level</h2><div id="bld" class="mut">—</div></section>
+<section class="card wide"><h2>Map spots open</h2><div id="spots" class="mut">—</div></section>
 </main>
 <script>
 const ${'$'} = id => document.getElementById(id);
@@ -65,10 +65,8 @@ async function load() {
     ${'$'}('eco').innerHTML = '<p class="mut">' + b.activeClubs + ' clubs active ' + esc(b.from) + ' – ' + esc(b.to) + '</p>' +
       table(['', 'p10', 'median', 'p90', 'max'], [spread('coins', b.coins), spread('gold', b.gold), spread('trophies', b.trophies), spread('club level', b.clubLevel)]) +
       '<p>stadium levels: ' + map(b.stadium) + '</p><p>stadium level-ups: ' + map(b.stadiumUps) + '</p>';
-    ${'$'}('money').innerHTML = '<p>purchases: ' + map(b.purchases) + '</p><p>checkout opened: ' + map(b.purchaseStarts) + '</p><p>rewarded ads: <b>' + b.adRewards + '</b></p>' +
-      '<p>obstacles cleared: <b>' + b.obstaclesCleared + '</b> · gold found <b>' + b.obstacleGold + '</b></p>';
-    const levels = [...new Set(Object.values(b.buildings).flatMap(v => Object.keys(v)))].map(Number).sort((x, y) => x - y);
-    ${'$'}('bld').innerHTML = table(['building'].concat(levels.map(l => 'L' + l)), Object.entries(b.buildings).map(([t, v]) => [esc(t)].concat(levels.map(l => v[l] || ''))));
+    ${'$'}('money').innerHTML = '<p>purchases: ' + map(b.purchases) + '</p><p>checkout opened: ' + map(b.purchaseStarts) + '</p><p>rewarded ads: <b>' + b.adRewards + '</b></p>';
+    ${'$'}('spots').innerHTML = table(['spot', 'clubs'], Object.entries(b.spots).map(([s, n]) => [esc(s), n]));
     ${'$'}('msg').textContent = 'updated ' + new Date().toLocaleTimeString();
   } catch (e) { ${'$'}('msg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
 }

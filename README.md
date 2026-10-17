@@ -8,7 +8,7 @@ Kotlin backend for the Arena City mobile game. Design spec and plans live in
 | Module | Purpose |
 |---|---|
 | `match-engine` | Pure Kotlin, deterministic match simulator. No Ktor/DB dependencies. |
-| `server` | Ktor 3 API: auth, clubs, buildings, athletes, lineups, public/private leagues, matchday scheduler, friendlies. |
+| `server` | Ktor 3 API: auth, clubs and their map spots, athletes, lineups, public/private leagues, matchday scheduler, friendlies. |
 
 ## Commands
 
@@ -23,7 +23,7 @@ Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides
 `DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
 `ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`; stores and ads:
 `GOOGLE_PLAY_PACKAGE`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY`,
-`APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`, `ADS_CLIENT_REWARDS`; ops: `ADMIN_TOKEN`, `SUPPORT_EMAIL`, `LEGAL_COMPANY`).
+`APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`; ops: `ADMIN_TOKEN`, `SUPPORT_EMAIL`, `LEGAL_COMPANY`).
 Production setup, monitoring, backups and the store checklist: `deploy/README.md`.
 
 ## API (v1)
@@ -38,18 +38,15 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET/PATCH/DELETE | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it); DELETE erases the account (sign-in data, tokens, chat lines) and retires the club into a bot |
 | POST | `/api/v1/auth/transfer-code`; `/auth/transfer` `{code, deviceId}` | move an account to another device with a one-time code (24 h) |
 | GET/POST | `/api/v1/club/inbox`, `/club/inbox/read` | in-app inbox (matchday results, season end, accepted challenges, new league members); `GET /club` has `inboxUnread` |
-| GET | `/api/v1/catalog/buildings` | building catalog (costs, timers, effects per level), the sport town's set (14 Oct 2026): `name` in the `Accept-Language`, `island` (an island arena: built on that zone's side island only, once the zone is open), `section` (the sport it opens), `soon` + `about` + `soonText` (no mechanic yet: what it will do, «soon») |
-| GET | `/api/v1/catalog/land` | the land mask (`resources/land/land_mask.json`, from the art pipeline; the old 48×48 square until it is installed): 10 m cells of the main island and the locked side islands; `ETag` = its sha1 id |
-| POST/GET | `/api/v1/club` | create / full state (buildings, timers, pending income, `land` = `{maskId, regions, locked}`; `parcels`/`gridSize` are the old square's, kept for one client release) |
-| POST | `/api/v1/club/buildings` | place `{type,x,y,rotation}` (an arena off its own island: 400 "This arena is built on its own island"; its island locked: 400 "Open this island first") |
-| POST | `/api/v1/club/buildings/{id}/upgrade`, `/collect`, `/speedup`, `/move` `{x,y,rotation}`; DELETE | building actions (one builder; constructions queue on it) |
-| POST | `/api/v1/club/builders` | hire the second builder for 250 gold (parallel construction) |
+| GET | `/api/v1/catalog/spots` | the five islands map's ten spots `[{id, island, cost, people?}]`: `stadium` (always open), `academy` 3 000, `hospital` 6 000, `mall` 12 000, `lighthouse` 25 000, `marina` 50 000 (main island, `island` = `main`); `android_stadium`, `stone_arena`, `beast_dome`, `shadow_ruins` (one per people's island, `cost` = the island's price; they open with the island) |
+| POST/GET | `/api/v1/club` | create / full state: `club`, `stadium` (= the number of open spots, 1..10), `spots` (open spot ids), `land` = `{maskId: null, regions: ["main", open islands…], locked: [{id, people, zone, state, requiredStadium}], peoples}`, `sections`, `inboxUnread`, `live`, `energy`; `buildings` is always `[]` (the city builder went on 17 Oct 2026) |
+| POST | `/api/v1/club/spots/{id}/unlock` | open a main-island spot for its coins, at once, any order; answers GET /club's body. 409 already open (the stadium always), 404 unknown id, 400 an island's spot (it opens with its island: `/club/zones/{people}/buy`), 402 not enough coins |
 | GET | `/api/v1/club/athletes` | squad, active trainings, slots |
-| POST | `/api/v1/club/academy/claim` `{sport?}` | new graduate every 8 h (football, or any open section) |
-| POST | `/api/v1/club/trainings`, `/trainings/{id}/complete`, `/trainings/{id}/speedup` | train one attribute for 1 h; finish now for gold (1 per 10 min) |
-| POST | `/api/v1/club/athletes/{id}/heal`, `/club/medical/speedup` | medical centre; end its cooldown for gold |
+| POST | `/api/v1/club/academy/claim` `{sport?}` | a graduate (needs the `academy` spot open; quality and interval — 12 h … 6 h — by the stadium level) |
+| POST | `/api/v1/club/trainings`, `/trainings/{id}/complete`, `/trainings/{id}/speedup` | train one attribute for 1 h (always available: slots, gain and the attribute cap by the stadium level); finish now for gold (1 per 10 min) |
+| POST | `/api/v1/club/athletes/{id}/heal`, `/club/medical/speedup` | the hospital (needs the `hospital` spot open; its rest by the stadium level); end its cooldown for gold |
 | DELETE | `/api/v1/club/athletes/{id}` | release an athlete (free; the section must still field a lineup) |
-| GET/POST | `/api/v1/club/scouting`, `/club/scouting/{slot}/sign` | daily scouting report (needs an academy): prospect / prime / veteran from the club's sections; one free signing a day |
+| GET/POST | `/api/v1/club/scouting`, `/club/scouting/{slot}/sign` | daily scouting report (needs the `lighthouse` spot open): prospect / prime / veteran from the club's sections; one free signing a day |
 | GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics per section (`football` 11+7, `basketball` 5+5, `tennis` 1+1) |
 | GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
 | GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
@@ -64,15 +61,13 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks, 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
 | GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold packs + premium pass. `GOOGLE`: Play purchase token (`purchases.products.get`, order id = idempotency key); `APPLE`: transaction id (App Store Server API, production then sandbox; optional x5c chain check against Apple Root CA G3); `DEV` with `IAP_DEV_MODE=true`, token `dev:<order>` |
 | GET | `/api/v1/catalog/coin-packs`; POST `/club/shop/coins/{pack}` | coins for gold (25 → 3 000, 100 → 13 000, 400 → 60 000) |
-| POST | `/api/v1/club/buildings` `{…, variant?}` | decor look at placement (an owned decor item). Cosmetics (kits, emblem frames, celebrations, decor looks) are no longer sold: they come from the season pass, achievements, the roads, events and mail; the looks a club already has stay on `ClubDto`/`ClubRefDto` (`kit`, `emblemFrame`/`frame`, `celebration`) |
-| GET | `/api/v1/club/achievements`; POST `/club/achievements/{id}/claim` | 14 tiered achievements (wins, sections, divisions, titles, builds, streak, invites…): gold per tier, some tiers give cosmetics |
-| POST | `/api/v1/ads/reward` `{placement, buildingId?}` | client-reported reward (development, or `ADS_CLIENT_REWARDS=true`): `DOUBLE_INCOME` (4h cooldown), `FREE_SPEEDUP` (≤30 min, once a day) |
-| GET | `/api/v1/ads/ssv` | AdMob server-side verification callback (signature checked with Google's keys; `user_id` = user id, `custom_data` = `PLACEMENT[:buildingId]`; idempotent per `transaction_id`) |
+| GET | `/api/v1/club/achievements`; POST `/club/achievements/{id}/claim` | tiered achievements (wins, sections, divisions, titles, the stadium level, streak, invites…): gold per tier, some tiers give cosmetics |
+| GET | `/api/v1/ads/ssv` | AdMob server-side verification callback (signature checked with Google's keys, 403 when bad); no placement grants a reward since the double income and the free speed-up went with the city builder |
 | POST | `/api/v1/store/apple/notifications`, `/api/v1/store/google/rtdn?token=...` | store refunds (no JWT). Apple: App Store Server Notifications V2 (`REFUND`/`REVOKE` take the purchase back, `REFUND_REVERSED` restores it; the JWS chain is checked against `APPSTORE_ROOT_CERT_PATH`, required outside dev mode). Google: Pub/Sub push of Real-time developer notifications, `voidedPurchaseNotification` by order id or token hash; `GOOGLE_PLAY_RTDN_TOKEN` guards the URL. Gold/coins are taken back as far as the club still has them, the premium pass and the product's item go too; the player gets an inbox message. Dev: `POST /api/v1/dev/store/refund {externalId, action}` |
 | GET/POST | `/api/v1/leagues/{id}/messages` `?before=&after=` / `{text}` | private-league chat (members only, 2 s / 20 per 5 min, masked; system lines `join|Name`, `leave|…`, `restart|n|winner`, `kick|…`) |
 | POST/DELETE | `/api/v1/messages/{id}/report`, `/messages/{id}`; `/clubs/{id}/block` | moderation: 3 reports hide a line; author or creator deletes; blocks hide a club's lines |
 | POST/DELETE/GET | `/api/v1/leagues/private/{id}/restart`, `/members/{clubId}`, `/history` | creator: new private season (table frozen into history), remove members |
-| GET | `/api/v1/clubs/{id}/h2h`, `/clubs/{id}/grounds` | head-to-head record; another club's buildings (visit) |
+| GET | `/api/v1/clubs/{id}/h2h`, `/clubs/{id}/grounds` | head-to-head record; another club's grounds (visit): `club`, `stadium`, `spots`, `land` as GET /club's, `buildings` always `[]` |
 | POST/GET | `/api/v1/challenges`, `/challenges/mine`, `/challenges/{code}`, `/challenges/{code}/accept` | one-off friendly by link (7 days, first taker plays; both clubs rewarded) |
 | GET | `/l/{code}`, `/c/{code}`, `/.well-known/assetlinks.json`, `/.well-known/apple-app-site-association` | invite landing pages (5 languages, store links, clipboard hand-off) and app-link association |
 | GET | `/api/v1/config` | public client config: base URL, link templates, store URLs, minimum client version |
@@ -82,9 +77,8 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
-Monetization (spec §6): gold buys speed-ups (buildings, trainings, medical cooldown), the second builder and coin packs;
-athletes, attributes, reputation and league places are never sold. `GET /club` carries `ads` (double-income window/cooldown, today's
-free speed-up). Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
+Monetization (spec §6): gold buys speed-ups (trainings, the hospital's cooldown) and coin packs; coins open the map's spots;
+athletes, attributes, reputation and league places are never sold. Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
 `season_pass` — consumable bought once per season. AdMob SSV callback URL: `https://<host>/api/v1/ads/ssv`.
 
 Sections: football always; a basketball court (club level 3) or tennis court (level 5) opens that section with a starter squad

@@ -4,13 +4,8 @@ import com.arenacity.common.time.Clock
 import com.arenacity.common.tx.NoTx
 import com.arenacity.common.tx.Tx
 import com.arenacity.domain.exception.*
-import com.arenacity.domain.model.Building
-import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.model.Club
-import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
-import com.arenacity.domain.rules.BuildingCatalog
-import com.arenacity.domain.rules.Stadium
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.rules.ProgressEvent
 import com.arenacity.domain.usecase.economy.ProgressTracker
@@ -20,8 +15,8 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Alliances (GAME-PLAN phase 4): clubs band together — chat, roles, help on constructions, a weekend tournament of the
-// members' arena wins, likes on visits.
+// Alliances (GAME-PLAN phase 4): clubs band together — chat, roles, a weekend tournament of the members' arena wins,
+// likes on visits. (The help on constructions went with the city builder, 17 October 2026; helpsGiven is what a member gave before.)
 
 enum class AllianceRole(val rank: Int) { LEADER(4), CO_LEADER(3), ELDER(2), MEMBER(1) }
 
@@ -31,11 +26,6 @@ data class Alliance(
 )
 data class AllianceMember(val allianceId: UUID, val clubId: UUID, val role: AllianceRole, val joinedAt: Instant, val helpsGiven: Int = 0)
 data class JoinRequest(val allianceId: UUID, val clubId: UUID, val message: String, val createdAt: Instant)
-data class HelpRequest(
-    val id: UUID, val allianceId: UUID, val clubId: UUID, val buildingId: UUID, val buildingType: String, val level: Int,
-    val helps: Int, val maxHelps: Int, val createdAt: Instant, val closed: Boolean,
-)
-
 interface AllianceRepository {
     suspend fun create(a: Alliance): Alliance
     suspend fun update(a: Alliance): Alliance
@@ -56,15 +46,6 @@ interface AllianceRepository {
     suspend fun removeRequest(allianceId: UUID, clubId: UUID)
     suspend fun clearRequests(clubId: UUID)
 
-    suspend fun openHelps(allianceId: UUID): List<HelpRequest>
-    suspend fun help(id: UUID): HelpRequest?
-    suspend fun createHelp(h: HelpRequest): HelpRequest
-    suspend fun updateHelp(h: HelpRequest)
-    /** Records that [helper] helped [helpId]; false when it already did. */
-    suspend fun markHelped(helpId: UUID, helper: UUID, at: Instant): Boolean
-    suspend fun helpersOf(helpId: UUID): Set<UUID>
-    suspend fun helpsGivenSince(helper: UUID, since: Instant): Int
-
     suspend fun addWeekendWin(week: Int, allianceId: UUID, clubId: UUID)
     /** Alliances by total weekend wins, best first. */
     suspend fun weekendTable(week: Int, limit: Int): List<Pair<UUID, Int>>
@@ -81,15 +62,8 @@ object AllianceRules {
     const val MAX_MEMBERS = 30
     const val CREATE_COINS = 1_000L
     const val CREATE_STADIUM = 2
-    const val MAX_HELPS = 8
-    const val DAILY_HELPS = 40
-    const val HELP_MIN_SECONDS = 180L
-    const val HELP_SHARE = 0.02
-    const val HELP_COINS = 25L
     const val NAME = 3
     const val NAME_MAX = 24
-    /** Each help takes this much off the construction: 2 % of its full time, at least 3 minutes. */
-    fun helpSeconds(buildSeconds: Long) = maxOf(HELP_MIN_SECONDS, (buildSeconds * HELP_SHARE).toLong())
 
     /** Weekend reward of a member who won at least [MIN_WINS] arena matches, by the alliance's place. */
     const val MIN_WINS = 3
@@ -107,8 +81,7 @@ object AllianceRules {
 }
 
 /** [now]: when it was read (the members' online state, club.Presence). */
-data class AllianceView(val alliance: Alliance, val members: List<Pair<AllianceMember, Club>>, val requests: List<Pair<JoinRequest, Club>>, val helps: List<HelpView>, val me: AllianceMember?, val now: java.time.Instant = java.time.Instant.EPOCH)
-data class HelpView(val help: HelpRequest, val club: Club, val helpedByMe: Boolean, val remainingSeconds: Long)
+data class AllianceView(val alliance: Alliance, val members: List<Pair<AllianceMember, Club>>, val requests: List<Pair<JoinRequest, Club>>, val me: AllianceMember?, val now: java.time.Instant = java.time.Instant.EPOCH)
 data class AllianceSummary(val alliance: Alliance, val members: Int)
 data class TournamentRow(val alliance: Alliance, val wins: Int, val place: Int)
 data class TournamentView(val week: Int, val live: Boolean, val rows: List<TournamentRow>, val mine: TournamentRow?, val myWins: Int, val claimable: WeekendReward?)
@@ -117,7 +90,6 @@ data class WeekendReward(val week: Int, val place: Int, val wins: Int, val gold:
 class AllianceUseCases(
     private val service: ClubService,
     private val clubs: ClubRepository,
-    private val buildings: BuildingRepository,
     private val repo: AllianceRepository,
     private val clock: Clock,
     private val tx: Tx = NoTx,
@@ -167,13 +139,8 @@ class AllianceUseCases(
         val reqs = if (mine != null && mine.role.rank >= AllianceRole.CO_LEADER.rank) repo.requests(a.id) else emptyList()
         val reqClubs = clubs.findByIds(reqs.map { it.clubId }.toSet()).associateBy { it.id }
         val now = clock.now()
-        val helps = if (mine != null) repo.openHelps(a.id).mapNotNull { h ->
-            val b = buildings.findById(h.buildingId)
-            if (b == null || b.state != BuildingState.UPGRADING || b.upgradeEndsAt == null || !b.upgradeEndsAt.isAfter(now)) { repo.updateHelp(h.copy(closed = true)); null }
-            else byId[h.clubId]?.let { HelpView(h, it, me.id in repo.helpersOf(h.id), b.upgradeEndsAt.epochSecond - now.epochSecond) }
-        } else emptyList()
         return AllianceView(a, members.sortedWith(compareByDescending<AllianceMember> { it.role.rank }.thenBy { byId[it.clubId]?.trophies?.unaryMinus() ?: 0 }).mapNotNull { m -> byId[m.clubId]?.let { m to it } },
-            reqs.mapNotNull { r -> reqClubs[r.clubId]?.let { r to it } }, helps, mine, now)
+            reqs.mapNotNull { r -> reqClubs[r.clubId]?.let { r to it } }, mine, now)
     }
 
     /** Joins an open alliance (or asks to join a closed one; returns null then). */
@@ -248,46 +215,6 @@ class AllianceUseCases(
             else -> throw ValidationException("Unknown action")
         }
         view(alliance(me.allianceId), club)
-    }
-
-    // ---- help ----
-
-    /** Asks the alliance to help with a construction in progress. */
-    suspend fun askHelp(userId: UUID, buildingId: UUID): HelpRequest = tx {
-        val st = service.state(userId, lock = true)
-        val m = myMembership(st.club)
-        val b = st.buildings.firstOrNull { it.id == buildingId } ?: throw NotFoundException("Building not found")
-        if (b.state != BuildingState.UPGRADING) throw ConflictException("Nothing to speed up")
-        if (repo.openHelps(m.allianceId).any { it.buildingId == b.id && !it.closed }) throw ConflictException("Help already asked")
-        repo.createHelp(HelpRequest(UUID.randomUUID(), m.allianceId, st.club.id, b.id, b.type.name, b.level, 0, AllianceRules.MAX_HELPS, clock.now(), false))
-    }
-
-    data class HelpResult(val coins: Long, val secondsCut: Long, val club: Club)
-
-    /** One tap on an ally's request: their construction gets shorter, the helper gets a few coins (daily cap). */
-    suspend fun giveHelp(userId: UUID, helpId: UUID): HelpResult = tx {
-        val me = service.lockedClubOf(userId)
-        val m = myMembership(me)
-        val h = repo.help(helpId) ?: throw NotFoundException("Request not found")
-        if (h.allianceId != m.allianceId || h.closed) throw NotFoundException("Request not found")
-        if (h.clubId == me.id) throw ValidationException("You cannot help yourself")
-        val now = clock.now()
-        if (repo.helpsGivenSince(me.id, now.minusSeconds(86_400)) >= AllianceRules.DAILY_HELPS) throw ConflictException("Enough helping for today")
-        if (!repo.markHelped(h.id, me.id, now)) throw ConflictException("Already helped")
-        clubs.lockById(h.clubId)
-        val b = buildings.findById(h.buildingId)
-        var cut = 0L
-        if (b != null && b.state == BuildingState.UPGRADING && b.upgradeEndsAt != null && b.upgradeEndsAt.isAfter(now)) {
-            val total = BuildingCatalog.level(b.type, b.level).buildSeconds
-            cut = minOf(AllianceRules.helpSeconds(total), b.upgradeEndsAt.epochSecond - now.epochSecond)
-            val ends = b.upgradeEndsAt.minusSeconds(cut)
-            if (!ends.isAfter(now)) service.complete(b, now) else buildings.update(b.copy(upgradeEndsAt = ends, updatedAt = now))
-        }
-        val helps = h.helps + 1
-        repo.updateHelp(h.copy(helps = helps, closed = helps >= h.maxHelps || b == null || b.state != BuildingState.UPGRADING))
-        repo.updateMember(m.copy(helpsGiven = m.helpsGiven + 1))
-        val saved = clubs.update(me.copy(coins = me.coins + AllianceRules.HELP_COINS, updatedAt = now))
-        HelpResult(AllianceRules.HELP_COINS, cut, saved)
     }
 
     // ---- weekend tournament ----

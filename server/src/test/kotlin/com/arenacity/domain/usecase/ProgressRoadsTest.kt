@@ -2,8 +2,6 @@ package com.arenacity.domain.usecase
 
 import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.ValidationException
-import com.arenacity.domain.model.Building
-import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.rules.*
 import com.arenacity.domain.usecase.club.*
 import com.arenacity.domain.usecase.economy.AchievementService
@@ -17,16 +15,15 @@ import java.util.UUID
 class ProgressRoadsTest {
     private val clock = FixedClock()
     private val clubs = FakeClubRepository()
-    private val buildings = FakeBuildingRepository()
     private val athletes = FakeAthleteRepository()
     private val inventory = FakeInventoryRepository()
-    private val service = ClubService(clubs, buildings, clock)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
     private val cosmetics = CosmeticsService(inventory, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
+    private val create = CreateClubUseCase(clubs, clock, emptyList())
     private val roads = RoadUseCases(service, clubs, FakeRoadRepository(), cosmetics, athletes, clock)
     private val collections = CollectionsUseCases(service, cosmetics)
-    private val museum = MuseumService(clubs, buildings, AchievementService(FakeAchievementRepository(), buildings, FakeSeasonRepository()))
-    private val collect = CollectIncomeUseCase(service, clubs, buildings, clock, collections = { id -> collections.incomePct(id) })
+    private val museum = MuseumService(clubs, service, AchievementService(FakeAchievementRepository(), service, FakeSeasonRepository()))
     private val user = UUID.randomUUID()
     private fun club() = clubs.rows.values.first { it.userId == user }
 
@@ -70,34 +67,24 @@ class ProgressRoadsTest {
     }
 
     @Test
-    fun `a complete collection lifts income on top of the atmosphere`() = runBlocking<Unit> {
+    fun `a collection is complete once every item is owned`() = runBlocking<Unit> {
         newClub()
-        val office = buildings.listByClub(club().id).first { it.type == BuildingType.TICKET_OFFICE }
         val (sets0, pct0) = collections.list(user)
         assertEquals(0, pct0); assertTrue(sets0.none { it.complete })
         for (id in Collections.ALL.first { it.id == "park" }.items) cosmetics.grant(club().id, Cosmetics.find(id)!!, CosmeticSource.SHOP)
-        assertEquals(4, collections.list(user).second)
-        val bonus = Atmosphere.of(buildings.listByClub(club().id), 4).getValue(office.id)
-        assertEquals(4, bonus.collection)
-        clock.advanceSeconds(3600)
-        val base = BuildingCatalog.income(BuildingCatalog.level(BuildingType.TICKET_OFFICE, 1), 3600, 1, bonus.total)
-        assertEquals(base, collect(user, office.id).coins)
+        val (sets, pct) = collections.list(user)
+        assertEquals(4, pct); assertTrue(sets.single { it.complete }.set.id == "park")
     }
 
     @Test
-    fun `the museum shows as many honours as its shelves hold and lifts its neighbours`() = runBlocking<Unit> {
+    fun `the hall of fame holds as many honours as the stadium level allows`() = runBlocking<Unit> {
         newClub()
-        assertEquals(0, museum.of(club().id).capacity)
-        buildings.setStadium(club().id, 3)
-        val now = clock.now()
-        // the hall of fame a lawn row in front of the seeded ticket office (wherever the land's anchor puts it)
-        val office = buildings.listByClub(club().id).first { it.type == BuildingType.TICKET_OFFICE }
-        val m = buildings.create(Building(UUID.randomUUID(), club().id, BuildingType.HALL_OF_FAME, 1, office.gridX, office.gridY + 4, 0, BuildingState.IDLE, null, now, now, now))
-        val v = museum.of(club().id)
-        assertEquals(1, v.level); assertEquals(3, v.capacity)   // ten levels since 16 October: the old first level's 6 at the second
-        assertTrue(v.exhibits.size <= 3)
-        assertEquals(MuseumRules.atmospherePct(1), Atmosphere.of(buildings.listByClub(club().id)).getValue(office.id).museum)
-        assertEquals(0, Atmosphere.of(buildings.listByClub(club().id)).getValue(m.id).museum)
+        val v1 = museum.of(club().id)
+        assertEquals(1, v1.level); assertEquals(3, v1.capacity)                     // stadium 1: three exhibits
+        spots.open(club().id, MapSpots.ACADEMY, MapSpots.HOSPITAL)
+        val v3 = museum.of(club().id)
+        assertEquals(3, v3.level); assertEquals(MuseumRules.capacity(3), v3.capacity); assertEquals(9, v3.capacity)
+        assertTrue(v3.exhibits.size <= 9)
     }
 }
 

@@ -18,50 +18,35 @@ import kotlin.test.*
 
 class MonetizationTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val economyRepo = FakeEconomyRepository()
     private val inventory = FakeInventoryRepository(); private val achievementsRepo = FakeAchievementRepository(); private val seasons = FakeSeasonRepository()
-    private val service = ClubService(clubs, buildings, clock)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
     private val economy = EconomyService(economyRepo, leagues, clock, achievements = achievementsRepo)
     private val cosmetics = CosmeticsService(inventory, clock)
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val place = PlaceBuildingUseCase(service, buildings, clock, cosmetics = cosmetics)
-    private val speed = SpeedUpUseCase(service, buildings, clock)
-    private val collect = CollectIncomeUseCase(service, clubs, buildings, clock, economy)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val squads = SquadService(service, athletes, trainings, clock)
     private val startTraining = StartTrainingUseCase(service, squads, athletes, trainings, clock, economy)
     private val speedTraining = SpeedUpTrainingUseCase(service, squads, trainings, clock)
     private val speedMedical = SpeedUpMedicalUseCase(service, clubs, clock)
     private val heal = HealAthleteUseCase(service, squads, clubs, athletes, clock)
     private val coinPacks = BuyCoinPackUseCase(service, clubs, clock)
-    private val achievementService = AchievementService(achievementsRepo, buildings, seasons)
+    private val achievementService = AchievementService(achievementsRepo, service, seasons)
     private val achievements = AchievementUseCases(service, clubs, achievementsRepo, achievementService, cosmetics, clock)
     private val pass = SeasonPassUseCases(service, clubs, economyRepo, economy, clock, cosmetics = cosmetics, athletes = athletes)
     private val daily = ClaimDailyRewardUseCase(service, clubs, economy, clock)
-    private val ads = AdRewardUseCase(service, clubs, buildings, economy, clock, repo = economyRepo)
     private val user = UUID.randomUUID()
 
     private fun club() = clubs.rows.values.first { it.userId == user }
 
-    private fun setup(gold: Int = 1_000, level: Int = 3, vararg types: BuildingType) = runBlocking {
+    /** A club with the map's [open] spots open (its stadium level 1 + their number). */
+    private fun setup(gold: Int = 1_000, level: Int = 3, vararg open: String) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        clubs.update(club().copy(coins = 50_000, gold = gold, level = level)); buildings.setStadium(club().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, i * 14, 28, 0); speed(user, b.id) }   // the big footprints: a row below the ticket office
-        clubs.update(club().copy(gold = gold))
-    }
-
-    @Test
-    fun `decor looks at placement need an owned decor item`() = runBlocking<Unit> {
-        setup()
-        assertFailsWith<ConflictException> { place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain") }
-        assertFailsWith<ValidationException> { place(user, BuildingType.ACADEMY, 8, 36, 0, "decor_tree") }
-        cosmetics.grant(club().id, Cosmetics.find("decor_fountain")!!, CosmeticSource.ROAD)   // earned, e.g. on the club road
-        val d = place(user, BuildingType.DECOR, 6, 36, 0, "decor_fountain")
-        assertEquals("decor_fountain", d.variant)
-        Unit
+        clubs.update(club().copy(coins = 50_000, gold = gold, level = level)); spots.open(club().id, *open)
     }
 
     @Test
@@ -78,16 +63,21 @@ class MonetizationTest {
     @Test
     fun `achievements pay gold per reached tier from counters and club state`() = runBlocking<Unit> {
         setup(gold = 0, level = 3)
-        val office = buildings.rows.values.first { it.type == BuildingType.TICKET_OFFICE }
-        repeat(10) { clock.advanceSeconds(3600); collect(user, office.id) }
+        repeat(5) { economy.record(club().id, ProgressEvent.TRAINING_STARTED) }
         val list = achievements.list(user)
-        val tycoon = list.first { it.achievement.id == "tycoon" }
-        assertEquals(10, tycoon.value); assertEquals(1, tycoon.reachedTier); assertTrue(tycoon.claimable)
+        val coach = list.first { it.achievement.id == "coach" }
+        assertEquals(5, coach.value); assertEquals(1, coach.reachedTier); assertTrue(coach.claimable)
         val growing = list.first { it.achievement.id == "growing_club" }
         assertEquals(1, growing.reachedTier)                                           // club level 3
-        val claim = achievements.claim(user, "tycoon")
+        assertTrue(list.none { it.achievement.id in setOf("tycoon", "clearer", "master_builder") })   // gone with the city builder
+        val claim = achievements.claim(user, "coach")
         assertEquals(5, claim.gold); assertEquals(5, club().gold)
-        assertFailsWith<ConflictException> { achievements.claim(user, "tycoon") }
+        assertFailsWith<ConflictException> { achievements.claim(user, "coach") }
+        // the stadium achievement counts the open spots: stadium 1, then 2 with the academy open
+        assertFailsWith<ConflictException> { achievements.claim(user, "stadium") }
+        spots.open(club().id, MapSpots.ACADEMY)
+        assertEquals(2, achievements.list(user).first { it.achievement.id == "stadium" }.value)
+        assertEquals(10, achievements.claim(user, "stadium").gold)
         assertFailsWith<ConflictException> { achievements.claim(user, "champion") }
         assertEquals(10, achievements.claim(user, "growing_club").gold)
         Unit
@@ -145,12 +135,12 @@ class MonetizationTest {
 
     @Test
     fun `training and medical speed-ups cost gold by remaining time`() = runBlocking<Unit> {
-        setup(gold = 100, level = 3, BuildingType.TRAINING_CENTER, BuildingType.MEDICAL_CENTER)
+        setup(gold = 100, level = 3, MapSpots.HOSPITAL)
         val a = athletes.rows.values.first { it.clubId == club().id && it.sport == Sport.FOOTBALL && it.position.name != "GK" && it.attack < 55 }
         val t = startTraining(user, a.id, AttributeKind.ATTACK)
         clock.advanceSeconds(10 * 60)
         val (trained, c) = speedTraining(user, t.id)
-        assertEquals(100 - BuildingCatalog.speedUpGold(50 * 60), c.gold)                   // 50 min left → 5 gold
+        assertEquals(100 - Economy.speedUpGold(50 * 60), c.gold)                   // 50 min left → 5 gold
         assertEquals(a.attack + t.delta, trained.attack)
         assertTrue(trainings.rows.isEmpty())
         assertFailsWith<NotFoundException> { speedTraining(user, t.id) }
@@ -163,16 +153,6 @@ class MonetizationTest {
         val b = athletes.rows.values.first { it.clubId == club().id && it.id != a.id }
         athletes.update(b.copy(injuredUntil = clock.now().plusSeconds(86_400)))
         heal(user, b.id)                                                                  // healed right away
-        Unit
-    }
-
-    @Test
-    fun `verified ad rewards are granted once per transaction`() = runBlocking<Unit> {
-        setup()
-        val c = assertNotNull(ads.grantVerified(user, AdPlacement.DOUBLE_INCOME, null, "tx-1"))
-        assertNotNull(c.doubleIncomeUntil)
-        assertNull(ads.grantVerified(user, AdPlacement.DOUBLE_INCOME, null, "tx-1"))
-        assertFailsWith<ConflictException> { ads.grantVerified(user, AdPlacement.DOUBLE_INCOME, null, "tx-2") }   // cooldown
         Unit
     }
 

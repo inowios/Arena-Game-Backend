@@ -17,7 +17,7 @@ import java.util.UUID
 
 private fun RoutingCall.uuid(name: String) = runCatching { UUID.fromString(parameters[name]) }.getOrElse { throw ValidationException("Bad $name") }
 
-/** Alliances: search, create, join, members and roles, chat, help on constructions, the weekend tournament, likes. */
+/** Alliances: search, create, join, members and roles, chat, the weekend tournament, likes. */
 fun Route.allianceRoutes() {
     val alliances: AllianceUseCases by inject()
     val chat: ChatService by inject()
@@ -44,12 +44,6 @@ fun Route.allianceRoutes() {
                 call.respond(alliances.answer(call.userId(), call.uuid("clubId"), accept).toDto().toSuccessResponse())
             }
             post("/members/{clubId}/{action}") { call.respond(alliances.manage(call.userId(), call.uuid("clubId"), call.parameters["action"] ?: "").toDto().toSuccessResponse()) }
-            post("/help") {
-                val r = call.receive<AskHelpRequest>()
-                val id = runCatching { UUID.fromString(r.buildingId) }.getOrElse { throw ValidationException("Bad building id") }
-                alliances.askHelp(call.userId(), id); call.respond(HttpStatusCode.Created, mapOf("ok" to true).toSuccessResponse(201))
-            }
-            post("/help/{id}") { val h = alliances.giveHelp(call.userId(), call.uuid("id")); call.respond(HelpResultDto(h.coins, h.secondsCut, h.club.toDto()).toSuccessResponse()) }
             post("/tournament/claim") { call.respond(alliances.claimWeekend(call.userId()).toDto().toSuccessResponse()) }
             route("/messages") {
                 get {

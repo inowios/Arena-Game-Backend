@@ -11,7 +11,7 @@ import com.arenacity.domain.repository.AthleteRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.TrainingRepository
 import com.arenacity.domain.rules.AthleteFactory
-import com.arenacity.domain.rules.BuildingType
+import com.arenacity.domain.rules.MapSpots
 import com.arenacity.domain.rules.TrainingRules
 import com.arenacity.domain.usecase.club.ClubInitializer
 import com.arenacity.domain.usecase.club.ClubService
@@ -22,19 +22,14 @@ class StarterSquadInitializer(private val athletes: AthleteRepository, private v
 }
 
 /**
- * Which sport sections a club fields: enough athletes for a lineup and (for humans) an operational venue. Football only
- * since 15 October 2026 (rules.Sections; the basketball and tennis arenas that opened the other two, with a starter
- * squad when the first was finished, went).
+ * Which sport sections a club fields: enough athletes for a lineup. Football only since 15 October 2026 (rules.Sections;
+ * the basketball and tennis arenas that opened the other two went), and football needs no building (it plays in the
+ * stadium, always open on the map).
  */
-class SectionService(private val buildings: com.arenacity.domain.repository.BuildingRepository, private val athletes: AthleteRepository) {
-    suspend fun active(club: Club, squad: List<Athlete>? = null, clubBuildings: List<Building>? = null): List<Sport> {
+class SectionService(private val athletes: AthleteRepository) {
+    suspend fun active(club: Club, squad: List<Athlete>? = null): List<Sport> {
         val list = squad ?: athletes.listByClub(club.id)
-        fun enough(s: Sport) = list.count { it.sport == s } >= com.arenacity.domain.rules.Sections.profile(s).startersCount
-        if (club.isBot) return com.arenacity.domain.rules.Sections.ORDER.filter(::enough)
-        val bs = clubBuildings ?: buildings.listByClub(club.id)
-        return com.arenacity.domain.rules.Sections.ORDER.filter { s ->
-            enough(s) && (s == Sport.FOOTBALL || bs.any { it.type == com.arenacity.domain.rules.Sections.venue(s) && com.arenacity.domain.rules.Sections.venueOperational(it) })
-        }
+        return com.arenacity.domain.rules.Sections.ORDER.filter { s -> list.count { it.sport == s } >= com.arenacity.domain.rules.Sections.profile(s).startersCount }
     }
 }
 
@@ -46,8 +41,8 @@ class SquadService(private val service: ClubService, private val athletes: Athle
         val st = service.state(userId)
         val now = clock.now()
         val active = trainings.listByClub(st.club.id).filter { t -> if (!t.isDone(now)) true else { finish(t, now); false } }
-        val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE }
-        return Squad(athletes.listByClub(st.club.id), active, tc?.let { TrainingRules.slots(it.level) } ?: 0)
+        // training belongs to the stadium: always there, its slots by the stadium level
+        return Squad(athletes.listByClub(st.club.id), active, TrainingRules.slots(st.stadium))
     }
 
     suspend fun athleteOf(clubId: UUID, id: UUID): Athlete = athletes.findById(id)?.takeIf { it.clubId == clubId } ?: throw NotFoundException("Athlete not found")
@@ -70,17 +65,17 @@ class ListAthletesUseCase(private val squads: SquadService) {
 class ClaimAcademyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx, private val sections: SectionService? = null, private val progress: com.arenacity.domain.usecase.economy.ProgressTracker = com.arenacity.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     suspend operator fun invoke(userId: UUID, sport: Sport = Sport.FOOTBALL): Athlete = tx {
         val st = service.state(userId, lock = true)
-        if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club, clubBuildings = st.buildings)) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + sport.name))
-        // the youth sports school's graduates (16 October: the academy's before, the owner's building system)
-        val school = st.buildings.firstOrNull { it.type == BuildingType.YOUTH_SPORTS_SCHOOL && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a youth sports school first")
+        if (sport != Sport.FOOTBALL && sections != null && sport !in sections.active(st.club)) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + sport.name))
+        // the academy's graduates (the map's academy spot open; quality and interval by the stadium level)
+        if (!st.isOpen(MapSpots.ACADEMY)) throw ValidationException("Open the academy first")
         val now = clock.now()
         val next = st.club.academyNextAt
         if (next != null && now.isBefore(next)) throw ConflictException("Next graduate in {0}", java.time.Duration.between(now, next))
         if (athletes.listByClub(st.club.id).count { it.sport == sport } >= com.arenacity.domain.rules.Careers.squadMax(sport)) throw ConflictException("The squad is full — release someone first")
-        val q = TrainingRules.graduateQuality(school.level)
+        val q = TrainingRules.graduateQuality(st.stadium)
         val athlete = AthleteFactory.create(now.toEpochMilli() xor st.club.id.leastSignificantBits, st.club.id, sport, q.first, q.last, null, now)
         athletes.createAll(listOf(athlete))
-        clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.graduateIntervalSeconds(school.level)), updatedAt = now))
+        clubs.update(st.club.copy(academyNextAt = now.plusSeconds(TrainingRules.graduateIntervalSeconds(st.stadium)), updatedAt = now))
         progress.record(st.club.id, com.arenacity.domain.rules.ProgressEvent.ACADEMY_GRADUATE)
         athlete
     }
@@ -90,9 +85,8 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
     /** [attribute] null = a technique drill: a skill point for the trees instead of an attribute point. */
     suspend operator fun invoke(userId: UUID, athleteId: UUID, attribute: AttributeKind?): Training = tx {
         val st = service.state(userId, lock = true)
-        val tc = st.buildings.firstOrNull { it.type == BuildingType.TRAINING_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a training centre first")
         val squad = squads.squad(userId)
-        if (squad.trainings.size >= TrainingRules.slots(tc.level)) throw ConflictException("All training slots are busy")
+        if (squad.trainings.size >= TrainingRules.slots(st.stadium)) throw ConflictException("All training slots are busy")
         val a = squads.athleteOf(st.club.id, athleteId)
         val now = clock.now()
         if (squad.trainings.any { it.athleteId == a.id }) throw ConflictException("Athlete is already training")
@@ -102,16 +96,14 @@ class StartTrainingUseCase(private val service: ClubService, private val squads:
         if (drill && !com.arenacity.domain.rules.Techniques.learns(a.position)) throw ValidationException("This athlete cannot learn that move")
         if (!drill)
         {
-            val venue = st.buildings.firstOrNull { it.type == com.arenacity.domain.rules.Sections.venue(a.sport) }
-            if (venue == null || a.sport != Sport.FOOTBALL) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + a.sport.name))
-            val venueLevel = com.arenacity.domain.rules.Sections.effectiveLevel(venue)
-            if (a.attribute(attribute!!) >= TrainingRules.attributeCap(a.sport, venueLevel)) throw ValidationException("Attribute capped by the venue level; upgrade it")
-            if (!com.arenacity.domain.rules.Careers.canTrain(a, TrainingRules.delta(tc.level))) throw ValidationException("This athlete has reached their potential")
+            if (a.sport != Sport.FOOTBALL) throw ValidationException("Build the venue for {0} first", com.arenacity.common.i18n.Named("sport." + a.sport.name))
+            if (a.attribute(attribute!!) >= TrainingRules.attributeCap(st.stadium)) throw ValidationException("Attribute capped by the stadium level; open more spots")
+            if (!com.arenacity.domain.rules.Careers.canTrain(a, TrainingRules.delta(st.stadium))) throw ValidationException("This athlete has reached their potential")
         }
         athletes.update(a.copy(fatigue = a.currentFatigue(now) + TrainingRules.FATIGUE_PER_TRAINING, fatigueAt = now, updatedAt = now))
         progress.record(st.club.id, com.arenacity.domain.rules.ProgressEvent.TRAINING_STARTED)
         if (drill) trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, AttributeKind.TECHNIQUE, TrainingRules.DRILL_POINTS, now.plusSeconds(TrainingRules.DRILL_SECONDS), now, drill = true))
-        else trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute!!, TrainingRules.delta(tc.level), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
+        else trainings.create(Training(UUID.randomUUID(), st.club.id, a.id, attribute!!, TrainingRules.delta(st.stadium), now.plusSeconds(TrainingRules.DURATION_SECONDS), now))
     }
 }
 
@@ -128,13 +120,13 @@ class CompleteTrainingUseCase(private val service: ClubService, private val squa
 class HealAthleteUseCase(private val service: ClubService, private val squads: SquadService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID, athleteId: UUID): Athlete = tx {
         val st = service.state(userId, lock = true)
-        val med = st.buildings.firstOrNull { it.type == BuildingType.MEDICAL_CENTER && it.state == BuildingState.IDLE } ?: throw ValidationException("Build a medical centre first")
+        if (!st.isOpen(MapSpots.HOSPITAL)) throw ValidationException("Open the hospital first")
         val now = clock.now()
         val next = st.club.medicalNextAt
         if (next != null && now.isBefore(next)) throw ConflictException("The medical centre is busy for {0}", java.time.Duration.between(now, next))
         val a = squads.athleteOf(st.club.id, athleteId)
         if (!a.isInjured(now) && a.currentFatigue(now) == 0) throw ValidationException("Athlete is already fit")
-        clubs.update(st.club.copy(medicalNextAt = now.plusSeconds(TrainingRules.medicalCooldownSeconds(med.level)), updatedAt = now))
+        clubs.update(st.club.copy(medicalNextAt = now.plusSeconds(TrainingRules.medicalCooldownSeconds(st.stadium)), updatedAt = now))
         athletes.update(a.copy(injuredUntil = null, fatigue = 0, fatigueAt = now, updatedAt = now))
     }
 }
@@ -146,7 +138,7 @@ class SpeedUpTrainingUseCase(private val service: ClubService, private val squad
         val t = trainings.findById(trainingId)?.takeIf { it.clubId == club.id } ?: throw NotFoundException("Training not found")
         val now = clock.now()
         val remaining = t.endsAt.epochSecond - now.epochSecond
-        if (remaining > 0) club = service.charge(club, gold = com.arenacity.domain.rules.BuildingCatalog.speedUpGold(remaining))
+        if (remaining > 0) club = service.charge(club, gold = com.arenacity.domain.rules.Economy.speedUpGold(remaining))
         squads.finish(t, now)
         squads.athleteOf(club.id, t.athleteId) to club
     }
@@ -159,7 +151,7 @@ class SpeedUpMedicalUseCase(private val service: ClubService, private val clubs:
         val now = clock.now()
         val next = club.medicalNextAt
         if (next == null || !now.isBefore(next)) throw ConflictException("The medical centre is ready")
-        val charged = service.charge(club, gold = com.arenacity.domain.rules.BuildingCatalog.speedUpGold(next.epochSecond - now.epochSecond))
+        val charged = service.charge(club, gold = com.arenacity.domain.rules.Economy.speedUpGold(next.epochSecond - now.epochSecond))
         clubs.update(charged.copy(medicalNextAt = null, updatedAt = now))
     }
 }

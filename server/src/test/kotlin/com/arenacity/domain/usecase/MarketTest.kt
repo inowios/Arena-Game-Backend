@@ -16,10 +16,10 @@ import kotlin.test.*
 
 class MarketTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository()
+    private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository()
     private val repo = FakeMarketRepository()
-    private val clubService = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val clubService = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val service = MarketService(athletes, repo, clock)
     private val get = GetMarketUseCase(clubService, service)
     private val buy = BuyListingUseCase(clubService, clubs, athletes, repo, service, clock)

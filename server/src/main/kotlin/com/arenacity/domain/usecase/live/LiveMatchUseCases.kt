@@ -11,7 +11,6 @@ import com.arenacity.domain.repository.AthleteRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.LiveMatchRepository
 import com.arenacity.domain.rules.*
-import com.arenacity.domain.rules.BuildingType
 import com.arenacity.domain.usecase.account.InboxService
 import com.arenacity.domain.usecase.athlete.LineupRules
 import com.arenacity.domain.usecase.club.ClubService
@@ -58,7 +57,8 @@ object LiveRules {
     const val CANCEL_SECONDS = 120L
     /** The gate: a coin per twenty seats of the home stadium, every match played to the end. */
     fun gate(seats: Int): Long = (seats / 20).toLong()
-    fun seats(buildings: List<com.arenacity.domain.model.Building>?): Int = buildings?.firstOrNull { it.type == BuildingType.PITCH }?.let { BuildingCatalog.level(BuildingType.PITCH, it.level).effect2 } ?: 500
+    /** The home stadium's seats at its level (the club's open spots, rules.MapSpots). */
+    fun seats(stadium: Int): Int = MapSpots.seats(stadium)
 
     fun tempoCost(t: Tactics) = (if (t.tempo == Tempo.HIGH) 1.5 else 1.0) * (if (t.plan == Plan.PRESSING) 1.2 else 1.0)
 
@@ -95,7 +95,6 @@ object LiveRules {
 class StartLiveMatchUseCase(
     private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val lineupService: LineupService,
     private val bots: BotService, private val live: LiveMatchRepository, private val finisher: FinishLiveMatchUseCase, private val clock: Clock, private val tx: Tx = NoTx,
-    private val buildings: com.arenacity.domain.repository.BuildingRepository? = null,
 ) {
     suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): LiveStart = tx {
         var club = service.lockedClubOf(userId)
@@ -114,7 +113,7 @@ class StartLiveMatchUseCase(
         val myOverall = LiveRules.overall(starters); val oppOverall = LiveRules.overall(oppStarters)
         val match = live.create(LiveMatch(UUID.randomUUID(), club.id, opponent.id, now.toEpochMilli() xor club.id.leastSignificantBits xor opponent.id.mostSignificantBits, LiveStatus.OPEN,
             starters.map { it.id }, oppStarters.map { it.id }, LiveRules.tempoCost(lineup.tactics), myOverall, oppOverall, now))
-        LiveStart(match, LiveTeam(club, starters, bench, lineup.tactics, myOverall), LiveTeam(opponent, oppStarters, oppBench, oppLineup.tactics, oppOverall), seats = LiveRules.seats(buildings?.listByClub(club.id)))
+        LiveStart(match, LiveTeam(club, starters, bench, lineup.tactics, myOverall), LiveTeam(opponent, oppStarters, oppBench, oppLineup.tactics, oppOverall), seats = LiveRules.seats(service.stadiumOf(club.id)))
     }
 
     private suspend fun pickOpponent(club: Club, wanted: UUID?, now: Instant): Club {
@@ -180,7 +179,6 @@ class CancelLiveMatchUseCase(private val service: ClubService, private val live:
 class FinishLiveMatchUseCase(
     private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val live: LiveMatchRepository,
     private val clock: Clock, private val progress: ProgressTracker = ProgressTracker { _, _ -> }, private val inbox: InboxService? = null, private val tx: Tx = NoTx,
-    private val buildings: com.arenacity.domain.repository.BuildingRepository? = null,
 ) {
     private val json = Json { encodeDefaults = true }
 
@@ -204,8 +202,8 @@ class FinishLiveMatchUseCase(
         val arena = Arenas.of(club.trophies)
         val newTrophies = (club.trophies + Arenas.delta(outcome, m.myOverall, m.oppOverall)).coerceAtLeast(0)
         val delta = newTrophies - club.trophies
-        val myBuildings = buildings?.listByClub(club.id)
-        val gate = if (status == LiveStatus.FINISHED) LiveRules.gate(LiveRules.seats(myBuildings)) else 0L
+        val stadium = service.stadiumOf(club.id)
+        val gate = if (status == LiveStatus.FINISHED) LiveRules.gate(LiveRules.seats(stadium)) else 0L
         val coins = Arenas.coins(outcome, arena) + gate
         val rep = Arenas.reputation(outcome)
         val streak = if (outcome == Outcome.WIN) club.liveStreak + 1 else 0
@@ -214,8 +212,8 @@ class FinishLiveMatchUseCase(
         val points = when (outcome) { Outcome.WIN -> 3; Outcome.DRAW -> 1; Outcome.LOSS -> 0 }
         val squad = athletes.listByClub(club.id)
         val starterIds = m.starters.toSet()
-        // experience: minutes, goals, assists, saves and the result; the venue caps attributes like training does
-        val cap = TrainingRules.attributeCap(Sport.FOOTBALL, myBuildings?.firstOrNull { it.type == BuildingType.PITCH }?.level ?: 1)
+        // experience: minutes, goals, assists, saves and the result; the stadium level caps attributes like training does
+        val cap = TrainingRules.attributeCap(stadium)
         val byAthlete = report.minutes.associateBy { it.athleteId }
         val saves = report.events.count { it.type == "SAVE" && it.side == "HOME" }
         val rnd = Random(m.seed xor now.toEpochMilli())
@@ -261,7 +259,7 @@ class FinishLiveMatchUseCase(
 /** How ready the squad is for a live match: energy of the eleven, whether they can start, minutes until they can. */
 data class LiveReadiness(val energy: Int, val ready: Boolean, val restMinutes: Int, val tired: Int, val restGold: Int)
 
-class LiveReadinessUseCase(private val service: ClubService, private val athletes: AthleteRepository, private val lineupService: LineupService, private val buildings: com.arenacity.domain.repository.BuildingRepository, private val clock: Clock) {
+class LiveReadinessUseCase(private val service: ClubService, private val athletes: AthleteRepository, private val lineupService: LineupService, private val clock: Clock) {
     suspend operator fun invoke(userId: UUID): LiveReadiness = of(service.clubOf(userId))
 
     suspend fun of(club: Club): LiveReadiness {
@@ -273,13 +271,14 @@ class LiveReadinessUseCase(private val service: ClubService, private val athlete
         val energy = if (eleven.isEmpty()) 100 else eleven.map { 100 - it.currentFatigue(now) }.average().roundToInt()
         val tired = eleven.count { it.currentFatigue(now) >= Arenas.MAX_FATIGUE_TO_PLAY || it.isInjured(now) }
         val ready = LiveRules.restedEleven(lineup, squad, now) != null
-        val medical = buildings.listByClub(club.id).firstOrNull { it.type == BuildingType.MEDICAL_CENTER }?.level ?: 0
+        // the hospital open makes a rest cheaper, the more the higher the stadium (the old medical centre's level)
+        val medical = service.spotsOf(club.id, now).let { if (it.isOpen(MapSpots.HOSPITAL)) it.stadium else 0 }
         val minutes = if (ready) 0 else LiveRules.minutesToRest(squad, now)
         return LiveReadiness(energy, ready, minutes, tired, LiveRules.restGold(minutes, medical))
     }
 }
 
-/** Gold for a full recovery of the eleven: two plus a gold per three minutes until the squad could play again, cheaper with a medical centre. */
+/** Gold for a full recovery of the eleven: two plus a gold per three minutes until the squad could play again, cheaper with the hospital open. */
 fun LiveRules.restGold(minutesToReady: Int, medicalLevel: Int): Int = ((2 + Math.ceil(minutesToReady / 3.0)) * (1.0 - 0.15 * medicalLevel)).roundToInt().coerceAtLeast(2)
 
 /** Pays gold to rest the whole squad at once (the "army" is back): every athlete's fatigue goes to zero. */

@@ -5,51 +5,35 @@ Something went wrong. Try again.	Something went wrong. Try again.	Algo salió ma
 Access denied	Access denied	Acceso denegado	Acesso negado	Доступ запрещён	Доступ заборонено
 Account deactivated	Account deactivated	Cuenta desactivada	Conta desativada	Аккаунт отключён	Акаунт вимкнено
 Not authenticated	Please sign in again	Vuelve a iniciar sesión	Entre novamente	Войдите снова	Увійдіть знову
-# --- club & buildings
+# --- club & the map's spots
+Unknown spot	Unknown place on the map	Lugar del mapa desconocido	Local do mapa desconhecido	Неизвестное место на карте	Невідоме місце на мапі
+The spot is already open	This place is already open	Este lugar ya está abierto	Este local já está aberto	Это место уже открыто	Це місце вже відкрите
+This spot opens with its island	This place opens with its island	Este lugar se abre con su isla	Este local abre com a sua ilha	Это место откроется вместе с островом	Це місце відкриється разом з островом
 Club not found	Club not found	Club no encontrado	Clube não encontrado	Клуб не найден	Клуб не знайдено
 Club already exists	You already have a club	Ya tienes un club	Você já tem um clube	У вас уже есть клуб	У вас уже є клуб
 Club name must be 3..24 characters	The club name must be 3–24 characters	El nombre del club debe tener entre 3 y 24 caracteres	O nome do clube deve ter de 3 a 24 caracteres	Название клуба — от 3 до 24 символов	Назва клубу — від 3 до 24 символів
-This building is not available yet	This building is not available yet	Este edificio aún no está disponible	Esta construção ainda não está disponível	Эта постройка пока недоступна	Ця будівля поки недоступна
 Requires club level {0}	Requires club level {0}	Requiere nivel de club {0}	Requer nível de clube {0}	Нужен уровень клуба {0}	Потрібен рівень клубу {0}
 Requires stadium level {0}	Requires stadium level {0}	Requiere estadio de nivel {0}	Requer estádio nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
 Requires {0} trophies	Requires {0} trophies	Requiere {0} trofeos	Requer {0} troféus	Нужно {0} кубков	Потрібно {0} кубків
-You already have the maximum number of these buildings	You already have the maximum number of these buildings	Ya tienes el máximo de estos edificios	Você já tem o máximo dessas construções	У вас уже максимум таких построек	У вас уже максимум таких будівель
-Outside the club grid	That spot is outside your grounds	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами территории	Це місце поза територією
-Overlaps another building	It overlaps another building	Se superpone con otro edificio	Sobrepõe outra construção	Мешает другая постройка	Заважає інша будівля
-All builders are busy	All builders are busy	Todos los constructores están ocupados	Todos os construtores estão ocupados	Все строители заняты	Усі будівельники зайняті
-All builders already hired	You already have every builder	Ya tienes todos los constructores	Você já tem todos os construtores	Все строители уже наняты	Усіх будівельників уже найнято
-Building not found	Building not found	Edificio no encontrado	Construção não encontrada	Постройка не найдена	Будівлю не знайдено
-Building is under construction	The building is under construction	El edificio está en obras	A construção está em obras	Постройка строится	Будівля будується
-Already at max level	Already at the maximum level	Ya está al nivel máximo	Já está no nível máximo	Уже максимальный уровень	Уже максимальний рівень
-This building has no income	This building has no income	Este edificio no genera ingresos	Esta construção não gera renda	Эта постройка не приносит доход	Ця будівля не приносить дохід
-Only decor can be removed	Only decorations can be removed	Solo se puede quitar la decoración	Só a decoração pode ser removida	Убрать можно только декор	Прибрати можна лише декор
 Not enough coins	Not enough coins	No tienes suficientes monedas	Moedas insuficientes	Недостаточно монет	Недостатньо монет
 Not enough gold	Not enough gold	No tienes suficiente oro	Ouro insuficiente	Недостаточно золота	Недостатньо золота
 Not enough energy	Not enough energy — wait for it to refill or top it up	No tienes suficiente energía: espera a que se recargue o recárgala	Energia insuficiente — espere recarregar ou recarregue agora	Недостаточно энергии — подождите, пока она восстановится, или пополните её	Недостатньо енергії — зачекайте, поки вона відновиться, або поповніть її
 Energy is already full	Your energy is already full	Tu energía ya está llena	Sua energia já está cheia	Энергия уже полная	Енергія вже повна
 Today's offer is already bought	You've already bought today's offer — a new one comes at midnight (UTC)	Ya compraste la oferta de hoy: mañana habrá otra a medianoche (UTC)	Você já comprou a oferta de hoje — outra chega à meia-noite (UTC)	Вы уже купили сегодняшнее предложение — новое появится в полночь (UTC)	Ви вже купили сьогоднішню пропозицію — нова з'явиться опівночі (UTC)
-Nothing to speed up	Nothing to speed up	No hay nada que acelerar	Nada para acelerar	Нечего ускорять	Нічого прискорювати
-Free speed-up only for timers under 30 minutes	The free speed-up works for timers under 30 minutes	La aceleración gratis es para temporizadores de menos de 30 minutos	A aceleração grátis vale para timers de menos de 30 minutos	Бесплатное ускорение — только для таймеров до 30 минут	Безкоштовне прискорення — лише для таймерів до 30 хвилин
-Free speed-up already used today	You've used today's free speed-up	Ya usaste la aceleración gratis de hoy	Você já usou a aceleração grátis de hoje	Бесплатное ускорение на сегодня уже использовано	Безкоштовне прискорення на сьогодні вже використано
-Double income is on cooldown	Double income isn't available again yet	El doble de ingresos aún no está disponible	A renda dobrada ainda não está disponível	Двойной доход пока недоступен	Подвійний дохід поки недоступний
-Decor looks are not available	Decor looks are not available	Los estilos de decoración no están disponibles	Os visuais de decoração não estão disponíveis	Стили декора недоступны	Стилі декору недоступні
-Only decorations have looks	Only decorations have looks	Solo las decoraciones tienen estilos	Só decorações têm visuais	Вид меняется только у декора	Вигляд змінюється лише в декору
 Emblem too large	The emblem is too large	El escudo es demasiado grande	O escudo é grande demais	Эмблема слишком большая	Емблема завелика
 # --- athletes & lineups
+Open the academy first	Open the academy first	Primero abre la academia	Abra a academia primeiro	Сначала откройте академию	Спочатку відкрийте академію
+Open the hospital first	Open the hospital first	Primero abre el hospital	Abra o hospital primeiro	Сначала откройте больницу	Спочатку відкрийте лікарню
+Open the lighthouse first	Open the lighthouse first	Primero abre el faro	Abra o farol primeiro	Сначала откройте маяк	Спочатку відкрийте маяк
+Attribute capped by the stadium level; open more spots	This attribute is capped by your stadium level: open more of the map	Este atributo está limitado por el nivel de tu estadio: abre más del mapa	Este atributo está limitado pelo nível do seu estádio: abra mais do mapa	Этот параметр ограничен уровнем стадиона: откройте больше мест на карте	Цей параметр обмежений рівнем стадіону: відкрийте більше місць на мапі
 Athlete not found	Athlete not found	Atleta no encontrado	Atleta não encontrado	Спортсмен не найден	Спортсмена не знайдено
-Build a youth sports school first	Build a youth sports school first	Primero construye una escuela deportiva infantil	Construa uma escolinha de esportes primeiro	Сначала постройте детскую спортшколу	Спершу збудуйте дитячу спортшколу
-Build a scouting office first	Build a scouting office first	Primero construye una oficina de ojeadores	Construa uma central de olheiros primeiro	Сначала постройте скаутский центр	Спершу збудуйте скаутський центр
 Next graduate in {0}	Next graduate in {0}	Próximo canterano en {0}	Próximo formado em {0}	Следующий выпускник через {0}	Наступний випускник через {0}
-Build an academy first	Build an academy first	Primero construye una academia	Construa uma academia primeiro	Сначала постройте академию	Спершу збудуйте академію
-Build a training centre first	Build a training centre first	Primero construye un centro de entrenamiento	Construa um centro de treinamento primeiro	Сначала постройте тренировочный центр	Спершу збудуйте тренувальний центр
-Build a medical centre first	Build a medical centre first	Primero construye un centro médico	Construa um centro médico primeiro	Сначала постройте медцентр	Спершу збудуйте медцентр
 Build the venue for {0} first	Build the {0} venue first	Primero construye la instalación de {0}	Construa primeiro a instalação de {0}	Сначала постройте площадку: {0}	Спершу збудуйте майданчик: {0}
 Next academy graduate in {0}	Next academy graduate in {0}	Próximo canterano en {0}	Próximo formado da base em {0}	Следующий выпускник академии через {0}	Наступний випускник академії через {0}
 All training slots are busy	All training slots are busy	Todas las plazas de entrenamiento están ocupadas	Todas as vagas de treino estão ocupadas	Все слоты тренировок заняты	Усі слоти тренувань зайняті
 Athlete is already training	The athlete is already training	El atleta ya está entrenando	O atleta já está treinando	Спортсмен уже тренируется	Спортсмен уже тренується
 Athlete is injured	The athlete is injured	El atleta está lesionado	O atleta está lesionado	Спортсмен травмирован	Спортсмен травмований
 Athlete is too tired	The athlete is too tired	El atleta está demasiado cansado	O atleta está cansado demais	Спортсмен слишком устал	Спортсмен надто втомився
-Attribute capped by the venue level; upgrade it	This attribute is capped by the venue level — upgrade the venue	El atributo está limitado por el nivel de la instalación: mejórala	O atributo está limitado pelo nível da instalação — melhore-a	Характеристика упирается в уровень площадки — улучшите её	Характеристика впирається в рівень майданчика — покращте його
 Training not found	Training not found	Entrenamiento no encontrado	Treino não encontrado	Тренировка не найдена	Тренування не знайдено
 Training still in progress	The training is still in progress	El entrenamiento sigue en curso	O treino ainda está em andamento	Тренировка ещё идёт	Тренування ще триває
 The medical centre is busy for {0}	The medical centre is busy for {0}	El centro médico está ocupado durante {0}	O centro médico está ocupado por {0}	Медцентр занят ещё {0}	Медцентр зайнятий ще {0}
@@ -107,7 +91,6 @@ This item doesn't fit here	This item doesn't fit here	Este artículo no va aquí
 You don't own this item yet	You don't own this item yet	Aún no tienes este artículo	Você ainda não tem este item	У вас пока нет этого предмета	У вас поки немає цього предмета
 Unknown coin pack	Unknown coin pack	Paquete de monedas desconocido	Pacote de moedas desconhecido	Неизвестный пакет монет	Невідомий пакет монет
 Unknown achievement	Unknown achievement	Logro desconocido	Conquista desconhecida	Неизвестное достижение	Невідоме досягнення
-Ad rewards are confirmed by the ad network	Ad rewards are confirmed by the ad network	Las recompensas de anuncios las confirma la red publicitaria	As recompensas de anúncios são confirmadas pela rede de anúncios	Награды за рекламу подтверждает рекламная сеть	Нагороди за рекламу підтверджує рекламна мережа
 # --- names used in texts
 sport.FOOTBALL	Football	Fútbol	Futebol	Футбол	Футбол
 sport.BASKETBALL	Basketball	Baloncesto	Basquete	Баскетбол	Баскетбол
@@ -171,28 +154,13 @@ This athlete cannot learn that move	This athlete cannot learn that move	Este atl
 That move is already mastered	That move is already mastered	Ese movimiento ya está dominado	Esse movimento já está dominado	Этот приём уже освоен полностью	Цей прийом уже опановано повністю
 Not enough skill points: {0} needed	Not enough skill points: {0} needed	No hay suficientes puntos de habilidad: se necesitan {0}	Pontos de habilidade insuficientes: são precisos {0}	Недостаточно очков навыков: нужно {0}	Недостатньо очок навичок: потрібно {0}
 Too late to look for another opponent	Too late to look for another opponent	Demasiado tarde para buscar otro rival	Tarde demais para procurar outro adversário	Слишком поздно искать другого соперника	Запізно шукати іншого суперника
-Clear the obstacle first	Clear the obstacle first	Primero despeja el obstáculo	Primeiro remova o obstáculo	Сначала уберите препятствие	Спершу приберіть перешкоду
-Obstacle not found	Obstacle not found	Obstáculo no encontrado	Obstáculo não encontrado	Препятствие не найдено	Перешкоду не знайдено
-Already being cleared	Already being cleared	Ya se está despejando	Já está sendo removido	Уже расчищается	Уже розчищається
-Not cleared yet	Not cleared yet	Aún no está despejado	Ainda não foi removido	Ещё не расчищено	Ще не розчищено
-Bad obstacle id	Bad obstacle id	Id de obstáculo no válido	Id de obstáculo inválido	Неверный id препятствия	Невірний id перешкоди
-# --- fences & layouts
-Nothing to build	Nothing to build	No hay nada que construir	Nada para construir	Нечего строить	Нічого будувати
-Too many cells at once	Too many cells at once	Demasiadas casillas a la vez	Muitas células de uma vez	Слишком много клеток за раз	Забагато клітинок за раз
-Only fences can be upgraded together	Only fences can be upgraded together	Solo las vallas se mejoran juntas	Só as cercas podem ser melhoradas juntas	Вместе улучшаются только заборы	Разом покращуються лише паркани
-A building is listed twice	A building is listed twice	Un edificio aparece dos veces	Um edifício aparece duas vezes	Здание указано дважды	Будівлю вказано двічі
-Unknown layout	Unknown layout	Disposición desconocida	Disposição desconhecida	Неизвестная планировка	Невідоме планування
-This layout no longer fits: move the new buildings first	This layout no longer fits: move the new buildings first	Esta disposición ya no cabe: mueve primero los edificios nuevos	Esta disposição já não cabe: mova primeiro os edifícios novos	Планировка больше не помещается: сначала передвиньте новые здания	Планування більше не вміщується: спершу пересуньте нові будівлі
 # --- roads
 Unknown reward	Unknown reward	Recompensa desconocida	Recompensa desconhecida	Неизвестная награда	Невідома нагорода
 Not reached yet	Not reached yet	Todavía no alcanzado	Ainda não alcançado	Ещё не достигнуто	Ще не досягнуто
 # --- alliances
 Alliance name must be 3..24 characters	Alliance name must be 3..24 characters	El nombre de la alianza debe tener 3..24 caracteres	O nome da aliança deve ter 3..24 caracteres	Название союза — от 3 до 24 символов	Назва союзу — від 3 до 24 символів
 Alliance not found	Alliance not found	Alianza no encontrada	Aliança não encontrada	Союз не найден	Союз не знайдено
-Already helped	You already helped here	Ya ayudaste aquí	Você já ajudou aqui	Вы уже помогли здесь	Ви вже допомогли тут
 Already liked this week	You already liked this club this week	Ya te gustó este club esta semana	Você já curtiu este clube esta semana	Вы уже лайкнули этот клуб на этой неделе	Ви вже вподобали цей клуб цього тижня
-Enough helping for today	Enough helping for today — come back tomorrow	Suficiente ayuda por hoy, vuelve mañana	Já ajudou bastante hoje — volte amanhã	На сегодня помощи достаточно — возвращайтесь завтра	На сьогодні досить допомоги — повертайтеся завтра
-Help already asked	Help is already asked for this building	Ya se pidió ayuda para este edificio	Já foi pedida ajuda para esta construção	Помощь для этого здания уже запрошена	Допомогу для цієї будівлі вже попрошено
 Leave your alliance first	Leave your alliance first	Primero abandona tu alianza	Saia da sua aliança primeiro	Сначала выйдите из своего союза	Спершу вийдіть зі свого союзу
 Member not found	Member not found	Miembro no encontrado	Membro não encontrado	Участник не найден	Учасника не знайдено
 Not allowed for your role	Your role does not allow this	Tu rol no lo permite	Seu cargo não permite isso	Ваша роль этого не позволяет	Ваша роль цього не дозволяє
@@ -203,7 +171,6 @@ That name is taken	That name is taken	Ese nombre está ocupado	Esse nome já exi
 The alliance is full	The alliance is full	La alianza está llena	A aliança está cheia	Союз заполнен	Союз заповнений
 Unknown action	Unknown action	Acción desconocida	Ação desconhecida	Неизвестное действие	Невідома дія
 You are not in an alliance	You are not in an alliance	No estás en una alianza	Você não está em uma aliança	Вы не в союзе	Ви не в союзі
-You cannot help yourself	You cannot help yourself	No puedes ayudarte a ti mismo	Você não pode ajudar a si mesmo	Себе помогать нельзя	Собі допомагати не можна
 You cannot like your own club	You cannot like your own club	No puedes dar me gusta a tu propio club	Você não pode curtir o próprio clube	Свой клуб лайкать нельзя	Свій клуб вподобати не можна
 # --- live game
 Already bought	Already bought today	Ya comprado hoy	Já comprado hoje	Уже куплено сегодня	Вже куплено сьогодні
@@ -225,51 +192,7 @@ No opponent around	No opponent around	No hay rivales cerca	Não há adversários
 # --- admin dashboards
 days must be 1..120	days must be 1..120	días debe ser 1..120	dias deve ser 1..120	days: от 1 до 120	days: від 1 до 120
 days must be 1..90	days must be 1..90	días debe ser 1..90	dias deve ser 1..90	days: от 1 до 90	days: від 1 до 90
+# --- the peoples' islands (zones)
 Needs stadium level {0}	Needs stadium level {0}	Necesita el estadio de nivel {0}	Precisa do estádio de nível {0}	Нужен стадион уровня {0}	Потрібен стадіон рівня {0}
 The zone is already yours	This island is already open	Esta isla ya está abierta	Esta ilha já está aberta	Этот остров уже открыт	Цей острів уже відкрито
-This zone has no island yet	This people has no island yet: it opens later	Este pueblo aún no tiene isla: se abrirá más adelante	Este povo ainda não tem ilha: abre mais tarde	У этого народа пока нет острова: он откроется позже	У цього народу поки немає острова: він відкриється пізніше
 Unknown zone	Unknown island	Isla desconocida	Ilha desconhecida	Неизвестный остров	Невідомий острів
-# --- land (a mask since the owner's picture, 13 October)
-Outside your land	That spot is outside your land	Ese lugar está fuera de tu terreno	Esse lugar está fora do seu terreno	Это место за пределами твоей земли	Це місце за межами твоєї землі
-Off the build grid	Buildings stand on the grid's tiles	Los edificios van sobre las casillas de la cuadrícula	Os edifícios ficam nas casas da grade	Здания ставятся по клеткам сетки	Будівлі ставляться по клітинках сітки
-The island opens with its bridge	This island is still closed: open it from its card	Esta isla sigue cerrada: ábrela desde su tarjeta	Esta ilha ainda está fechada: abra-a pelo cartão dela	Этот остров ещё закрыт: открой его в карточке острова	Цей острів ще закритий: відкрий його в картці острова
-Land is not for sale	The land round your plot is not for sale: your club grows on the islands	El terreno alrededor de tu parcela no está a la venta: tu club crece en las islas	O terreno ao redor do seu lote não está à venda: seu clube cresce nas ilhas	Земля вокруг твоего участка не продаётся: клуб растёт на островах	Земля навколо твоєї ділянки не продається: клуб росте на островах
-Only fences and roads are drawn	Only roads can be drawn	Solo se pueden dibujar calles	Só ruas podem ser desenhadas	Рисовать можно только дороги	Малювати можна лише дороги
-Unknown type	Unknown building type	Tipo de edificio desconocido	Tipo de prédio desconhecido	Неизвестный тип здания	Невідомий тип будівлі
-# --- the sport town (14 October 2026): the buildings' names (GET /catalog/buildings), what the ones with no mechanic yet will do (the island arenas went on 15 October)
-building.soon	Soon	Pronto	Em breve	Скоро	Незабаром
-building.PITCH	Stadium	Estadio	Estádio	Стадион	Стадіон
-building.ACADEMY	Academy	Academia	Academia	Академия	Академія
-building.TRAINING_CENTER	Training Center	Centro de entrenamiento	Centro de treinamento	Тренировочный центр	Тренувальний центр
-building.MEDICAL_CENTER	Medical Center	Centro médico	Centro médico	Медцентр	Медцентр
-building.TICKET_OFFICE	Ticket Office	Taquilla	Bilheteria	Касса	Каса
-building.DECOR	Decoration	Decoración	Decoração	Декор	Декор
-building.FENCE	Fence	Valla	Cerca	Забор	Паркан
-building.HOUSE	House	Casa	Casa	Дом	Будинок
-building.ROAD	Road	Calle	Rua	Дорога	Дорога
-building.SHOPPING_CENTER	Shopping Center	Centro comercial	Shopping center	Торговый центр	Торговий центр
-building.HALL_OF_FAME	Hall of Fame	Salón de la Fama	Hall da Fama	Зал славы	Зала слави
-building.BACKYARD_COURT	Backyard Court	Cancha de barrio	Quadra de bairro	Дворовая площадка	Дворовий майданчик
-building.FAN_ZONE	Fan Zone	Zona de aficionados	Zona da torcida	Фан-зона	Фан-зона
-building.MEDIA_CENTER	Media Center	Centro de prensa	Centro de mídia	Медиацентр	Медіацентр
-building.SPONSOR_OFFICE	Sponsor Office	Oficina de patrocinadores	Escritório de patrocinadores	Спонсорский офис	Спонсорський офіс
-building.HOTEL	Hotel	Hotel	Hotel	Отель	Готель
-building.ATHLETES_RESIDENCE	Athletes' Residence	Residencia de atletas	Residência dos atletas	Резиденция спортсменов	Резиденція спортсменів
-building.YOUTH_SPORTS_SCHOOL	Youth Sports School	Escuela deportiva infantil	Escolinha de esportes	Детская спортшкола	Дитяча спортшкола
-building.SPORTS_SCIENCE_LAB	Sports Science Lab	Laboratorio de ciencias del deporte	Laboratório de ciência do esporte	Лаборатория спортнауки	Лабораторія спортивної науки
-building.SCHOOL	School	Escuela	Escola	Школа	Школа
-building.TRANSPORT_HUB	Transport Hub	Intercambiador	Terminal de transportes	Транспортный узел	Транспортний вузол
-building.SCOUTING_OFFICE	Scouting Office	Oficina de ojeadores	Central de olheiros	Скаутский центр	Скаутський центр
-building.RECOVERY_CENTER	Recovery Center	Centro de recuperación	Centro de recuperação	Центр восстановления	Центр відновлення
-building.ANALYTICS_CENTER	Analytics Center	Centro de análisis	Centro de análise	Аналитический центр	Аналітичний центр
-building.COACHING_HQ	Coaching HQ	Sede técnica	Sede técnica	Тренерский штаб	Тренерський штаб
-building.ATHLETES_RESIDENCE.about	Your athletes will live here between matches.	Aquí vivirán tus atletas entre partidos.	Seus atletas vão morar aqui entre as partidas.	Здесь будут жить ваши спортсмены между матчами.	Тут житимуть ваші спортсмени між матчами.
-building.ACADEMY.about	Will teach your players' advanced skills.	Enseñará a tus jugadores habilidades avanzadas.	Vai ensinar habilidades avançadas aos seus jogadores.	Будет учить игроков продвинутым приёмам.	Навчатиме гравців просунутих прийомів.
-building.YOUTH_SPORTS_SCHOOL.about	Will bring up young athletes for every section.	Formará a jóvenes atletas para cada sección.	Vai formar jovens atletas para cada seção.	Будет растить юных спортсменов для всех секций.	Ростиме юних спортсменів для всіх секцій.
-building.SPORTS_SCIENCE_LAB.about	Will study your athletes to make training pay off more.	Estudiará a tus atletas para que los entrenamientos rindan más.	Vai estudar seus atletas para que os treinos rendam mais.	Будет изучать спортсменов, чтобы тренировки давали больше.	Вивчатиме спортсменів, щоб тренування давали більше.
-building.SCHOOL.about	Will teach the town's children and draw new families to the town.	Educará a los niños del pueblo y atraerá nuevas familias.	Vai ensinar as crianças da cidade e atrair novas famílias.	Будет учить детей города и привлекать в него новые семьи.	Навчатиме дітей міста й приваблюватиме нові родини.
-building.TRANSPORT_HUB.about	Will bring fans to your matches from all over the island.	Traerá aficionados a tus partidos desde toda la isla.	Vai trazer torcedores de toda a ilha para suas partidas.	Будет привозить болельщиков на матчи со всего острова.	Привозитиме вболівальників на матчі з усього острова.
-building.SCOUTING_OFFICE.about	Will search the world for talented players for your club.	Buscará por el mundo jugadores con talento para tu club.	Vai procurar pelo mundo jogadores talentosos para o seu clube.	Будет искать по миру талантливых игроков для клуба.	Шукатиме по світу талановитих гравців для клубу.
-building.RECOVERY_CENTER.about	Will help your athletes recover after matches and training.	Ayudará a tus atletas a recuperarse tras partidos y entrenamientos.	Vai ajudar seus atletas a se recuperar depois de jogos e treinos.	Поможет спортсменам восстанавливаться после матчей и тренировок.	Допомагатиме спортсменам відновлюватися після матчів і тренувань.
-building.ANALYTICS_CENTER.about	Will study your rivals before every match.	Analizará a tus rivales antes de cada partido.	Vai analisar seus adversários antes de cada partida.	Будет разбирать соперников перед каждым матчем.	Розбиратиме суперників перед кожним матчем.
-building.COACHING_HQ.about	Will bring in coaches to sharpen your tactics.	Traerá entrenadores que afinarán tu táctica.	Vai trazer técnicos para afiar a sua tática.	Будет приглашать тренеров, которые отточат вашу тактику.	Запрошуватиме тренерів, які відточать вашу тактику.

@@ -13,11 +13,11 @@ import kotlin.test.*
 
 class MatchdayRunnerTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))   // 13:00 Kyiv
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock)
     private val user = UUID.randomUUID()
 

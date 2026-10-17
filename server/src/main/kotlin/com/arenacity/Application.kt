@@ -19,5 +19,4 @@ fun Application.module() {
     configureMatchdayScheduler()
     configureRouting()
     configureShowcase()
-    configureLand()
 }

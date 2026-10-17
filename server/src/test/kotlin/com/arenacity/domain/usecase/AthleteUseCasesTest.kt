@@ -4,7 +4,7 @@ import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.AttributeKind
 import com.arenacity.domain.model.Sport
-import com.arenacity.domain.rules.BuildingType
+import com.arenacity.domain.rules.MapSpots
 import com.arenacity.domain.usecase.athlete.*
 import com.arenacity.domain.usecase.club.*
 import com.arenacity.engine.model.Position
@@ -17,12 +17,11 @@ import kotlin.test.*
 
 class AthleteUseCasesTest {
     private val clock = FixedClock()
-    private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
-    private val service = ClubService(clubs, buildings, clock)
+    private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
     private val squads = SquadService(service, athletes, trainings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
-    private val place = PlaceBuildingUseCase(service, buildings, clock)
-    private val speed = SpeedUpUseCase(service, buildings, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val claim = ClaimAcademyUseCase(service, clubs, athletes, clock)
     private val start = StartTrainingUseCase(service, squads, athletes, trainings, clock)
     private val complete = CompleteTrainingUseCase(service, squads, trainings, clock)
@@ -31,10 +30,10 @@ class AthleteUseCasesTest {
     private val setLineup = SetLineupUseCase(service, squads, lineups, clock)
     private val user = UUID.randomUUID()
 
-    private fun setup(vararg types: BuildingType) = runBlocking {
+    /** A club with the map's [open] spots open: its stadium level is 1 + their number. */
+    private fun setup(vararg open: String) = runBlocking {
         create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3)); buildings.setStadium(clubs.rows.values.first().id, 3)
-        types.forEachIndexed { i, t -> val b = place(user, t, -6 + i * 10, 2, 0); speed(user, b.id) }   // the big footprints: a row above the stadium
+        clubs.update(clubs.rows.values.first().copy(coins = 50_000, gold = 500, level = 3)); spots.open(clubs.rows.values.first().id, *open)
     }
 
     @Test
@@ -46,19 +45,21 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `academy claim respects cooldown`() = runBlocking<Unit> {
-        setup(BuildingType.YOUTH_SPORTS_SCHOOL)   // the graduates' school since 16 October (the academy's before)
+    fun `academy claim needs the academy open and respects cooldown`() = runBlocking<Unit> {
+        setup()
         clubs.update(clubs.rows.values.first().copy(academyNextAt = null))
+        assertEquals("Open the academy first", assertFailsWith<ValidationException> { claim(user) }.template)
+        spots.open(clubs.rows.values.first().id, MapSpots.ACADEMY)        // stadium 2
         val a = claim(user)
         assertEquals(15, athletes.rows.size); assertTrue(a.overall in 30..70)
         assertFailsWith<ConflictException> { claim(user) }
-        clock.advanceSeconds(12 * 3600)   // the school's first level: a graduate every 12 hours
+        clock.advanceSeconds(11 * 3600)   // stadium 2: a graduate every 11 hours
         claim(user); assertEquals(16, athletes.rows.size)
     }
 
     @Test
     fun `training raises an attribute after an hour and uses slots`() = runBlocking<Unit> {
-        setup(BuildingType.TRAINING_CENTER)
+        setup()   // training belongs to the stadium: stadium 1 has one slot, +1 a training
         val a = athletes.rows.values.first { it.attack < 60 }
         val t = start(user, a.id, AttributeKind.ATTACK)
         assertEquals(15, athletes.rows.getValue(a.id).fatigue)
@@ -71,7 +72,7 @@ class AthleteUseCasesTest {
 
     @Test
     fun `a technique drill takes two hours and pays a skill point`() = runBlocking<Unit> {
-        setup(BuildingType.TRAINING_CENTER)
+        setup()
         val gk = athletes.rows.values.first { it.position == com.arenacity.engine.model.Position.GK }
         assertFailsWith<ValidationException> { start(user, gk.id, null) }
         val a = athletes.rows.values.first { it.position == com.arenacity.engine.model.Position.FWD }
@@ -85,11 +86,9 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `training needs a centre and respects fatigue and cap`() = runBlocking<Unit> {
-        setup()
+    fun `training respects fatigue and the stadium's cap`() = runBlocking<Unit> {
+        setup(MapSpots.ACADEMY, MapSpots.HOSPITAL)   // stadium 3
         val a = athletes.rows.values.first()
-        assertFailsWith<ValidationException> { start(user, a.id, AttributeKind.ATTACK) }
-        val tc = place(user, BuildingType.TRAINING_CENTER, 0, 28, 0); speed(user, tc.id)
         athletes.update(a.copy(fatigue = 90, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { start(user, a.id, AttributeKind.MENTAL) }
         athletes.update(a.copy(fatigue = 0, mental = 68))
@@ -98,16 +97,18 @@ class AthleteUseCasesTest {
     }
 
     @Test
-    fun `medical centre heals with cooldown`() = runBlocking<Unit> {
-        setup(BuildingType.MEDICAL_CENTER)
+    fun `the hospital heals with cooldown once it is open`() = runBlocking<Unit> {
+        setup()
         val a = athletes.rows.values.first()
         athletes.update(a.copy(injuredUntil = clock.now().plusSeconds(86_400), fatigue = 50, fatigueAt = clock.now()))
+        assertEquals("Open the hospital first", assertFailsWith<ValidationException> { heal(user, a.id) }.template)
+        spots.open(clubs.rows.values.first().id, MapSpots.HOSPITAL)       // stadium 2
         val healed = heal(user, a.id)
         assertNull(healed.injuredUntil); assertEquals(0, healed.fatigue)
         val b = athletes.rows.values.drop(1).first()
         athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))
         assertFailsWith<ConflictException> { heal(user, b.id) }
-        clock.advanceSeconds(5 * 3600)                                     // medical centre L1: 5 h cooldown
+        clock.advanceSeconds(4 * 3600)                                     // stadium 2: 4 h cooldown
         athletes.update(b.copy(fatigue = 30, fatigueAt = clock.now()))   // tired again once the cooldown has passed
         heal(user, b.id)
         Unit

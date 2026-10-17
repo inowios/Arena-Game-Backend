@@ -28,15 +28,15 @@ import kotlin.test.*
 @EnabledIfEnvironmentVariable(named = "TEST_DATABASE_URL", matches = ".+")
 class CupIT {
     private val clock = FixedClock(Instant.parse("2026-10-08T10:00:00Z"))   // Thursday
-    private val users = UserRepositoryImpl(); private val clubs = ClubRepositoryImpl(); private val buildings = BuildingRepositoryImpl()
+    private val users = UserRepositoryImpl(); private val clubs = ClubRepositoryImpl()
     private val athletes = AthleteRepositoryImpl(); private val lineups = LineupRepositoryImpl(); private val leagues = LeagueRepositoryImpl(); private val fixtures = FixtureRepositoryImpl()
     private val seasons = SeasonRepositoryImpl(); private val cups = CupRepositoryImpl(); private val analytics = AnalyticsRepositoryImpl(); private val inbox = InboxRepositoryImpl()
     private val bots = BotService(users, clubs, athletes, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)), tx = DbTx)
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, tx = DbTx, sections = SectionService(buildings, athletes))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)), tx = DbTx)
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, tx = DbTx, sections = SectionService(athletes))
     private val service = CupService(cups, clubs, fixtures, bots, runner, seasons, clock, tx = DbTx, notifier = CupNotifier(null, InboxService(inbox, clock)))
-    private val queries = CupQueries(ClubService(clubs, buildings, clock), cups, fixtures, clubs, clock)
+    private val queries = CupQueries(ClubService(clubs, clock), cups, fixtures, clubs, clock)
 
     @BeforeEach
     fun setUp() { TestDb.fresh() }

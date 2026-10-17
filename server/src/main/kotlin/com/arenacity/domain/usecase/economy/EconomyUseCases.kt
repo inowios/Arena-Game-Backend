@@ -8,7 +8,6 @@ import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.*
 import com.arenacity.domain.repository.AthleteRepository
-import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.EconomyRepository
 import com.arenacity.domain.rules.*
@@ -147,42 +146,6 @@ class VerifyPurchaseUseCase(private val service: ClubService, private val clubs:
                 val updated = clubs.update(club.copy(gold = club.gold + product.gold, coins = club.coins + product.coins, updatedAt = now))
                 if (product.premiumPass) pass.unlockPremium(updated)
                 PurchaseResult("GRANTED", product.gold, product.coins, updated)
-            }
-        }
-    }
-}
-
-enum class AdPlacement { DOUBLE_INCOME, FREE_SPEEDUP }
-
-class AdRewardUseCase(private val service: ClubService, private val clubs: ClubRepository, private val buildings: BuildingRepository, private val economy: EconomyService, private val clock: Clock, private val tx: Tx = NoTx, private val repo: EconomyRepository? = null) {
-    /** Client-reported reward: only enabled in development (production rewards come from [grantVerified]). */
-    suspend operator fun invoke(userId: UUID, placement: AdPlacement, buildingId: UUID?): Club = tx { apply(service.lockedClubOf(userId), placement, buildingId) }
-
-    /**
-     * Reward confirmed by the ad network's server-side verification callback. Idempotent per [transactionId]
-     * (callbacks are retried): returns null when that transaction was already granted.
-     */
-    suspend fun grantVerified(userId: UUID, placement: AdPlacement, buildingId: UUID?, transactionId: String): Club? = tx {
-        val club = service.lockedClubOf(userId)
-        val fresh = repo?.recordAdReward(transactionId, club.id, placement.name, clock.now()) ?: true
-        if (fresh) apply(club, placement, buildingId) else null
-    }
-
-    private suspend fun apply(club: Club, placement: AdPlacement, buildingId: UUID?): Club {
-        val now = clock.now()
-        return when (placement) {
-            AdPlacement.DOUBLE_INCOME -> {
-                if (club.doubleIncomeAdAt != null && now.isBefore(club.doubleIncomeAdAt.plusSeconds(Economy.DOUBLE_INCOME_COOLDOWN_SECONDS))) throw ConflictException("Double income is on cooldown")
-                clubs.update(club.copy(doubleIncomeUntil = now.plusSeconds(Economy.DOUBLE_INCOME_COOLDOWN_SECONDS), doubleIncomeAdAt = now, updatedAt = now))
-            }
-            AdPlacement.FREE_SPEEDUP -> {
-                val today = economy.today(club.timezone)
-                if (club.freeSpeedupDate == today) throw ConflictException("Free speed-up already used today")
-                val b = service.building(club, buildingId ?: throw ValidationException("buildingId required"))
-                if (b.state != BuildingState.UPGRADING || b.upgradeEndsAt == null) throw ConflictException("Nothing to speed up")
-                if (b.upgradeEndsAt.epochSecond - now.epochSecond > Economy.FREE_SPEEDUP_MAX_SECONDS) throw ValidationException("Free speed-up only for timers under 30 minutes")
-                service.complete(b, now)
-                clubs.update(club.copy(freeSpeedupDate = today, updatedAt = now))
             }
         }
     }

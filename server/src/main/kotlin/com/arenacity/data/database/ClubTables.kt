@@ -24,10 +24,6 @@ object ClubTable : BaseTable("clubs") {
     val loginDay = integer("login_day")
     val loginLast = date("login_last").nullable()
     val streak = integer("streak")
-    val doubleIncomeUntil = timestamp("double_income_until").nullable()
-    val doubleIncomeAdAt = timestamp("double_income_ad_at").nullable()
-    val freeSpeedupDate = date("free_speedup_date").nullable()
-    val builderSlots = integer("builder_slots")
     val seasonNo = integer("season_no")
     val kit = varchar("kit", 40).nullable()
     val emblemFrame = varchar("emblem_frame", 40).nullable()
@@ -37,8 +33,6 @@ object ClubTable : BaseTable("clubs") {
     val liveStreak = integer("live_streak")
     val marketSalt = integer("market_salt")
     val arenaChestWeek = integer("arena_chest_week")
-    /** The land mask the buildings were last moved onto (V34); written only by [com.arenacity.domain.repository.ClubRepository.setLandMask] and on insert. */
-    val landMask = varchar("land_mask", 40).nullable()
     val energy = integer("energy")
     val energyAt = timestamp("energy_at").nullable()
     val offerDay = date("offer_day").nullable()
@@ -56,43 +50,16 @@ object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases")
     override val primaryKey = PrimaryKey(clubId, period, salt, idx)
 }
 
-object BuildingTable : BaseTable("buildings") {
+/**
+ * The main-island spots a club opened (V48, rules.MapSpots). The builder's old columns (land_mask, builder_slots, the ads'
+ * double income and free speed-up) and tables (buildings, obstacles, club_layouts, rehome_log) are still in the database
+ * but no longer mapped: dropping them is a later step.
+ */
+object ClubSpotTable : org.jetbrains.exposed.sql.Table("club_spots") {
     val clubId = uuid("club_id").references(ClubTable.id)
-    val type = varchar("type", 32)
-    val level = integer("level")
-    val gridX = integer("grid_x")
-    val gridY = integer("grid_y")
-    val rotation = integer("rotation")
-    val state = varchar("state", 16)
-    val upgradeEndsAt = timestamp("upgrade_ends_at").nullable()
-    val lastCollectedAt = timestamp("last_collected_at")
-    val variant = varchar("variant", 40).nullable()
-}
-
-object ObstacleTable : BaseTable("obstacles") {
-    val clubId = uuid("club_id").references(ClubTable.id)
-    val kind = varchar("kind", 16)
-    val gridX = integer("grid_x")
-    val gridY = integer("grid_y")
-    val state = varchar("state", 16)
-    val clearEndsAt = timestamp("clear_ends_at").nullable()
-    val rewardGold = integer("reward_gold")
-}
-
-/** The clubs table's obstacle clock alone (kept out of [ClubTable] so club updates never overwrite it). */
-object ClubObstacleClock : org.jetbrains.exposed.sql.Table("clubs") {
-    val id = uuid("id")
-    val spawnedAt = timestamp("obstacles_spawned_at").nullable()
-}
-
-/** Saved layouts: [data] = "id,x,y,rotation;…" (one entry per building). */
-object ClubLayoutTable : org.jetbrains.exposed.sql.Table("club_layouts") {
-    val clubId = uuid("club_id")
-    val slot = integer("slot")
-    val name = varchar("name", 32)
-    val data = text("data")
-    val updatedAt = timestamp("updated_at")
-    override val primaryKey = PrimaryKey(clubId, slot)
+    val spot = varchar("spot", 32)
+    val unlockedAt = timestamp("unlocked_at")
+    override val primaryKey = PrimaryKey(clubId, spot)
 }
 
 /** Claimed road steps (trophy road, club-level road). */

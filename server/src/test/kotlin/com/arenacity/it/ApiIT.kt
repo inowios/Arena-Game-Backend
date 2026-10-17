@@ -36,127 +36,103 @@ class ApiIT {
     private suspend fun ApplicationTestBuilder.guestWithClub(device: String, name: String): String {
         val token = call(HttpMethod.Post, "/auth/guest", body = """{"deviceId":"$device"}""").data.o()["accessToken"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/club", token, """{"name":"$name","primaryColor":"#112233","secondaryColor":"#ffffff","timezone":"UTC"}""", expect = 201)
-        // the land mask as the client fetches it: what freeSpot builds on
-        served = com.arenacity.domain.rules.LandMap.parse(call(HttpMethod.Get, "/catalog/land").data.toString())
         return token
     }
 
+    private fun sql(statement: String) = java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate(statement) }
+    private fun JsonElement.strings() = jsonArray.map { it.jsonPrimitive.content }
+
     @Test
-    fun `club, buildings, builders and squad over HTTP`() = testApplication {
+    fun `club, map spots and squad over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-0001", "Api FC")
         val club = call(HttpMethod.Get, "/club", t).data.o()
         assertEquals(2500, club["club"]!!.o()["coins"]!!.jsonPrimitive.int)
-        assertEquals(1, club["club"]!!.o()["builderSlots"]!!.jsonPrimitive.int)
-        val (ax, ay) = freeSpot(club, "ACADEMY")   // obstacles turn up at random: find room
-        val academy = call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$ax,"y":$ay}""", expect = 201).data.o()["id"]!!.jsonPrimitive.content
-        val (tx, ty) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "TRAINING_CENTER")
-        // one builder: a second construction must wait
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 409)
-        call(HttpMethod.Post, "/club/builders", t, expect = 402)   // 250 gold needed, 50 owned
-        call(HttpMethod.Post, "/club/buildings/$academy/speedup", t)
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"TRAINING_CENTER","x":$tx,"y":$ty}""", expect = 402)   // 2 400 coins, 1 000 left
-        val (mx, my) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), "ACADEMY")
-        call(HttpMethod.Post, "/club/buildings/$academy/move", t, """{"x":$mx,"y":$my,"rotation":0}""")
-        // graduates come from the youth sports school since 16 October (it opens at stadium 3): the academy alone has none
-        call(HttpMethod.Post, "/club/academy/claim", t, expect = 400)
+        assertEquals(1, club["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), club["spots"]!!.strings())
+        assertTrue(club["buildings"]!!.jsonArray.isEmpty())
+        // the map's ten spots: five bought on the main island, one on each people's island
+        val catalog = call(HttpMethod.Get, "/catalog/spots").data.jsonArray.map { it.o() }
+        assertEquals(listOf("stadium", "academy", "hospital", "mall", "lighthouse", "marina", "android_stadium", "stone_arena", "beast_dome", "shadow_ruins"), catalog.map { it["id"]!!.jsonPrimitive.content })
+        assertEquals(3000, catalog[1]["cost"]!!.jsonPrimitive.int); assertEquals("main", catalog[1]["island"]!!.jsonPrimitive.content); assertEquals(JsonNull, catalog[1]["people"])
+        assertEquals("BEAST", catalog[8]["people"]!!.jsonPrimitive.content); assertEquals("beast", catalog[8]["island"]!!.jsonPrimitive.content)
+        // the builder's routes are gone
+        assertEquals(404, client.get("/api/v1/catalog/buildings").status.value)
+        assertEquals(404, client.get("/api/v1/catalog/land").status.value)
+        assertEquals(404, client.post("/api/v1/club/buildings") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
         val squad = call(HttpMethod.Get, "/club/athletes", t).data.o()
-        assertEquals(14, squad["athletes"]!!.jsonArray.size)
+        assertEquals(14, squad["athletes"]!!.jsonArray.size); assertEquals(1, squad["trainingSlots"]!!.jsonPrimitive.int)
         val lineup = call(HttpMethod.Get, "/club/lineup/football", t).data.o()["lineup"]!!.o()
         assertEquals(11, lineup["starters"]!!.jsonArray.size)
+        // the academy graduates once it is open; opening it costs 3 000 coins
+        assertEquals("Спочатку відкрийте академію", call(HttpMethod.Post, "/club/academy/claim", t, expect = 400, lang = "uk").o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
+        call(HttpMethod.Post, "/club/spots/academy/unlock", t, expect = 402)
+        sql("UPDATE clubs SET coins = 10000 WHERE name = 'Api FC'")
+        val opened = call(HttpMethod.Post, "/club/spots/academy/unlock", t).data.o()
+        assertEquals(7000, opened["club"]!!.o()["coins"]!!.jsonPrimitive.int)
+        assertEquals(2, opened["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium", "academy"), opened["spots"]!!.strings())
+        call(HttpMethod.Post, "/club/spots/academy/unlock", t, expect = 409)
+        call(HttpMethod.Post, "/club/spots/castle/unlock", t, expect = 404)
+        call(HttpMethod.Post, "/club/spots/beast_dome/unlock", t, expect = 400)
+        call(HttpMethod.Post, "/club/academy/claim", t, expect = 201)
+        assertEquals(15, call(HttpMethod.Get, "/club/athletes", t).data.o()["athletes"]!!.jsonArray.size)
     }
 
     @Test
-    fun `showcase friends and their cities over HTTP`() = testApplication {
+    fun `showcase friends and the islands over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-friends", "Friends FC")
         val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
         assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
-        val top = friends.last()["club"]!!.o()["id"]!!.jsonPrimitive.content
-        // both showcases stand on the land mask's main island, the top one with every people's island open (its zones);
-        // the grounds carry the visited club's land (and, for one client release, the old square's sixteen parcels and 48 cells)
+        val (mid, top) = friends.map { it["club"]!!.o()["id"]!!.jsonPrimitive.content }
+        // the top showcase has every spot open, every people's island with it
         val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
-        assertEquals(served.id, g["land"]!!.o()["maskId"]!!.jsonPrimitive.content)
-        assertEquals(listOf(served.main.id) + com.arenacity.domain.rules.Showcase.islands(10, served).map { it.id }, g["land"]!!.o()["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
-        assertEquals(16, g["parcels"]!!.jsonArray.size); assertEquals(48, g["gridSize"]!!.jsonPrimitive.int)
         assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
-        val types = g["buildings"]!!.jsonArray.map { it.o()["type"]!!.jsonPrimitive.content }
-        assertEquals(com.arenacity.domain.rules.Showcase.city(10, served).slots.size, types.size)
-        assertTrue(types.count { it != "ROAD" && it != "DECOR" } >= 15)
-        assertTrue(types.none { it.endsWith("_ARENA") }, "no arenas on the islands")
-        assertEquals(listOf("BEAST", "STONE", "ANDROID", "SHADOW"), g["land"]!!.o()["peoples"]!!.jsonArray.map { it.jsonPrimitive.content })
-        // the catalog names the buildings in the caller's language and marks the ones to come
-        val catalog = call(HttpMethod.Get, "/catalog/buildings", lang = "ru").data.jsonArray.map { it.o() }.associateBy { it["type"]!!.jsonPrimitive.content }
-        assertEquals("Зал славы", catalog.getValue("HALL_OF_FAME")["name"]!!.jsonPrimitive.content)
-        assertEquals("Скоро", catalog.getValue("TRANSPORT_HUB")["soonText"]!!.jsonPrimitive.content)
-        assertTrue(catalog.keys.none { it.endsWith("_ARENA") })
-        // GET /club sends the land: the mask's id (the catalog's ETag), the regions the club builds on, the locked islands
-        val state = call(HttpMethod.Get, "/club", t).data.o()
-        val land = state["land"]!!.o()
-        assertEquals(served.id, land["maskId"]!!.jsonPrimitive.content)
-        assertEquals(listOf(served.main.id), land["regions"]!!.jsonArray.map { it.jsonPrimitive.content })
-        assertEquals(served.locked(served.home).map { it.id }, land["locked"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
-        // every people's island under its dome, with its people and its bridge's stadium; the bridges are on sale by the people's key
+        assertEquals(listOf("stadium", "academy", "hospital", "mall", "lighthouse", "marina", "android_stadium", "stone_arena", "beast_dome", "shadow_ruins"), g["spots"]!!.strings())
+        assertEquals(listOf("main", "beast", "stone", "android", "shadow"), g["land"]!!.o()["regions"]!!.strings())
+        assertEquals(listOf("BEAST", "STONE", "ANDROID", "SHADOW"), g["land"]!!.o()["peoples"]!!.strings())
+        assertTrue(g["land"]!!.o()["locked"]!!.jsonArray.isEmpty()); assertEquals(JsonNull, g["land"]!!.o()["maskId"])
+        assertTrue(g["buildings"]!!.jsonArray.isEmpty())
+        // the stadium-5 one: the academy, the hospital and the mall, the beastfolk's island
+        val m = call(HttpMethod.Get, "/clubs/$mid/grounds", t).data.o()
+        assertEquals(5, m["stadium"]!!.jsonPrimitive.int)
+        assertEquals(listOf("stadium", "academy", "hospital", "mall", "beast_dome"), m["spots"]!!.strings())
+        assertEquals(listOf("main", "beast"), m["land"]!!.o()["regions"]!!.strings())
+        // GET /club sends the islands: the main one open, every people's island locked with its stadium
+        val land = call(HttpMethod.Get, "/club", t).data.o()["land"]!!.o()
+        assertEquals(listOf("main"), land["regions"]!!.strings())
+        assertEquals(listOf("beast", "stone", "android", "shadow"), land["locked"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
         assertEquals(setOf("BEAST", "STONE", "ANDROID", "SHADOW"), land["locked"]!!.jsonArray.map { it.o()["people"]!!.jsonPrimitive.content }.toSet())
-        assertEquals(emptyList<String>(), land["peoples"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertTrue(land["locked"]!!.jsonArray.all { it.o()["state"]!!.jsonPrimitive.content == "LOCKED" })
+        assertEquals(emptyList<String>(), land["peoples"]!!.strings())
         val bridges = call(HttpMethod.Get, "/club/zones", t).data.jsonArray.map { it.o() }
-        assertEquals(mapOf("BEAST" to 4, "STONE" to 5, "ANDROID" to 7, "SHADOW" to 10), bridges.associate { it["people"]!!.jsonPrimitive.content to it["requiredStadium"]!!.jsonPrimitive.int })
+        assertEquals(mapOf("BEAST" to 4, "STONE" to 5, "ANDROID" to 7, "SHADOW" to 9), bridges.associate { it["people"]!!.jsonPrimitive.content to it["requiredStadium"]!!.jsonPrimitive.int })
         assertEquals("Потрібен стадіон рівня 4", call(HttpMethod.Post, "/club/zones/basketball/buy", t, expect = 400, lang = "uk").o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
-        assertEquals(0, land["nextPrice"]!!.jsonPrimitive.int); assertEquals(false, land["buyable"]!!.jsonPrimitive.boolean)
-        val cached = client.request("/api/v1/catalog/land") { header(HttpHeaders.IfNoneMatch, "\"${served.id}\"") }
-        assertEquals(304, cached.status.value)
-        // land is not for sale any more: the old buying route answers a clear error
-        val refused = call(HttpMethod.Post, "/club/land/5/2/buy", t, expect = 400, lang = "ru").o()["errors"]!!.jsonArray.single().jsonPrimitive.content
-        assertEquals("Земля вокруг твоего участка не продаётся: клуб растёт на островах", refused)
-        // a free spot on the mask is built on; a cell off it (the sea round the meadow) is refused
-        val (nx, ny) = freeSpot(state, "ACADEMY")
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"ACADEMY","x":$nx,"y":$ny}""", expect = 201)
-        val m = served.main
-        val (sx, sy) = (m.x0 - 1..m.x0 + m.w).flatMap { x -> (m.y0 - 1..m.y0 + m.h).map { y -> x to y } }.first { (x, y) -> com.arenacity.domain.rules.Grid.aligned(x, y) && served.regions.none { it.has(x, y) } }
-        val sea = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$sx,"y":$sy}]}""", expect = 400).o()["errors"]!!.jsonArray.single().jsonPrimitive.content
-        assertEquals("That spot is outside your land", sea)
     }
 
     @Test
-    fun `fences, edit mode and saved layouts over HTTP`() = testApplication {
+    fun `roads, collections and the hall of fame over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-fence", "Fence FC")
-        val (ax, ay) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
-        val a = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$ax,"y":$ay}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
-        val (bx, by) = freeSpot(call(HttpMethod.Get, "/club", t).data.o(), 2, 2)
-        val b = call(HttpMethod.Post, "/club/fences", t, """{"cells":[{"x":$bx,"y":$by}]}""", expect = 201).data.jsonArray.single().o()["id"]!!.jsonPrimitive.content
-        call(HttpMethod.Post, "/club/fences/upgrade", t, """{"ids":["$a","$b"]}""", expect = 400)   // level 2 needs stadium 2
-        call(HttpMethod.Put, "/club/layouts/1", t, """{"name":"Home"}""")
-        // swap the two cells in one go (the (club, x, y) uniqueness must not trip)
-        call(HttpMethod.Put, "/club/layout", t, """{"moves":[{"id":"$a","x":$bx,"y":$by},{"id":"$b","x":$ax,"y":$ay}]}""")
-        val moved = call(HttpMethod.Get, "/club", t).data.o()["buildings"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == a }
-        assertEquals(bx, moved["x"]!!.jsonPrimitive.int)
-        call(HttpMethod.Post, "/club/layouts/1/apply", t)
-        val back = call(HttpMethod.Get, "/club", t).data.o()["buildings"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == a }
-        assertEquals(ax, back["x"]!!.jsonPrimitive.int)
-        assertEquals("Home", call(HttpMethod.Get, "/club/layouts", t).data.jsonArray.single().o()["name"]!!.jsonPrimitive.content)
-        call(HttpMethod.Delete, "/club/buildings/$b", t)
-        // long goals: roads, collections, the museum (own and as a visitor)
         val roads = call(HttpMethod.Get, "/club/roads", t).data.jsonArray
         assertEquals(listOf("TROPHY", "LEVEL"), roads.map { it.o()["road"]!!.jsonPrimitive.content })
         call(HttpMethod.Post, "/club/roads/trophy/1/claim", t, expect = 400)   // 0 trophies
         assertEquals(0, call(HttpMethod.Get, "/club/collections", t).data.o()["incomePct"]!!.jsonPrimitive.int)
-        assertEquals(0, call(HttpMethod.Get, "/club/museum", t).data.o()["capacity"]!!.jsonPrimitive.int)
+        assertEquals(3, call(HttpMethod.Get, "/club/museum", t).data.o()["capacity"]!!.jsonPrimitive.int)   // stadium 1
         val id = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
         call(HttpMethod.Get, "/clubs/$id/museum", t)
     }
 
     @Test
-    fun `alliances over HTTP - create, join, chat, help, tournament, likes`() = testApplication {
+    fun `alliances over HTTP - create, join, chat, tournament, likes`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val a = guestWithClub("it-device-al-a", "Ally One")
         val b = guestWithClub("it-device-al-b", "Ally Two")
         call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 400)   // stadium 1
-        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE buildings SET level = 2 WHERE type = 'PITCH'") }
+        sql("INSERT INTO club_spots (club_id, spot, unlocked_at) SELECT id, 'academy', now() FROM clubs WHERE name = 'Ally One'")   // stadium 2
         val id = call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 201).data.o()["alliance"]!!.o()["id"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/alliances/$id/join", b)
         val members = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray
@@ -203,7 +179,8 @@ class ApiIT {
         call(HttpMethod.Post, "/challenges/$cc/accept", b, expect = 409)
         val clubA = call(HttpMethod.Get, "/club", a).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
         assertEquals(1, call(HttpMethod.Get, "/clubs/$clubA/h2h", b).data.o()["fixtures"]!!.jsonArray.size)
-        assertTrue(call(HttpMethod.Get, "/clubs/$clubA/grounds", b).data.o()["buildings"]!!.jsonArray.size >= 2)
+        val grounds = call(HttpMethod.Get, "/clubs/$clubA/grounds", b).data.o()
+        assertEquals(1, grounds["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), grounds["spots"]!!.strings())
         val landing = client.get("/l/$code") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }
         val html = landing.bodyAsText()
         assertEquals(200, landing.status.value); assertTrue(html.contains(code) && html.contains("arenacity://l/$code") && html.contains("приглашает"))
@@ -288,13 +265,12 @@ class ApiIT {
         val bought = call(HttpMethod.Post, "/purchases/verify", a, """{"store":"DEV","productId":"gold_medium","token":"dev:it-1"}""").data.o()
         assertEquals("GRANTED", bought["status"]!!.jsonPrimitive.content)
         assertEquals("DUPLICATE", call(HttpMethod.Post, "/purchases/verify", a, """{"store":"DEV","productId":"gold_medium","token":"dev:it-1"}""").data.o()["status"]!!.jsonPrimitive.content)
-        assertEquals(2, call(HttpMethod.Post, "/club/builders", a).data.o()["builderSlots"]!!.jsonPrimitive.int)
-        call(HttpMethod.Post, "/club/builders", a, expect = 400)   // the 3rd builder needs a stadium 5
+        assertEquals(404, client.post("/api/v1/club/builders") { header(HttpHeaders.Authorization, "Bearer $a") }.status.value)   // no builders since the five islands map
     }
 
     @Test
-    fun `decor looks, coin packs, achievements and ad rewards over HTTP`() = testApplication {
-        environment { config = TestDb.appConfig(mapOf("ads.clientRewards" to "false")) }
+    fun `coin packs, achievements and ad callbacks over HTTP`() = testApplication {
+        environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-0201", "Cosmo FC")
         // the cosmetics shop is gone
@@ -305,16 +281,6 @@ class ApiIT {
         val me = call(HttpMethod.Patch, "/me", t, """{"locale":"uk-UA"}""").data.o()
         assertEquals("uk", me["user"]!!.o()["locale"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/purchases/verify", t, """{"store":"DEV","productId":"gold_small","token":"dev:it-cos"}""")
-        val state = call(HttpMethod.Get, "/club", t).data.o()
-        assertTrue(state["ads"]!!.o()["freeSpeedupAvailable"]!!.jsonPrimitive.boolean)
-        // decor looks at placement: only owned ones (earned on the pass, roads, achievements…), the default tree always
-        val (dx, dy) = freeSpot(state, 2, 2)
-        call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_flowerbed"}""", expect = 409)
-        val decor = call(HttpMethod.Post, "/club/buildings", t, """{"type":"DECOR","x":$dx,"y":$dy,"variant":"decor_tree"}""", expect = 201).data.o()
-        assertTrue(decor["variant"] == null || decor["variant"] is JsonNull)
-        assertEquals(404, client.post("/api/v1/club/buildings/${decor["id"]!!.jsonPrimitive.content}/variant") {
-            header(HttpHeaders.Authorization, "Bearer $t"); contentType(ContentType.Application.Json); setBody("""{"itemId":"decor_tree"}""")
-        }.status.value)
         // coins for gold
         val coinsBefore = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["coins"]!!.jsonPrimitive.long
         val afterPack = call(HttpMethod.Post, "/club/shop/coins/coins_small", t).data.o()
@@ -328,8 +294,8 @@ class ApiIT {
         val claim = call(HttpMethod.Post, "/club/achievements/friendly_face/claim", t).data.o()
         assertEquals(5, claim["gold"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/club/achievements/friendly_face/claim", t, expect = 409)
-        // production-style ads: the client can't grant itself rewards; unsigned callbacks are refused
-        call(HttpMethod.Post, "/ads/reward", t, """{"placement":"DOUBLE_INCOME"}""", expect = 403)
+        // no rewarded placements any more (the double income and the free speed-up went with the builder); unsigned callbacks are refused
+        assertEquals(404, client.post("/api/v1/ads/reward") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
         assertEquals(403, client.get("/api/v1/ads/ssv?transaction_id=1&user_id=x").status.value)
         // speed-ups need something running
         call(HttpMethod.Post, "/club/medical/speedup", t, expect = 409)
@@ -374,7 +340,7 @@ class ApiIT {
         assertEquals(1, funnel["steps"]!!.jsonArray.first().o()["users"]!!.jsonPrimitive.int)
         val bal = admin(HttpMethod.Get, "/admin/balance?days=7").data.o()
         assertEquals(1, bal["activeClubs"]!!.jsonPrimitive.int)
-        assertTrue(bal["buildings"]!!.o().isNotEmpty())
+        assertTrue(bal["spots"]!!.o().isEmpty())   // a new club: only the stadium, which is not counted
         assertEquals(1, bal["stadium"]!!.o()["1"]!!.jsonPrimitive.int)
         admin(HttpMethod.Get, "/admin/balance?days=0", expect = 400)
         val page = client.get("/admin/dashboard")
@@ -407,34 +373,4 @@ class ApiIT {
         call(HttpMethod.Delete, "/me", t)
         assertEquals(1, admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()["analyticsEvents"]!!.jsonPrimitive.int)   // only the anonymous account_deleted
     }
-}
-
-/** The land mask GET /catalog/land served (set when a test signs in, see guestWithClub). */
-private lateinit var served: com.arenacity.domain.rules.LandMap
-
-/** A free spot for a building type (its real footprint, unrotated). */
-private fun freeSpot(state: kotlinx.serialization.json.JsonObject, type: String): Pair<Int, Int> {
-    val fp = com.arenacity.domain.rules.footprint(com.arenacity.domain.rules.BuildingType.valueOf(type), 0, 0, 0)
-    return freeSpot(state, fp.w, fp.h)
-}
-
-/** A free w×h spot on the club's land (the served mask's main island) of a GET /club response (buildings and obstacles taken into account). */
-private fun freeSpot(state: kotlinx.serialization.json.JsonObject, w: Int, h: Int): Pair<Int, Int> {
-    val taken = mutableListOf<com.arenacity.domain.rules.Footprint>()
-    for (b in state["buildings"]!!.jsonArray) {
-        val o = b.jsonObject
-        taken += com.arenacity.domain.rules.footprint(com.arenacity.domain.rules.BuildingType.valueOf(o["type"]!!.jsonPrimitive.content), o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["rotation"]!!.jsonPrimitive.int)
-    }
-    for (b in state["obstacles"]?.jsonArray ?: kotlinx.serialization.json.JsonArray(emptyList())) {
-        val o = b.jsonObject
-        taken += com.arenacity.domain.rules.Footprint(o["x"]!!.jsonPrimitive.int, o["y"]!!.jsonPrimitive.int, o["w"]!!.jsonPrimitive.int, o["h"]!!.jsonPrimitive.int)
-    }
-    val regions = state["land"]!!.jsonObject["regions"]!!.jsonArray.map { it.jsonPrimitive.content }.toSet()
-    val land = com.arenacity.domain.rules.LandSet(served.regions.filter { it.id in regions })
-    for ((x, y) in land.cells) {
-        if (!com.arenacity.domain.rules.Grid.aligned(x, y)) continue   // on the build grid's tiles (14 October, pass 3)
-        val fp = com.arenacity.domain.rules.Footprint(x, y, w, h)
-        if (land.fits(fp) && taken.none { it.overlaps(fp) }) return x to y
-    }
-    error("no free spot")
 }

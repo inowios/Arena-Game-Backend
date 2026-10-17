@@ -32,8 +32,9 @@ class EconomyService(
     /** Today's 3 tasks, created on first access. */
     suspend fun todaysTasks(clubId: UUID, timezone: String): List<DailyTask> {
         val day = today(timezone)
+        // a task that went (collecting income went with the city builder) is left out of a day stored before
         val stored = economy.tasks(clubId, day)
-        if (stored.isNotEmpty()) return stored
+        if (stored.isNotEmpty()) return stored.filter { t -> TaskKind.entries.any { it.name == t.task } }
         val league = publicLeague(clubId)
         val matchToday = league != null && league.currentRound < 28
         val multi = (sectionCount?.invoke(clubId) ?: 1) >= 2

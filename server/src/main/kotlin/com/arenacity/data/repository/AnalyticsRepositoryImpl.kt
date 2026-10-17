@@ -41,6 +41,9 @@ class AnalyticsRepositoryImpl : AnalyticsRepository {
     override suspend fun deleteActivityOf(userId: UUID) { dbQuery { UserDayTable.deleteWhere { UserDayTable.userId eq userId } } }
     override suspend fun purgeActivityBefore(day: LocalDate): Int = dbQuery { UserDayTable.deleteWhere { UserDayTable.day less day } }
 
+    /** The main-island spots bought with coins, as an SQL list (the stadium level: rules.MapSpots). */
+    private val BUYABLE = com.arenacity.domain.rules.MapSpots.BUYABLE.joinToString { "'${it.id}'" }
+
     private fun <T> query(sql: String, read: (java.sql.ResultSet) -> T): T = TransactionManager.current().exec(sql) { rs -> read(rs) }!!
 
     override suspend fun cohorts(from: LocalDate, to: LocalDate): List<CohortRow> = dbQuery {
@@ -114,21 +117,27 @@ class AnalyticsRepositoryImpl : AnalyticsRepository {
             .limit(limit).map { props(it[AnalyticsEventTable.props]) }
     }
 
-    override suspend fun buildingLevels(): Map<String, Map<Int, Int>> = dbQuery {
+    override suspend fun spotCounts(): Map<String, Int> = dbQuery {
+        val out = sortedMapOf<String, Int>()
         query("""
-            SELECT b.type, b.level, count(*) AS n FROM buildings b JOIN clubs c ON c.id = b.club_id
-            WHERE NOT c.is_bot GROUP BY b.type, b.level
+            SELECT s.spot, count(*) AS n FROM club_spots s JOIN clubs c ON c.id = s.club_id WHERE NOT c.is_bot GROUP BY s.spot
+        """.trimIndent()) { rs -> while (rs.next()) out[rs.getString("spot")] = rs.getInt("n") }
+        query("""
+            SELECT z.sport, count(*) AS n FROM club_zones z JOIN clubs c ON c.id = z.club_id
+            WHERE NOT c.is_bot AND (z.state = 'OPEN' OR (z.state = 'RESTORING' AND z.restore_ends_at <= now())) GROUP BY z.sport
         """.trimIndent()) { rs ->
-            val out = mutableMapOf<String, MutableMap<Int, Int>>()
-            while (rs.next()) out.getOrPut(rs.getString("type")) { sortedMapOf() }[rs.getInt("level")] = rs.getInt("n")
-            out
+            while (rs.next()) com.arenacity.domain.model.People.parse(rs.getString("sport"))?.let { out[com.arenacity.domain.rules.MapSpots.islandSpot(it).id] = rs.getInt("n") }
         }
+        out
     }
 
     override suspend fun activeClubs(from: LocalDate, to: LocalDate, limit: Int): List<ClubSnapshot> = dbQuery {
         query("""
             SELECT c.coins, c.gold, c.trophies, c.level,
-              COALESCE((SELECT max(b.level) FROM buildings b WHERE b.club_id = c.id AND b.type = 'PITCH'), 1) AS stadium
+              LEAST(10, 1
+                + (SELECT count(*) FROM club_spots s WHERE s.club_id = c.id AND s.spot IN ($BUYABLE))
+                + (SELECT count(*) FROM club_zones z WHERE z.club_id = c.id AND z.sport IN ('BEAST', 'STONE', 'ANDROID', 'SHADOW')
+                     AND (z.state = 'OPEN' OR (z.state = 'RESTORING' AND z.restore_ends_at <= now())))) AS stadium
             FROM clubs c
             WHERE NOT c.is_bot AND c.user_id IN (SELECT DISTINCT user_id FROM user_days WHERE day >= '$from' AND day <= '$to')
             LIMIT $limit

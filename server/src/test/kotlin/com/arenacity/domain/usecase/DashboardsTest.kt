@@ -86,25 +86,22 @@ class DashboardsTest {
         repo.events += ev(u, "live_finish", 10, "outcome" to "win")
         repo.events += ev(u, "live_finish", 11, "outcome" to "win")
         repo.events += ev(u, "live_finish", 12, "outcome" to "loss")
-        repo.events += ev(u, "obstacle_cleared", 13, "kind" to "TREE", "gold" to "3")
-        repo.events += ev(u, "obstacle_cleared", 14, "kind" to "ROCK", "gold" to "5")
         repo.events += ev(u, "purchase_start", 15, "product" to "starter_pack")
         repo.events += ev(u, "stadium_level", 16, "level" to "2")
         repo.clubs = (1..10).map { ClubSnapshot(it * 1_000L, it * 10, it * 100, it, if (it > 7) 2 else 1) }
-        repo.buildings = mapOf("PITCH" to mapOf(1 to 7, 2 to 3))
+        repo.spots = mapOf("academy" to 3, "beast_dome" to 1)
 
         val r = BalanceUseCase(repo, clock)(days = 7)
         assertEquals(4, r.live.kickoffs); assertEquals(3, r.live.finishes); assertEquals(0.75, r.live.finishRate)
         assertEquals(mapOf("loss" to 1, "win" to 2), r.live.outcomes)
         assertEquals(mapOf("auto" to 1, "stick" to 3), r.live.controls)
         assertEquals(4, r.live.vsBots)
-        assertEquals(2, r.obstaclesCleared); assertEquals(8, r.obstacleGold)
         assertEquals(mapOf("starter_pack" to 1), r.purchaseStarts)
         assertEquals(mapOf(2 to 1), r.stadiumUps)
         assertEquals(10, r.activeClubs)
         assertEquals(5_000, r.coins!!.p50); assertEquals(10_000, r.coins!!.max); assertEquals(1_000, r.coins!!.p10)
         assertEquals(mapOf(1 to 7, 2 to 3), r.stadium)
-        assertEquals(mapOf("1" to 7, "2" to 3), r.toDto().buildings["PITCH"])
+        assertEquals(mapOf("academy" to 3, "beast_dome" to 1), r.toDto().spots)
     }
 
     @Test

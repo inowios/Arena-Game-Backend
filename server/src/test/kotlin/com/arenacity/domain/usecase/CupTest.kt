@@ -22,15 +22,15 @@ import kotlin.test.*
 class CupTest {
     // Thursday 2026-10-08, 10:00 UTC: the draw is at 12:00, the round of 16 at 18:00 (bucket 0)
     private val clock = FixedClock(Instant.parse("2026-10-08T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val seasons = FakeSeasonRepository(); private val cupRepo = FakeCupRepository(); private val inboxRepo = FakeInboxRepository()
     private val bots = BotService(users, clubs, athletes, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(buildings, athletes))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(athletes))
     private val cupService = CupService(cupRepo, clubs, fixtures, bots, runner, seasons, clock, notifier = CupNotifier(null, InboxService(inboxRepo, clock)))
-    private val queries = CupQueries(ClubService(clubs, buildings, clock), cupRepo, fixtures, clubs, clock)
+    private val queries = CupQueries(ClubService(clubs, clock), cupRepo, fixtures, clubs, clock)
 
     private fun newClub(name: String, timezone: String = "UTC", division: Int = 1, rating: Int? = null): Club = runBlocking {
         val user = UUID.randomUUID()

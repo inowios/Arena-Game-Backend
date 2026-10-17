@@ -52,46 +52,22 @@ val appModule = module {
     single<UserRepository> { UserRepositoryImpl() }
     single<RefreshTokenRepository> { RefreshTokenRepositoryImpl() }
     single<ClubRepository> { ClubRepositoryImpl() }
-    single<BuildingRepository> { BuildingRepositoryImpl() }
+    single<ClubSpotRepository> { ClubSpotRepositoryImpl() }
     single<ClubExistence> { val clubs = get<ClubRepository>(); ClubExistence { clubs.findByUserId(it)?.isBot == false } }
-    single<com.arenacity.domain.repository.ObstacleRepository> { com.arenacity.data.repository.ObstacleRepositoryImpl() }
-    single<com.arenacity.domain.rules.LandMap> { com.arenacity.domain.rules.Lands.MAP }
-    single<com.arenacity.domain.repository.RehomeLogRepository> { com.arenacity.data.repository.RehomeLogRepositoryImpl() }
-    single {
-        ClubService(get(), get(), get(), getAll<BuildingListener>(), get(), lands = get(), tx = get(), moves = get()).also { svc ->
-            val koin = getKoin()
-            svc.effects = { koin.get<com.arenacity.domain.usecase.liveops.LiveOps>().modifiers().let { com.arenacity.domain.usecase.club.EventEffects(it.buildTimePct, it.incomePct, it.obstacleGoldPct) } }
-            // a people's island opens with its bridge: the club's OPEN zones (as GET /club/zones has them)
-            svc.openZones = { id -> com.arenacity.domain.usecase.club.openPeoples(koin.get(), id, koin.get<Clock>().now()) }
-        }
-    }
+    // the club's open spots: the main-island ones it bought and the peoples' islands whose zone is OPEN
+    single { ClubService(get(), get(), spots = get(), zones = get()) }
     single<com.arenacity.domain.usecase.liveops.LiveOpsRepository> { com.arenacity.data.repository.LiveOpsRepositoryImpl() }
     single { val econ: EconomyRepository = get(); com.arenacity.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get(), purchases = { club, pid -> econ.hasPurchase(club, pid) }) }
     single<com.arenacity.domain.repository.ZoneRepository> { com.arenacity.data.repository.ZoneRepositoryImpl() }
-    single { com.arenacity.domain.usecase.club.LandSweep(get(), get()) }
     single { com.arenacity.domain.usecase.club.ZoneUseCases(get(), get(), get(), get(), tx = get()) }
-    single { SectionService(get(), get()) }
-    single { CreateClubUseCase(get(), get(), get(), getAll<ClubInitializer>(), tx = get(), lands = get()) }
+    single { SectionService(get()) }
+    single { CreateClubUseCase(get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
-    single { PlaceBuildingUseCase(get(), get(), get(), tx = get(), cosmetics = get()) }
-    single { UpgradeBuildingUseCase(get(), get(), get(), tx = get()) }
-    single { val cos: CosmeticsService = get(); CollectIncomeUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get(), collections = { id -> com.arenacity.domain.rules.Collections.incomePct(cos.owned(id)) }) }
+    single { UnlockSpotUseCase(get(), get(), get(), tx = get()) }
     single<com.arenacity.domain.usecase.progress.RoadRepository> { com.arenacity.data.repository.RoadRepositoryImpl() }
     single { com.arenacity.domain.usecase.progress.RoadUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.progress.CollectionsUseCases(get(), get()) }
     single { com.arenacity.domain.usecase.progress.MuseumService(get(), get(), get()) }
-    single { SpeedUpUseCase(get(), get(), get(), tx = get()) }
-    single { RemoveBuildingUseCase(get(), get(), tx = get()) }
-    single { MoveBuildingUseCase(get(), get(), get(), tx = get()) }
-    single { PlaceFencesUseCase(get(), get(), get(), tx = get()) }
-    single { UpgradeFencesUseCase(get(), get(), get(), tx = get()) }
-    single { ApplyLayoutUseCase(get(), get(), get(), tx = get()) }
-    single<com.arenacity.domain.repository.LayoutRepository> { com.arenacity.data.repository.LayoutRepositoryImpl() }
-    single { LayoutUseCases(get(), get(), get(), get(), tx = get()) }
-    single { BuyBuilderUseCase(get(), get(), get(), tx = get()) }
-    single { ClearObstacleUseCase(get(), get(), get(), tx = get()) }
-    single { SpeedUpObstacleUseCase(get(), get(), get(), tx = get()) }
-    single { CollectObstacleUseCase(get(), get(), get(), get(), get<EconomyService>(), tx = get()) }
     single { UpdateClubUseCase(get(), get(), get(), tx = get()) }
 
     single<AthleteRepository> { AthleteRepositoryImpl() }
@@ -123,7 +99,7 @@ val appModule = module {
             .also { e -> val koin = getKoin(); e.also = listOf(com.arenacity.domain.usecase.alliance.AllianceProgress { koin.get() }, com.arenacity.domain.usecase.liveops.EventProgressTracker { koin.get() }) }
     }
     single<com.arenacity.domain.usecase.alliance.AllianceRepository> { com.arenacity.data.repository.AllianceRepositoryImpl() }
-    single { com.arenacity.domain.usecase.alliance.AllianceUseCases(get(), get(), get(), get(), get(), tx = get()) }
+    single { com.arenacity.domain.usecase.alliance.AllianceUseCases(get(), get(), get(), get(), tx = get()) }
     single {
         val c = get<Application>().environment.config
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
@@ -162,13 +138,7 @@ val appModule = module {
         log.info("Store notifications: apple ${if (roots.isNotEmpty() || dev) "on" else "off (set APPSTORE_ROOT_CERT_PATH)"}, google ${if (token.isNotEmpty()) "on" else "off (set GOOGLE_PLAY_RTDN_TOKEN)"}")
         com.arenacity.core.store.StoreNotificationsConfig(appleEnabled = roots.isNotEmpty() || dev, appleRoots = roots, appleBundleId = prop("iap.apple.bundleId"), googleToken = token, googlePackageName = prop("iap.google.packageName"))
     }
-    single { AdRewardUseCase(get(), get(), get(), get(), get(), tx = get(), repo = get()) }
     single { com.arenacity.core.store.AdMobSsvVerifier(get()) }
-    single {
-        val app = get<Application>()
-        val v = app.environment.config.propertyOrNull("ads.clientRewards")?.getString()?.trim().orEmpty()
-        com.arenacity.presentation.route.AdsConfig(if (v.isEmpty()) app.developmentMode else v.toBoolean())
-    }
     single<InventoryRepository> { InventoryRepositoryImpl() }
     single<AchievementRepository> { AchievementRepositoryImpl() }
     single { CosmeticsService(get(), get()) }
@@ -187,23 +157,20 @@ val appModule = module {
     single { com.arenacity.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
     single {
-        com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get(), get()).also { g ->
-            val koin = getKoin()
-            g.openZones = { id -> com.arenacity.domain.usecase.club.openPeoples(koin.get(), id, koin.get<Clock>().now()) }
-        }
+        com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get())
     }
-    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get(), zones = get()) }
+    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get()) }
     single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
     single { com.arenacity.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }
     single { PlayFriendlyUseCase(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single<com.arenacity.domain.repository.LiveMatchRepository> { com.arenacity.data.repository.LiveMatchRepositoryImpl() }
-    single { com.arenacity.domain.usecase.live.FinishLiveMatchUseCase(get(), get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get(), tx = get(), buildings = get()) }
-    single { com.arenacity.domain.usecase.live.StartLiveMatchUseCase(get(), get(), get(), get(), get(), get(), get(), get(), tx = get(), buildings = get()) }
+    single { com.arenacity.domain.usecase.live.FinishLiveMatchUseCase(get(), get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get(), tx = get()) }
+    single { com.arenacity.domain.usecase.live.StartLiveMatchUseCase(get(), get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.live.CancelLiveMatchUseCase(get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.live.RecentLiveMatchesUseCase(get(), get(), get()) }
     single { com.arenacity.domain.usecase.live.AthleteMatchHistoryUseCase(get(), get(), get(), get()) }
-    single { com.arenacity.domain.usecase.live.LiveReadinessUseCase(get(), get(), get(), get(), get()) }
+    single { com.arenacity.domain.usecase.live.LiveReadinessUseCase(get(), get(), get(), get()) }
     single { com.arenacity.domain.usecase.live.ArenaChestUseCase(get(), get(), get(), tx = get()) }
     single<com.arenacity.domain.repository.MarketRepository> { com.arenacity.data.repository.MarketRepositoryImpl() }
     single { com.arenacity.domain.usecase.market.MarketService(get(), get(), get()) }

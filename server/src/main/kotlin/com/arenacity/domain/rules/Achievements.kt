@@ -5,16 +5,14 @@ package com.arenacity.domain.rules
  * BEST_STREAK); state metrics are read from the club when the list is shown, so they never drift.
  */
 enum class Metric(val counted: Boolean) {
-    MATCHES_WON(true), SECTIONS_WON(true), TRAININGS(true), INCOME_COLLECTIONS(true), ACADEMY_GRADUATES(true),
+    MATCHES_WON(true), SECTIONS_WON(true), TRAININGS(true), ACADEMY_GRADUATES(true),
     FRIENDLIES(true), INVITES(true), BEST_STREAK(true),
     /** Arena (live) matches: goals scored by the club and signature moves pulled off. */
     GOALS(true), SIGNATURES(true),
-    /** Obstacles cleared off the plot. */
-    OBSTACLES_CLEARED(true),
-    CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), BUILDINGS_MAXED(false), SECTIONS_OPEN(false), CUPS(false),
+    CLUB_LEVEL(false), DIVISION(false), TITLES(false), PROMOTIONS(false), SECTIONS_OPEN(false), CUPS(false),
     /** The rung of the arena ladder the club stands on (1 = yard … 7 = world). */
     ARENA(false),
-    /** The stadium level (the club's town hall). */
+    /** The stadium level: the spots the club has open on the map (rules.MapSpots). */
     STADIUM(false),
 }
 
@@ -37,12 +35,9 @@ object Achievements {
         Achievement("promoted", Metric.PROMOTIONS, listOf(1, 3, 6), listOf(20, 40, 80)),
         Achievement("cup_winner", Metric.CUPS, listOf(1, 3, 10), listOf(30, 80, 200)),
         Achievement("growing_club", Metric.CLUB_LEVEL, listOf(3, 5, 7, 10), listOf(10, 25, 50, 100)),
-        Achievement("clearer", Metric.OBSTACLES_CLEARED, listOf(5, 25, 100, 300), listOf(5, 15, 35, 80)),
         Achievement("stadium", Metric.STADIUM, listOf(2, 4, 6, 8, 10), listOf(10, 25, 50, 90, 150)),
-        Achievement("master_builder", Metric.BUILDINGS_MAXED, listOf(1, 3, 6, 10), listOf(10, 20, 40, 80)),
         Achievement("multisport", Metric.SECTIONS_OPEN, listOf(2, 3), listOf(20, 40)),
         Achievement("coach", Metric.TRAININGS, listOf(5, 50, 250, 1000), listOf(5, 15, 30, 60)),
-        Achievement("tycoon", Metric.INCOME_COLLECTIONS, listOf(10, 100, 500, 2000), listOf(5, 15, 30, 60)),
         Achievement("talent_spotter", Metric.ACADEMY_GRADUATES, listOf(1, 10, 50), listOf(5, 15, 40)),
         Achievement("friendly_face", Metric.FRIENDLIES, listOf(1, 20, 100), listOf(5, 15, 40)),
         Achievement("loyal", Metric.BEST_STREAK, listOf(7, 30, 100), listOf(10, 40, 120)),

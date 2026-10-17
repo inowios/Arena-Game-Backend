@@ -1,7 +1,6 @@
 package com.arenacity.domain.usecase
 
 import com.arenacity.domain.exception.*
-import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.rules.*
 import com.arenacity.domain.usecase.alliance.*
 import com.arenacity.domain.usecase.club.*
@@ -14,12 +13,11 @@ import java.util.UUID
 class AllianceTest {
     private val clock = FixedClock(Instant.parse("2026-10-10T12:00:00Z"))   // a Saturday
     private val clubs = FakeClubRepository()
-    private val buildings = FakeBuildingRepository()
     private val repo = FakeAllianceRepository()
-    private val service = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, emptyList())
-    private val place = PlaceBuildingUseCase(service, buildings, clock)
-    private val alliances = AllianceUseCases(service, clubs, buildings, repo, clock)
+    private val spots = FakeClubSpotRepository()
+    private val service = ClubService(clubs, clock, spots)
+    private val create = CreateClubUseCase(clubs, clock, emptyList())
+    private val alliances = AllianceUseCases(service, clubs, repo, clock)
     private val a = UUID.randomUUID(); private val b = UUID.randomUUID(); private val c = UUID.randomUUID()
 
     private fun club(u: UUID) = clubs.rows.values.first { it.userId == u }
@@ -27,7 +25,7 @@ class AllianceTest {
         for ((u, n) in listOf(a to "Alpha FC", b to "Beta FC", c to "Gamma FC")) {
             create(u, n, "#AA0000", "#FFFFFF", "UTC"); clubs.update(club(u).copy(coins = 50_000, gold = 100))
         }
-        buildings.setStadium(club(a).id, 2)
+        spots.open(club(a).id, MapSpots.ACADEMY)   // stadium 2: one spot open
     }
 
     @Test
@@ -62,28 +60,6 @@ class AllianceTest {
         assertEquals(AllianceRole.LEADER, repo.membership(club(b).id)!!.role)
         alliances.leave(b)
         assertNull(repo.find(id))
-    }
-
-    @Test
-    fun `allies' taps shorten a construction, once each, and pay the helper`() = runBlocking<Unit> {
-        setup()
-        val id = alliances.create(a, "Northern Lights", "NL", "", true, 0, null).alliance.id
-        alliances.join(b, id); alliances.join(c, id)
-        val (x, y) = (8 to 28)
-        val academy = place(a, BuildingType.ACADEMY, x, y, 0)
-        val ends0 = buildings.findById(academy.id)!!.upgradeEndsAt!!
-        val h = alliances.askHelp(a, academy.id)
-        assertFailsWith<ConflictException> { alliances.askHelp(a, academy.id) }
-        assertFailsWith<ValidationException> { alliances.giveHelp(a, h.id) }
-        val coins = club(b).coins
-        val r = alliances.giveHelp(b, h.id)
-        assertEquals(AllianceRules.helpSeconds(BuildingCatalog.level(BuildingType.ACADEMY, 1).buildSeconds), r.secondsCut)
-        assertEquals(ends0.minusSeconds(r.secondsCut), buildings.findById(academy.id)!!.upgradeEndsAt)
-        assertEquals(coins + AllianceRules.HELP_COINS, club(b).coins)
-        assertFailsWith<ConflictException> { alliances.giveHelp(b, h.id) }
-        alliances.giveHelp(c, h.id)
-        assertEquals(2, repo.help(h.id)!!.helps)
-        assertTrue(alliances.mine(b)!!.helps.single().helpedByMe)
     }
 
     @Test
@@ -123,7 +99,6 @@ class AllianceTest {
 
 class FakeAllianceRepository : AllianceRepository {
     val alliances = linkedMapOf<UUID, Alliance>(); val members = mutableListOf<AllianceMember>(); val reqs = mutableListOf<JoinRequest>()
-    val helps = linkedMapOf<UUID, HelpRequest>(); val helped = mutableListOf<Triple<UUID, UUID, Instant>>()
     val weekend = mutableMapOf<Triple<Int, UUID, UUID>, Int>(); val claims = mutableSetOf<Pair<Int, UUID>>(); val likes = mutableSetOf<Triple<UUID, UUID, Int>>()
     override suspend fun create(a: Alliance) = a.also { alliances[a.id] = a }
     override suspend fun update(a: Alliance) = a.also { alliances[a.id] = a }
@@ -141,13 +116,6 @@ class FakeAllianceRepository : AllianceRepository {
     override suspend fun addRequest(r: JoinRequest) = if (reqs.any { it.allianceId == r.allianceId && it.clubId == r.clubId }) false else reqs.add(r)
     override suspend fun removeRequest(allianceId: UUID, clubId: UUID) { reqs.removeAll { it.allianceId == allianceId && it.clubId == clubId } }
     override suspend fun clearRequests(clubId: UUID) { reqs.removeAll { it.clubId == clubId } }
-    override suspend fun openHelps(allianceId: UUID) = helps.values.filter { it.allianceId == allianceId && !it.closed }
-    override suspend fun help(id: UUID) = helps[id]
-    override suspend fun createHelp(h: HelpRequest) = h.also { helps[h.id] = h }
-    override suspend fun updateHelp(h: HelpRequest) { helps[h.id] = h }
-    override suspend fun markHelped(helpId: UUID, helper: UUID, at: Instant) = if (helped.any { it.first == helpId && it.second == helper }) false else helped.add(Triple(helpId, helper, at))
-    override suspend fun helpersOf(helpId: UUID) = helped.filter { it.first == helpId }.map { it.second }.toSet()
-    override suspend fun helpsGivenSince(helper: UUID, since: Instant) = helped.count { it.second == helper && !it.third.isBefore(since) }
     override suspend fun addWeekendWin(week: Int, allianceId: UUID, clubId: UUID) { weekend.merge(Triple(week, allianceId, clubId), 1, Int::plus) }
     override suspend fun weekendTable(week: Int, limit: Int) = weekend.filterKeys { it.first == week }.entries.groupBy { it.key.second }.map { (id, e) -> id to e.sumOf { it.value } }.sortedByDescending { it.second }.take(limit)
     override suspend fun weekendWins(week: Int, allianceId: UUID) = weekend.filterKeys { it.first == week && it.second == allianceId }.mapKeys { it.key.third }

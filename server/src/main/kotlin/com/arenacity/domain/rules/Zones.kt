@@ -10,8 +10,12 @@ import com.arenacity.domain.model.People
  * The prices and the building times are the zones' of the sport town (14 October: each island kept its own), the stadium
  * each needs follows the people's era (docs/claude/CARD-GAME-ROSTER-PROGRESSION.md §5, eras = stadium 1–3 / 4–6 / 7–9 /
  * 10): the beastfolk (south, was basketball) 4, the stone people (east, was volleyball) 5, the androids (north, was
- * tennis) 7, the shadows (west, was padel) 10. A club that opened an island earlier (at the sport town's lower stadium)
+ * tennis) 7, the shadows (west, was padel) 10 (9 since the map, below). A club that opened an island earlier (at the sport town's lower stadium)
  * keeps it: only a new bridge checks the stadium. Hockey's zone (no island) went with V44.
+ *
+ * The five islands map (17 October 2026): the stadium level is the number of open spots (rules.MapSpots) and each island's
+ * spot is one of them, so the shadows need 9 — every other spot open (with 10 they could never open: the tenth spot is
+ * their own).
  */
 data class ZoneSpec(val people: People, val priceCoins: Long, val requiredStadium: Int, val restoreSeconds: Long)
 
@@ -21,7 +25,7 @@ object Zones {
         ZoneSpec(People.BEAST, 8_000, 4, 2 * H),
         ZoneSpec(People.STONE, 50_000, 5, 12 * H),
         ZoneSpec(People.ANDROID, 40_000, 7, 6 * H),
-        ZoneSpec(People.SHADOW, 120_000, 10, 12 * H),
+        ZoneSpec(People.SHADOW, 120_000, 9, 12 * H),
     ).associateBy { it.people }
 
     fun spec(people: People) = specs.getValue(people)

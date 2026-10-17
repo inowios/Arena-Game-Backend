@@ -17,15 +17,6 @@ object AllianceRequestTable : Table("alliance_requests") {
     val allianceId = uuid("alliance_id"); val clubId = uuid("club_id"); val message = varchar("message", 120); val createdAt = timestamp("created_at")
     override val primaryKey = PrimaryKey(allianceId, clubId)
 }
-object AllianceHelpTable : Table("alliance_helps") {
-    val id = uuid("id"); val allianceId = uuid("alliance_id"); val clubId = uuid("club_id"); val buildingId = uuid("building_id"); val buildingType = varchar("building_type", 32)
-    val level = integer("level"); val helps = integer("helps"); val maxHelps = integer("max_helps"); val closed = bool("closed"); val createdAt = timestamp("created_at")
-    override val primaryKey = PrimaryKey(id)
-}
-object AllianceHelpByTable : Table("alliance_help_by") {
-    val helpId = uuid("help_id"); val helperId = uuid("helper_id"); val createdAt = timestamp("created_at")
-    override val primaryKey = PrimaryKey(helpId, helperId)
-}
 object AllianceWeekendTable : Table("alliance_weekend") {
     val week = integer("week"); val allianceId = uuid("alliance_id"); val clubId = uuid("club_id"); val wins = integer("wins")
     override val primaryKey = PrimaryKey(week, allianceId, clubId)

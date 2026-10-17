@@ -17,14 +17,14 @@ import kotlin.test.*
 
 class AccountTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val refresh = FakeRefreshTokenRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val refresh = FakeRefreshTokenRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val accounts = FakeAccountRepository(); private val inboxRepo = FakeInboxRepository()
     private val issuer = TokenIssuer(refresh, testJwt, clock)
     private val guest = GuestLoginUseCase(users, issuer, clock)
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val retirement = ClubRetirement(clubs, leagues, accounts, clock)
     private val transfer = TransferUseCases(users, clubs, accounts, issuer, retirement, clock)
     private val delete = DeleteAccountUseCase(users, clubs, accounts, refresh, retirement, clock)
@@ -57,8 +57,8 @@ class AccountTest {
         val u = guest("device-del-0001").user
         val club = create(u.id, "Leavers FC", "#AA0000", "#FFFFFF", "UTC")
         val friend = guest("device-del-0002").user; val friendClub = create(friend.id, "Stayers FC", "#0000AA", "#FFFFFF", "UTC")
-        val priv = CreatePrivateLeagueUseCase(ClubService(clubs, buildings, clock), leagues, clock)(u.id, "Office")
-        JoinPrivateLeagueUseCase(ClubService(clubs, buildings, clock), leagues)(friend.id, priv.code!!)
+        val priv = CreatePrivateLeagueUseCase(ClubService(clubs, clock), leagues, clock)(u.id, "Office")
+        JoinPrivateLeagueUseCase(ClubService(clubs, clock), leagues)(friend.id, priv.code!!)
         delete(u.id)
         val gone = users.rows.getValue(u.id)
         assertFalse(gone.isActive); assertTrue(gone.providerId.startsWith("deleted:")); assertNull(gone.email)

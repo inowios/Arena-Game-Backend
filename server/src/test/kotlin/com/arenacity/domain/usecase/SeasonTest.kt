@@ -18,14 +18,14 @@ import kotlin.test.*
 
 class SeasonTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val seasons = FakeSeasonRepository(); private val economyRepo = FakeEconomyRepository()
     private val bots = BotService(users, clubs, athletes, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val seasonService = SeasonService(leagues, fixtures, clubs, seasons, leagueService, clock)
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(buildings, athletes), seasonCloser = seasonService)
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(athletes), seasonCloser = seasonService)
 
     private fun newClub(name: String, rating: Int? = null, division: Int = 1): Club = runBlocking {
         val user = UUID.randomUUID()
@@ -92,7 +92,7 @@ class SeasonTest {
     @Test
     fun `season pass follows the club season counter`() = runBlocking<Unit> {
         val c = newClub("Passers")
-        val service = ClubService(clubs, buildings, clock)
+        val service = ClubService(clubs, clock)
         val economy = EconomyService(economyRepo, leagues, clock)
         val pass = SeasonPassUseCases(service, clubs, economyRepo, economy, clock)
         assertEquals(1, pass.view(c.userId).seasonNumber)

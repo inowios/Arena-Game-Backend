@@ -22,7 +22,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class ClaimLevelsResponse(val reward: RewardDto, val pass: PassResponse, val club: ClubDto, val items: List<String> = emptyList(), val elite: AthleteDto? = null)
 @Serializable data class VerifyPurchaseRequest(val store: String, val productId: String, val token: String)
 @Serializable data class PurchaseResponse(val status: String, val gold: Int, val coins: Long, val club: ClubDto)
-@Serializable data class AdRewardRequest(val placement: String, val buildingId: String? = null)
 @Serializable data class PushTokenRequest(val token: String, val platform: String = "android")
 @Serializable data class ProductDto(val id: String, val gold: Int, val coins: Long, val premiumPass: Boolean)
 @Serializable data class CoinPackDto(val id: String, val gold: Int, val coins: Long)

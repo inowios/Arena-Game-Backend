@@ -5,11 +5,9 @@ import com.arenacity.common.tx.NoTx
 import com.arenacity.common.tx.Tx
 import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.NotFoundException
-import com.arenacity.domain.model.BuildingState
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.model.TrophyKind
 import com.arenacity.domain.repository.AchievementRepository
-import com.arenacity.domain.repository.BuildingRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.SeasonRepository
 import com.arenacity.domain.rules.*
@@ -27,25 +25,23 @@ data class AchievementClaim(val gold: Int, val items: List<String>, val list: Li
 /** Current metric values: lifetime counters plus values read from the club's state. */
 class AchievementService(
     private val repo: AchievementRepository,
-    private val buildings: BuildingRepository,
+    private val service: ClubService,
     private val seasons: SeasonRepository,
     private val sections: SectionService? = null,
 ) {
     suspend fun values(club: Club): Map<Metric, Long> {
         val counters = repo.counters(club.id)
         val trophies = seasons.trophiesOf(club.id)
-        val list = buildings.listByClub(club.id)
         return Metric.values().associateWith { m ->
             when (m) {
                 Metric.CLUB_LEVEL -> club.level.toLong()
                 Metric.DIVISION -> club.division.toLong()
                 Metric.ARENA -> (Arenas.of(club.trophies).index + 1).toLong()
-                Metric.STADIUM -> Stadium.level(list).toLong()
+                Metric.STADIUM -> service.stadiumOf(club.id).toLong()
                 Metric.TITLES -> trophies.count { it.kind == TrophyKind.LEAGUE_TITLE }.toLong()
                 Metric.PROMOTIONS -> trophies.count { it.kind == TrophyKind.PROMOTION }.toLong()
                 Metric.CUPS -> trophies.count { it.kind == TrophyKind.CUP }.toLong()
-                Metric.BUILDINGS_MAXED -> list.count { it.type !in com.arenacity.domain.rules.Stadium.COSMETIC && it.state == BuildingState.IDLE && it.level >= BuildingCatalog.spec(it.type).maxLevel }.toLong()
-                Metric.SECTIONS_OPEN -> (sections?.active(club, clubBuildings = list)?.size ?: 1).toLong()
+                Metric.SECTIONS_OPEN -> (sections?.active(club)?.size ?: 1).toLong()
                 else -> counters[m] ?: 0L
             }
         }
@@ -54,9 +50,7 @@ class AchievementService(
     suspend fun list(club: Club): List<AchievementState> {
         val values = values(club)
         val claimed = repo.claimed(club.id)
-        // the obstacles' achievement only where it was begun while obstacles turned up (off since 14 October, pass 3)
-        return Achievements.ALL.filter { it.metric != Metric.OBSTACLES_CLEARED || com.arenacity.domain.rules.Obstacles.ENABLED || (values[it.metric] ?: 0L) > 0 }
-            .map { AchievementState(it, values[it.metric] ?: 0L, claimed[it.id] ?: 0) }
+        return Achievements.ALL.map { AchievementState(it, values[it.metric] ?: 0L, claimed[it.id] ?: 0) }
     }
 }
 

@@ -23,11 +23,11 @@ import kotlin.test.*
 
 class LiveMatchTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val live = FakeLiveMatchRepository(clubs)
     private val bots = BotService(users, clubs, athletes, clock)
-    private val clubService = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val clubService = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val events = mutableListOf<ProgressEvent>()
     private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock, progress = { _, e -> events += e })
     private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
@@ -143,14 +143,14 @@ class LiveMatchTest {
 
 class LiveReadinessTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val live = FakeLiveMatchRepository(clubs)
     private val bots = BotService(users, clubs, athletes, clock)
-    private val clubService = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val clubService = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock)
     private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
-    private val readiness = com.arenacity.domain.usecase.live.LiveReadinessUseCase(clubService, athletes, LineupService(athletes, lineups), buildings, clock)
+    private val readiness = com.arenacity.domain.usecase.live.LiveReadinessUseCase(clubService, athletes, LineupService(athletes, lineups), clock)
     private val rest = com.arenacity.domain.usecase.live.RestSquadUseCase(clubService, clubs, athletes, readiness, clock)
     private val u1 = UUID.randomUUID()
 
@@ -171,12 +171,12 @@ class LiveReadinessTest {
 
 class GrowthTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val live = FakeLiveMatchRepository(clubs)
     private val bots = BotService(users, clubs, athletes, clock)
-    private val clubService = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
-    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock, buildings = buildings)
+    private val clubService = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val finish = FinishLiveMatchUseCase(clubService, clubs, athletes, live, clock)
     private val start = StartLiveMatchUseCase(clubService, clubs, athletes, LineupService(athletes, lineups), bots, live, finish, clock)
     private val u1 = UUID.randomUUID()
 
@@ -205,9 +205,9 @@ class GrowthTest {
 
 class ArenaChestTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))   // a Friday
-    private val clubs = FakeClubRepository(); private val buildings = FakeBuildingRepository(); private val athletes = FakeAthleteRepository()
-    private val clubService = ClubService(clubs, buildings, clock)
-    private val create = CreateClubUseCase(clubs, buildings, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository()
+    private val clubService = ClubService(clubs, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val chest = com.arenacity.domain.usecase.live.ArenaChestUseCase(clubService, clubs, clock)
     private val u1 = UUID.randomUUID()
 

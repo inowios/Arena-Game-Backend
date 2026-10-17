@@ -131,15 +131,15 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
     }
 }
 
+/** [pitchLevel]: the club's stadium level (its open spots on the map, rules.MapSpots). */
 data class PublicClub(val club: Club, val squadOverall: Int, val pitchLevel: Int, val sections: List<Sport> = listOf(Sport.FOOTBALL), val sectionOverall: Map<Sport, Int> = emptyMap())
 
-class GetPublicClubUseCase(private val clubs: ClubRepository, private val athletes: AthleteRepository, private val buildings: BuildingRepository, private val sections: com.arenacity.domain.usecase.athlete.SectionService? = null) {
+class GetPublicClubUseCase(private val clubs: ClubRepository, private val athletes: AthleteRepository, private val service: com.arenacity.domain.usecase.club.ClubService, private val sections: com.arenacity.domain.usecase.athlete.SectionService? = null) {
     suspend operator fun invoke(clubId: UUID): PublicClub {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
         val squad = athletes.listByClub(clubId)
-        val bs = buildings.listByClub(clubId)
-        val pitch = bs.firstOrNull { it.type == com.arenacity.domain.rules.BuildingType.PITCH }?.level ?: 1
-        val active = sections?.active(club, squad, bs) ?: listOf(Sport.FOOTBALL)
+        val pitch = service.stadiumOf(clubId)
+        val active = sections?.active(club, squad) ?: listOf(Sport.FOOTBALL)
         fun overallOf(s: Sport) = squad.filter { it.sport == s }.sortedByDescending { it.overall }.take(com.arenacity.domain.rules.Sections.profile(s).startersCount).map { it.overall }.let { if (it.isEmpty()) 0 else it.average().toInt() }
         return PublicClub(club, overallOf(Sport.FOOTBALL), pitch, active, active.associateWith(::overallOf))
     }

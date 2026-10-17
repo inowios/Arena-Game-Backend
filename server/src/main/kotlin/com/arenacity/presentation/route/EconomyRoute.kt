@@ -14,7 +14,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import java.util.UUID
 
 private inline fun <reified E : Enum<E>> parseEnum(v: String, what: String): E = runCatching { enumValueOf<E>(v.uppercase()) }.getOrElse { throw ValidationException("Unknown $what '$v'") }
 
@@ -22,35 +21,26 @@ fun Route.economyRoutes() {
     val daily: ClaimDailyRewardUseCase by inject()
     val pass: SeasonPassUseCases by inject()
     val purchase: VerifyPurchaseUseCase by inject()
-    val ads: AdRewardUseCase by inject()
     val pushTokens: PushTokenRepository by inject()
     val clubService: com.arenacity.domain.usecase.club.ClubService by inject()
     val coinPacks: BuyCoinPackUseCase by inject()
     val achievements: AchievementUseCases by inject()
     val ssv: com.arenacity.core.store.AdMobSsvVerifier by inject()
-    val adsConfig: AdsConfig by inject()
     val log = org.slf4j.LoggerFactory.getLogger("Ads")
 
     get("/catalog/products") { call.respond(Economy.PRODUCTS.values.map { ProductDto(it.id, it.gold, it.coins, it.premiumPass) }.toSuccessResponse()) }
     get("/catalog/coin-packs") { call.respond(Economy.COIN_PACKS.values.map { CoinPackDto(it.id, it.gold, it.coins) }.toSuccessResponse()) }
 
     /**
-     * AdMob rewarded-ad server-side verification callback (configure its URL in the AdMob console). The app sets
-     * user_id = our user id and custom_data = "<PLACEMENT>[:<buildingId>]". Always answers 200 so AdMob stops retrying
-     * requests we can't use; invalid signatures are rejected with 403.
+     * AdMob rewarded-ad server-side verification callback (its URL is set in the AdMob console). No placement grants a
+     * reward any more (the double income and the free speed-up went with the city builder, 17 October 2026): the signature
+     * is still checked (403 when bad) and every valid callback answered 200, so AdMob stops retrying.
      */
     get("/ads/ssv") {
         val raw = call.request.queryString()
         val params = try { ssv.verify(raw) } catch (e: Exception) { log.warn("SSV rejected: ${e.message}"); com.arenacity.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "rejected"); call.respond(io.ktor.http.HttpStatusCode.Forbidden, mapOf("ok" to false)); return@get }
-        val userId = params["user_id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-        val tx = params["transaction_id"]
-        val custom = params["custom_data"].orEmpty()
-        val placement = runCatching { AdPlacement.valueOf(custom.substringBefore(':').uppercase()) }.getOrNull()
-        val buildingId = custom.substringAfter(':', "").takeIf { it.isNotBlank() }?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-        if (userId == null || tx.isNullOrBlank() || placement == null) { log.info("SSV ignored (test or incomplete): user=${params["user_id"]} custom=$custom"); call.respond(mapOf("ok" to true)); return@get }
-        runCatching { ads.grantVerified(userId, placement, buildingId, tx) }
-            .onSuccess { com.arenacity.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "granted") }
-            .onFailure { log.info("SSV reward not applied for $userId/$placement: ${it.message}"); com.arenacity.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "not_applied") }
+        log.info("SSV ignored (no rewarded placements): user=${params["user_id"]} custom=${params["custom_data"].orEmpty()}")
+        com.arenacity.core.metrics.Metrics.inc("ad_rewards_total", "source" to "ssv", "result" to "not_applied")
         call.respond(mapOf("ok" to true))
     }
     authenticate(AUTH_JWT) {
@@ -76,17 +66,7 @@ fun Route.economyRoutes() {
             com.arenacity.core.metrics.Metrics.inc("purchases_total", "store" to store.name, "result" to res.status.lowercase())
             call.respond(PurchaseResponse(res.status, res.gold, res.coins, res.club.toDto()).toSuccessResponse())
         }
-        post("/ads/reward") {
-            if (!adsConfig.clientRewards) throw com.arenacity.domain.exception.AuthorizationException("Ad rewards are confirmed by the ad network")
-            val r = call.receive<AdRewardRequest>()
-            val club = ads(call.userId(), parseEnum<AdPlacement>(r.placement, "placement"), r.buildingId?.let { runCatching { UUID.fromString(it) }.getOrElse { throw ValidationException("Bad buildingId") } })
-            com.arenacity.core.metrics.Metrics.inc("ad_rewards_total", "source" to "client", "result" to "granted")
-            call.respond(club.toDto().toSuccessResponse())
-        }
         post("/push-tokens") { val r = call.receive<PushTokenRequest>(); pushTokens.upsert(call.userId(), r.token, r.platform.lowercase()); call.respond(mapOf("ok" to true).toSuccessResponse()) }
         delete("/push-tokens") { val r = call.receive<PushTokenRequest>(); pushTokens.delete(r.token); call.respond(mapOf("ok" to true).toSuccessResponse()) }
     }
 }
-
-/** [clientRewards]: trust /ads/reward from the app (development builds without AdMob). */
-data class AdsConfig(val clientRewards: Boolean)
