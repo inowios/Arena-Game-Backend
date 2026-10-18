@@ -66,4 +66,30 @@ class MatchdayRunnerTest {
         assertEquals(112 + 112, fixtures.rows.size)
         assertEquals(1, leagues.rows.getValue(league.id).currentRound)
     }
+
+    @Test
+    fun `a human club's heroes play its league match, the academy pupils fill the eleven`() = runBlocking<Unit> {
+        val heroes = FakeHeroRepository()
+        val heroRunner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, heroes = heroes)
+        val club = create(user, "Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv")
+        for (id in com.arenacity.domain.rules.Heroes.START)
+            heroes.insertIgnore(com.arenacity.domain.model.ClubHero(club.id, id, 1, 0, com.arenacity.domain.model.HeroSource.START, clock.now()))
+        val athletesBefore = athletes.rows.values.filter { it.clubId == club.id }.map { it.id }.toSet()
+        assertEquals(4, heroRunner.runDueRounds(Instant.parse("2026-10-09T17:00:00Z")))
+        val mine = fixtures.rows.values.single { it.involves(club.id) && it.round == 1 }
+        val result = com.arenacity.domain.model.MatchdayResult.parse(mine.resultJson!!)
+        val heroIds = com.arenacity.domain.rules.Heroes.START.map { com.arenacity.domain.rules.HeroSquad.idOf(club.id, it).toString() }.toSet()
+        // the six heroes start: they are the best of the squad
+        val football = result.section(com.arenacity.domain.model.Sport.FOOTBALL)!!.result!!
+        val events = football.events.filter { it.team == club.id.toString() }.mapNotNull { it.athleteId }.toSet()
+        assertTrue(events.any { it in heroIds }, "our events name the heroes: $events")
+        // the heroes are not written back as athletes; the pupils' rows are the same as before
+        assertEquals(athletesBefore, athletes.rows.values.filter { it.clubId == club.id }.map { it.id }.toSet())
+        // the match highlights name the heroes
+        val names = LeagueQueries(leagues, fixtures, clubs, athletes, clock, heroes).athleteNames(mine)
+        assertEquals("Kaito Homura", names[com.arenacity.domain.rules.HeroSquad.idOf(club.id, "p001").toString()])
+        // the squad the simulator saw: heroes first by rating, pupils after
+        val squad = com.arenacity.domain.rules.HeroSquad.athletes(club.id, heroes.listByClub(club.id), clock.now())
+        assertEquals(6, squad.size); assertTrue(squad.all { it.overall > 60 }, squad.map { it.overall }.toString())
+    }
 }

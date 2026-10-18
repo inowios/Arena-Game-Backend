@@ -53,7 +53,20 @@ class MatchdayRunner(
     private val sections: SectionService? = null,
     private val seasonCloser: SeasonCloser? = null,
     private val failures: com.arenacity.common.ops.FailureSink = com.arenacity.common.ops.NoFailures,
+    /** The clubs' heroes: a human club's heroes play its matches (rules.HeroSquad); null = athletes only (tests). */
+    private val heroes: com.arenacity.domain.repository.HeroRepository? = null,
 ) {
+    /** A club's match squad: its heroes as athletes (when it has any) with its athletes as the academy pupils. */
+    private suspend fun squadOf(club: Club, now: Instant): Pair<List<Athlete>, Set<UUID>> {
+        val pupils = athletes.listByClub(club.id)
+        val h = heroes ?: return pupils to emptySet()
+        if (club.isBot) return pupils to emptySet()
+        val playing = com.arenacity.domain.rules.HeroSquad.playing(h.listByClub(club.id), h.lineup(club.id))
+        if (playing.isEmpty()) return pupils to emptySet()
+        val heroAthletes = com.arenacity.domain.rules.HeroSquad.athletes(club.id, playing, now)
+        return (heroAthletes + pupils) to heroAthletes.map { it.id }.toSet()
+    }
+
     private val log = LoggerFactory.getLogger("MatchdayRunner")
     private val mutex = Mutex()
 
@@ -120,8 +133,8 @@ class MatchdayRunner(
     suspend fun playFixture(fixture: Fixture, now: Instant): PlayedFixture? {
         val home = clubs.findById(fixture.homeClubId) ?: return null
         val away = clubs.findById(fixture.awayClubId) ?: return null
-        val homeSquad = athletes.listByClub(home.id)
-        val awaySquad = athletes.listByClub(away.id)
+        val (homeSquad, homeHeroes) = squadOf(home, now)
+        val (awaySquad, awayHeroes) = squadOf(away, now)
         val hSec = sections?.active(home, homeSquad) ?: listOf(Sport.FOOTBALL)
         val aSec = sections?.active(away, awaySquad) ?: listOf(Sport.FOOTBALL)
         // friendlies and challenges play the sections both clubs have; league fixtures play every section either club fields
@@ -131,8 +144,8 @@ class MatchdayRunner(
             val profile = Sections.profile(sport)
             val bothPlay = fixture.kind != FixtureKind.LEAGUE || (sport in hSec && sport in aSec)
             if (bothPlay) {
-                val (hl, _) = lineupService.engineLineup(home, now, sport, homeSquad)
-                val (al, _) = lineupService.engineLineup(away, now, sport, awaySquad)
+                val (hl, _) = lineupService.engineLineup(home, now, sport, homeSquad, stored = homeHeroes.isEmpty())
+                val (al, _) = lineupService.engineLineup(away, now, sport, awaySquad, stored = awayHeroes.isEmpty())
                 val seed = fixture.seed xor (sport.ordinal.toLong() * -7046029254386353131L)
                 val r = MatchSimulator.simulate(hl, al, profile, seed)
                 SectionPlay(sport, SectionResult(sport.name, r.score.home, r.score.away, Sections.points(r.score.home, r.score.away), Sections.points(r.score.away, r.score.home), null, r),
@@ -163,28 +176,28 @@ class MatchdayRunner(
                 if (fixture.kind == FixtureKind.LEAGUE) {
                     // stable lock order (by id) so two fixtures touching the same clubs never deadlock
                     val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
-                    applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now)
-                    applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now)
+                    applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now, heroIds = homeHeroes)
+                    applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now, heroIds = awayHeroes)
                     if (!home.isBot) recordProgress(home.id, plays, true, result.homePoints > result.awayPoints)
                     if (!away.isBot) recordProgress(away.id, plays, false, result.awayPoints > result.homePoints)
                 } else if (fixture.kind == FixtureKind.CUP) {
                     // cup ties tire both squads like a friendly; prizes are paid by the cup for the round reached
                     val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
-                    if (!home.isBot) applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now, fixedCoins = 0)
-                    if (!away.isBot) applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now, fixedCoins = 0)
+                    if (!home.isBot) applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now, fixedCoins = 0, heroIds = homeHeroes)
+                    if (!away.isBot) applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now, fixedCoins = 0, heroIds = awayHeroes)
                     val homeWon = com.arenacity.domain.rules.Cups.winner(played, result) == home.id
                     if (!home.isBot) { progress.record(home.id, ProgressEvent.MATCH_PLAYED); if (homeWon) progress.record(home.id, ProgressEvent.MATCH_WON) }
                     if (!away.isBot) { progress.record(away.id, ProgressEvent.MATCH_PLAYED); if (!homeWon) progress.record(away.id, ProgressEvent.MATCH_WON) }
                 } else if (fixture.kind == FixtureKind.CHALLENGE) {
                     // both clubs agreed to a challenge: both get the friendly reward and fatigue
                     val fresh = listOf(home.id, away.id).sorted().associateWith { clubs.lockById(it) ?: error("club $it vanished") }
-                    applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now)
-                    applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now)
+                    applyEffects(fresh.getValue(home.id), homeSquad, plays, true, fixture.kind, now, heroIds = homeHeroes)
+                    applyEffects(fresh.getValue(away.id), awaySquad, plays, false, fixture.kind, now, heroIds = awayHeroes)
                     if (!home.isBot) progress.record(home.id, ProgressEvent.FRIENDLY_PLAYED)
                     if (!away.isBot) progress.record(away.id, ProgressEvent.FRIENDLY_PLAYED)
                 } else {
                     // a friendly only affects the club that asked for it; the opponent's squad is borrowed, not tired
-                    applyEffects(clubs.lockById(home.id) ?: home, homeSquad, plays, true, fixture.kind, now)
+                    applyEffects(clubs.lockById(home.id) ?: home, homeSquad, plays, true, fixture.kind, now, heroIds = homeHeroes)
                     if (!home.isBot) progress.record(home.id, ProgressEvent.FRIENDLY_PLAYED)
                 }
                 true
@@ -199,7 +212,8 @@ class MatchdayRunner(
         progress.record(clubId, ProgressEvent.MATCH_PLAYED)
     }
 
-    private suspend fun applyEffects(club: Club, squad: List<Athlete>, plays: List<SectionPlay>, isHome: Boolean, kind: FixtureKind, now: Instant, fixedCoins: Long? = null) {
+    /** [heroIds]: the club's heroes in [squad] (rules.HeroSquad): they play, but they are not athletes rows to update. */
+    private suspend fun applyEffects(club: Club, squad: List<Athlete>, plays: List<SectionPlay>, isHome: Boolean, kind: FixtureKind, now: Instant, fixedCoins: Long? = null, heroIds: Set<UUID> = emptySet()) {
         val teamId = club.id.toString()
         var coins = 0L; var rep = 0
         val updates = mutableMapOf<UUID, Athlete>()
@@ -231,6 +245,6 @@ class MatchdayRunner(
         if (kind != FixtureKind.LEAGUE) coins = fixedCoins ?: Standings.FRIENDLY_COINS
         val newRep = club.reputation + rep
         clubs.update(club.copy(coins = club.coins + coins, reputation = newRep, level = maxOf(club.level, ClubLevels.levelFor(newRep)), updatedAt = now))
-        updates.values.forEach { athletes.update(it) }
+        updates.values.filter { it.id !in heroIds }.forEach { athletes.update(it) }   // the heroes are not athletes rows
     }
 }

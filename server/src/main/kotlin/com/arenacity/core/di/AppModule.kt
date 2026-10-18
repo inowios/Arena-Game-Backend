@@ -110,7 +110,7 @@ val appModule = module {
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
     }
     single { MatchdayNotifier(get(), get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>(), failures = com.arenacity.core.plugins.SchedulerFailures) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>(), failures = com.arenacity.core.plugins.SchedulerFailures, heroes = get()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
     single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get(), athletes = get()) }
     single<com.arenacity.core.store.HttpGateway> { com.arenacity.core.store.KtorHttpGateway(get()) }
@@ -152,7 +152,7 @@ val appModule = module {
     single { AchievementUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
     single { SpeedUpTrainingUseCase(get(), get(), get(), get(), tx = get()) }
     single { SpeedUpMedicalUseCase(get(), get(), get(), tx = get()) }
-    single { LeagueQueries(get(), get(), get(), get(), get()) }
+    single { LeagueQueries(get(), get(), get(), get(), get(), heroes = get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
     single { JoinPrivateLeagueUseCase(get(), get(), tx = get(), invites = get(), chat = get()) }
     single { LeavePrivateLeagueUseCase(get(), get(), tx = get(), chat = get()) }

@@ -117,14 +117,15 @@ class JoinPublicLeagueInitializer(private val clubs: ClubRepository, private val
 
 /** The lineup that plays for a club in one section: stored (with injured starters auto-replaced) or default. */
 class LineupService(private val athletes: AthleteRepository, private val lineups: LineupRepository) {
-    suspend fun lineup(club: Club, sport: Sport, now: Instant, squad: List<Athlete>? = null): Lineup {
+    /** [stored] false: the best lineup of [squad], whatever the club saved (a hero squad: rules.HeroSquad). */
+    suspend fun lineup(club: Club, sport: Sport, now: Instant, squad: List<Athlete>? = null, stored: Boolean = true): Lineup {
         val list = squad ?: athletes.listByClub(club.id)
-        return LineupRules.effective(club.id, sport, lineups.find(club.id, sport), list, now)
+        return LineupRules.effective(club.id, sport, if (stored) lineups.find(club.id, sport) else null, list, now)
     }
 
-    suspend fun engineLineup(club: Club, now: Instant, sport: Sport = Sport.FOOTBALL, squad: List<Athlete>? = null): Pair<com.arenacity.engine.model.Lineup, List<Athlete>> {
+    suspend fun engineLineup(club: Club, now: Instant, sport: Sport = Sport.FOOTBALL, squad: List<Athlete>? = null, stored: Boolean = true): Pair<com.arenacity.engine.model.Lineup, List<Athlete>> {
         val list = squad ?: athletes.listByClub(club.id)
-        val lineup = lineup(club, sport, now, list)
+        val lineup = lineup(club, sport, now, list, stored)
         return EngineBridge.toEngineLineup(club.id.toString(), lineup, list, now).copy(tactics = lineup.tactics) to list
     }
 }

@@ -23,7 +23,8 @@ data class LeagueView(val league: League, val table: List<StandingRow>, val club
 data class FixturesView(val fixtures: List<Fixture>, val clubs: Map<UUID, Club>)
 data class MatchView(val fixture: Fixture, val result: MatchdayResult?, val clubs: Map<UUID, Club>, val athleteNames: Map<String, String> = emptyMap())
 
-class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock) {
+class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock,
+                    private val heroes: com.arenacity.domain.repository.HeroRepository? = null) {
     suspend fun view(leagueId: UUID): LeagueView = view(leagues.findById(leagueId) ?: throw NotFoundException("League not found"))
 
     suspend fun view(league: League): LeagueView {
@@ -60,8 +61,12 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
         return MatchView(f, result, clubsOf(listOf(f)), athleteNames(f))
     }
 
-    suspend fun athleteNames(f: Fixture): Map<String, String> =
-        athletes.namesByClubs(listOf(f.homeClubId, f.awayClubId)).mapKeys { it.key.toString() }
+    /** The scorers' names: the clubs' athletes and their heroes under their match ids (rules.HeroSquad). */
+    suspend fun athleteNames(f: Fixture): Map<String, String> {
+        val ids = listOf(f.homeClubId, f.awayClubId)
+        val heroNames = heroes?.let { h -> ids.flatMap { c -> com.arenacity.domain.rules.HeroSquad.names(c, h.listByClub(c)).entries } }.orEmpty()
+        return (athletes.namesByClubs(ids) + heroNames.associate { it.key to it.value }).mapKeys { it.key.toString() }
+    }
 
     private suspend fun clubsOf(list: List<Fixture>) = clubs.findByIds(list.flatMap { listOf(it.homeClubId, it.awayClubId) }.toSet()).associateBy { it.id }
 }
