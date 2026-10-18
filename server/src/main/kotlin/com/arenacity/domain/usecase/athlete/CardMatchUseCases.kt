@@ -15,18 +15,28 @@ import com.arenacity.domain.usecase.club.ClubService
 import java.util.UUID
 import kotlin.random.Random
 
-/** What the device reports after a card match «Три зони» against the AI: the result and the experience per card. */
-data class CardMatchReport(val seed: Int, val won: Boolean, val draw: Boolean, val goalsFor: Int, val goalsAgainst: Int, val cards: Map<UUID, Int>, val stake: Int = 1, val conceded: Boolean = false)
+/**
+ * What the device reports after a card match «Три зони» against the AI: the result and the experience per card;
+ * [heroes] = the ids of the club's heroes who played (rules.HeroCatalog), who earn rules.Heroes.matchXp each;
+ * [story] = the chapter when this was the story match of «Іскра» (rules.Story), null for any other match.
+ */
+data class CardMatchReport(val seed: Int, val won: Boolean, val draw: Boolean, val goalsFor: Int, val goalsAgainst: Int, val cards: Map<UUID, Int>, val stake: Int = 1, val conceded: Boolean = false,
+                           val heroes: List<String> = emptyList(), val story: Int? = null)
 /** A real club to play against: the club and its football players (the device builds the deck the same way as its own). */
 data class CardOpponent(val club: Club, val athletes: List<Athlete>)
-data class CardMatchOutcome(val coins: Long, val club: Club, val athletes: List<Athlete>)
+/** [heroes] = the heroes who played as they are now, [heroXp] = what each was offered (the daily cap may have cut it), [story] = the story's current chapter after the match. */
+data class CardMatchOutcome(val coins: Long, val club: Club, val athletes: List<Athlete>, val heroes: List<com.arenacity.domain.usecase.hero.HeroView> = emptyList(), val heroXp: Int = 0,
+                            val story: com.arenacity.domain.usecase.story.StoryUpdate? = null)
 
 /**
  * The card match's rewards. For now the server trusts the device's report within plausible bounds (at most
  * [MAX_CARDS] cards, at most [MAX_XP_PER_CARD] experience each, coins by the result); the engine is deterministic
- * by seed, so a replay check can replace the trust once the engine is ported.
+ * by seed, so a replay check can replace the trust once the engine is ported. Heroes who played ([CardMatchReport.heroes],
+ * at most rules.Heroes.MAX_HEROES_PER_MATCH) get the experience the server sets by the result, capped per hero a day;
+ * the match then counts for the club's chapter of the story «Іскра» (usecase.story.StoryUseCases.record).
  */
-class CardMatchUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+class CardMatchUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val tx: Tx = NoTx,
+                        private val heroes: com.arenacity.domain.usecase.hero.HeroUseCases? = null, private val stories: com.arenacity.domain.usecase.story.StoryUseCases? = null) {
     companion object {
         const val MAX_CARDS = 18
         const val MAX_XP_PER_CARD = 30
@@ -56,6 +66,7 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
 
     suspend fun report(userId: UUID, r: CardMatchReport): CardMatchOutcome = tx {
         if (r.cards.size > MAX_CARDS) throw ValidationException("Too many cards")
+        if (r.heroes.distinct().size > com.arenacity.domain.rules.Heroes.MAX_HEROES_PER_MATCH) throw ValidationException("Too many heroes")
         if (r.goalsFor !in 0..20 || r.goalsAgainst !in 0..20) throw ValidationException("Bad score")
         val st = service.state(userId)
         val club = service.lockedClubOf(userId)
@@ -67,6 +78,10 @@ class CardMatchUseCases(private val service: ClubService, private val clubs: Clu
         if (r.stake !in listOf(1, 2, 4)) throw ValidationException("Bad stake")
         val coins = coins(r.won, r.draw, r.stake, r.conceded)
         val saved = clubs.update(club.copy(coins = club.coins + coins, updatedAt = now))
-        CardMatchOutcome(coins, saved, grown)
+        val heroXp = com.arenacity.domain.rules.Heroes.matchXp(r.won, r.draw, r.conceded)
+        val played = heroes?.grantMatchXp(saved, r.heroes, heroXp).orEmpty()
+        // the story «Іскра» counts the match for the club's current chapter (the heroes: only its own who played)
+        val story = stories?.record(saved, com.arenacity.domain.rules.StoryMatch(r.won, r.draw, r.goalsFor, r.goalsAgainst, played.map { it.spec.id }.toSet(), r.story, r.conceded))
+        CardMatchOutcome(coins, saved, grown, played, heroXp, story)
     }
 }

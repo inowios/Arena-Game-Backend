@@ -15,6 +15,9 @@ data class PackSpec(val kind: CardKind, val coins: Long, val gold: Int, val chan
  * Card packs (plan §3b): a pack is a kind plus public chances; three cards an opening. An epic is guaranteed within
  * [EPIC_PITY] cards, a legend within [LEGEND_PITY]; the basic pack is free once a day. Packs open kinds the club level
  * has opened, so money speeds up and offers choice but cannot buy a kind the club has not grown into.
+ *
+ * DEPRECATED (16 October 2026): heroes replace cards and packs (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo;
+ * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged: the client dropped packs on 17 October 2026, but an older app version in production may still call them.
  */
 object Packs {
     const val CARDS_PER_PACK = 3

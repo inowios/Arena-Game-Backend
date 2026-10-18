@@ -28,7 +28,12 @@ data class PackResult(val open: PackOpen, val athletes: List<Athlete>, val club:
 /** The day's pack offer as a club sees it: whether its level has opened the pack and whether it was bought today. */
 data class DailyOfferView(val offer: DailyOffer, val open: Boolean, val bought: Boolean)
 
-/** The pack shop: what is on the shelf and the opening itself (plan §3b). */
+/**
+ * The pack shop: what is on the shelf and the opening itself (plan §3b).
+ *
+ * DEPRECATED (16 October 2026): heroes replace cards and packs (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo;
+ * the server side: rules.Heroes, usecase.hero.HeroUseCases). Kept, unchanged: the client dropped packs on 17 October 2026, but an older app version in production may still call them.
+ */
 class PackUseCases(private val service: ClubService, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val packs: PackRepository,
                    private val clock: Clock, private val tx: Tx = NoTx) {
     private fun today(club: Club) = clock.now().atZone(ZoneId.of(club.timezone)).toLocalDate()

@@ -43,6 +43,7 @@ fun Route.athleteRoutes() {
                 val s = list(call.userId()); val now = clock.now()
                 call.respond(SquadResponse(s.athletes.map { it.toDto(now) }, s.trainings.map { it.toDto(now) }, s.slots, now.toString()).toSuccessResponse())
             }
+            // deprecated (heroes instead of cards): the client dropped packs and the day's offer on 17 October 2026; kept for older app versions
             get("/packs") { call.respond(packs.shelf(call.userId()).toDto().toSuccessResponse()) }
             post("/packs/{kind}/open") {
                 val kind = parseEnum<com.arenacity.domain.model.CardKind>(call.parameters["kind"] ?: "", "pack")
@@ -64,9 +65,9 @@ fun Route.athleteRoutes() {
             post("/cards/result") {
                 val r = call.receive<CardMatchResultRequest>()
                 val cards = r.cards.associate { (runCatching { UUID.fromString(it.id) }.getOrElse { throw ValidationException("Bad athlete id") }) to it.xp }
-                val o = cardMatch.report(call.userId(), com.arenacity.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards, r.stake, r.conceded))
+                val o = cardMatch.report(call.userId(), com.arenacity.domain.usecase.athlete.CardMatchReport(r.seed, r.won, r.draw, r.goalsFor, r.goalsAgainst, cards, r.stake, r.conceded, r.heroes, r.story))
                 val now = clock.now()
-                call.respond(CardMatchResultResponse(o.coins, o.club.toDto(), o.athletes.map { it.toDto(now) }).toSuccessResponse())
+                call.respond(CardMatchResultResponse(o.coins, o.club.toDto(), o.athletes.map { it.toDto(now) }, o.heroes.map { it.toDto() }, o.heroXp, o.story?.toDto()).toSuccessResponse())
             }
             post("/academy/claim") {
                 val sport = runCatching { call.receive<AcademyClaimRequest>() }.getOrNull()?.sport?.let { parseEnum<Sport>(it, "sport") } ?: Sport.FOOTBALL
