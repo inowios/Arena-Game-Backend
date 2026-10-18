@@ -164,7 +164,6 @@ val appModule = module {
     single {
         com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get())
     }
-    single { com.arenacity.domain.usecase.social.ShowcaseService(get(), get(), get(), get(), get()) }
     single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
     single { com.arenacity.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }

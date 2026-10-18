@@ -79,26 +79,16 @@ class ApiIT {
     }
 
     @Test
-    fun `showcase friends and the islands over HTTP`() = testApplication {
+    fun `no friends yet, the islands over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-friends", "Friends FC")
-        val friends = call(HttpMethod.Get, "/friends", t).data.jsonArray.map { it.o() }
-        assertEquals(listOf(5, 10), friends.map { it["stadium"]!!.jsonPrimitive.int })
-        val (mid, top) = friends.map { it["club"]!!.o()["id"]!!.jsonPrimitive.content }
-        // the top showcase has every spot open, every people's island with it
-        val g = call(HttpMethod.Get, "/clubs/$top/grounds", t).data.o()
-        assertEquals(10, g["stadium"]!!.jsonPrimitive.int)
-        assertEquals(listOf("stadium", "academy", "hospital", "mall", "lighthouse", "marina", "android_stadium", "stone_arena", "beast_dome", "shadow_ruins"), g["spots"]!!.strings())
-        assertEquals(listOf("main", "beast", "stone", "android", "shadow"), g["land"]!!.o()["regions"]!!.strings())
-        assertEquals(listOf("BEAST", "STONE", "ANDROID", "SHADOW"), g["land"]!!.o()["peoples"]!!.strings())
-        assertTrue(g["land"]!!.o()["locked"]!!.jsonArray.isEmpty()); assertEquals(JsonNull, g["land"]!!.o()["maskId"])
+        assertTrue(call(HttpMethod.Get, "/friends", t).data.jsonArray.isEmpty())   // the showcase bots are gone (V55)
+        // a club's grounds: its open spots and islands
+        val own = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
+        val g = call(HttpMethod.Get, "/clubs/$own/grounds", t).data.o()
+        assertEquals(1, g["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), g["spots"]!!.strings())
         assertTrue("buildings" !in g)
-        // the stadium-5 one: the academy, the hospital and the mall, the beastfolk's island
-        val m = call(HttpMethod.Get, "/clubs/$mid/grounds", t).data.o()
-        assertEquals(5, m["stadium"]!!.jsonPrimitive.int)
-        assertEquals(listOf("stadium", "academy", "hospital", "mall", "beast_dome"), m["spots"]!!.strings())
-        assertEquals(listOf("main", "beast"), m["land"]!!.o()["regions"]!!.strings())
         // GET /club sends the islands: the main one open, every people's island locked with its stadium
         val land = call(HttpMethod.Get, "/club", t).data.o()["land"]!!.o()
         assertEquals(listOf("main"), land["regions"]!!.strings())
