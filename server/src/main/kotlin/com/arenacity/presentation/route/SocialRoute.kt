@@ -79,7 +79,7 @@ fun Route.socialRoutes() {
             val ids = r.fixtures.flatMap { listOf(it.homeClubId, it.awayClubId) }.toSet()
             call.respond(r.toDto(clubs.findByIds(ids).associateBy { it.id }).toSuccessResponse())
         }
-        get("/friends") { call.respond(friends().map { it.toDto() }.toSuccessResponse()) }
+        get("/friends") { call.respond(friends(call.userId()).map { it.toDto() }.toSuccessResponse()) }
         get("/clubs/{id}/grounds") { call.respond(grounds(call.id("id")).toDto().toSuccessResponse()) }
         get("/clubs/{id}/museum") { call.respond(museum.of(call.id("id")).toDto().toSuccessResponse()) }
 

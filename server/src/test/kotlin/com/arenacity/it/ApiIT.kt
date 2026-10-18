@@ -83,7 +83,7 @@ class ApiIT {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-friends", "Friends FC")
-        assertTrue(call(HttpMethod.Get, "/friends", t).data.jsonArray.isEmpty())   // the showcase bots are gone (V55)
+        assertTrue(call(HttpMethod.Get, "/friends", t).data.jsonArray.isEmpty())   // no bots, no friends yet (V55)
         // a club's grounds: its open spots and islands
         val own = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
         val g = call(HttpMethod.Get, "/clubs/$own/grounds", t).data.o()
@@ -169,6 +169,10 @@ class ApiIT {
         call(HttpMethod.Post, "/challenges/$cc/accept", b, expect = 409)
         val clubA = call(HttpMethod.Get, "/club", a).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
         assertEquals(1, call(HttpMethod.Get, "/clubs/$clubA/h2h", b).data.o()["fixtures"]!!.jsonArray.size)
+        // a private league mate and a challenge opponent is a friend, listed once (19 Oct 2026)
+        val friendsOfB = call(HttpMethod.Get, "/friends", b).data.jsonArray
+        assertEquals(listOf("Alpha FC"), friendsOfB.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
+        assertEquals(listOf("Bravo FC"), call(HttpMethod.Get, "/friends", a).data.jsonArray.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
         val grounds = call(HttpMethod.Get, "/clubs/$clubA/grounds", b).data.o()
         assertEquals(1, grounds["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), grounds["spots"]!!.strings())
         val landing = client.get("/l/$code") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }
