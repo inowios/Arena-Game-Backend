@@ -144,8 +144,8 @@ class MatchdayRunner(
             val profile = Sections.profile(sport)
             val bothPlay = fixture.kind != FixtureKind.LEAGUE || (sport in hSec && sport in aSec)
             if (bothPlay) {
-                val (hl, _) = lineupService.engineLineup(home, now, sport, homeSquad, stored = homeHeroes.isEmpty())
-                val (al, _) = lineupService.engineLineup(away, now, sport, awaySquad, stored = awayHeroes.isEmpty())
+                val (hl, _) = lineupService.engineLineup(home, now, sport, homeSquad, stored = homeHeroes.isEmpty(), first = homeHeroes)
+                val (al, _) = lineupService.engineLineup(away, now, sport, awaySquad, stored = awayHeroes.isEmpty(), first = awayHeroes)
                 val seed = fixture.seed xor (sport.ordinal.toLong() * -7046029254386353131L)
                 val r = MatchSimulator.simulate(hl, al, profile, seed)
                 SectionPlay(sport, SectionResult(sport.name, r.score.home, r.score.away, Sections.points(r.score.home, r.score.away), Sections.points(r.score.away, r.score.home), null, r),

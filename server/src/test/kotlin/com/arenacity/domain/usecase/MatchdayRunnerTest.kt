@@ -90,6 +90,6 @@ class MatchdayRunnerTest {
         assertEquals("Kaito Homura", names[com.arenacity.domain.rules.HeroSquad.idOf(club.id, "p001").toString()])
         // the squad the simulator saw: heroes first by rating, pupils after
         val squad = com.arenacity.domain.rules.HeroSquad.athletes(club.id, heroes.listByClub(club.id), clock.now())
-        assertEquals(6, squad.size); assertTrue(squad.all { it.overall > 60 }, squad.map { it.overall }.toString())
+        assertEquals(6, squad.size); assertTrue(squad.all { it.overall in 45..75 }, squad.map { it.overall }.toString())
     }
 }

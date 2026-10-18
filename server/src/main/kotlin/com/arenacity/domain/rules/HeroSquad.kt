@@ -18,12 +18,16 @@ import java.util.UUID
  * academy pupils (its athletes), as the hero lineup's empty places are. The match never writes these athletes back.
  */
 object HeroSquad {
-    /** The base attribute of a hero by rarity: above an academy pupil of the same stage, so the heroes play. */
+    /**
+     * The base attribute of a hero by rarity: a little above the first division's athletes (their average is ~48), so a
+     * hero team is better than the bots without crushing them; the level adds up to +10 %. The heroes always start
+     * before the pupils whatever their ratings (the lineup's priority, LineupRules.defaultFor).
+     */
     fun base(group: HeroGroup): Int = when (group) {
-        HeroGroup.COMMON -> 70
-        HeroGroup.GOOD -> 74
-        HeroGroup.STAR -> 78
-        HeroGroup.LEGEND -> 82
+        HeroGroup.COMMON -> 53
+        HeroGroup.GOOD -> 56
+        HeroGroup.STAR -> 59
+        HeroGroup.LEGEND -> 62
     }
 
     /** The athlete id a hero plays under in [clubId]'s matches (its name in the match highlights comes from [names]). */

@@ -46,9 +46,10 @@ object LineupRules {
      * Best available lineup: fit athletes first (injured only when nobody else is left), required roles filled first,
      * then by overall; basketball keeps a guard/forward/centre balance when possible. Bench = next best.
      */
-    fun defaultFor(clubId: UUID, sport: Sport, squad: List<Athlete>, now: Instant): Lineup {
+    /** [first]: athletes that start before any other whatever their ratings (a club's heroes, rules.HeroSquad). */
+    fun defaultFor(clubId: UUID, sport: Sport, squad: List<Athlete>, now: Instant, first: Set<UUID> = emptySet()): Lineup {
         val profile = Sections.profile(sport)
-        val pool = squad.filter { it.sport == sport }.sortedWith(compareBy<Athlete> { it.isInjured(now) }.thenByDescending { it.toEngine(now).effective })
+        val pool = squad.filter { it.sport == sport }.sortedWith(compareBy<Athlete> { it.isInjured(now) }.thenBy { it.id !in first }.thenByDescending { it.toEngine(now).effective })
         val picked = mutableListOf<Athlete>()
         for ((pos, range) in profile.requiredRoles) pool.filter { it.position == pos && it !in picked }.take(range.first).forEach { picked += it }
         if (sport == Sport.BASKETBALL) for (pos in listOf(Position.C, Position.G, Position.G, Position.F, Position.F)) {
@@ -71,8 +72,8 @@ object LineupRules {
      * The lineup that actually plays: the stored one, with injured starters replaced by the best fit bench/squad player
      * of the same role (spec §4 "травмирован — автозамена"), or the default when the stored one no longer validates.
      */
-    fun effective(clubId: UUID, sport: Sport, stored: Lineup?, squad: List<Athlete>, now: Instant): Lineup {
-        val valid = stored?.takeIf { runCatching { validate(sport, it.starters, it.bench, squad) }.isSuccess } ?: return defaultFor(clubId, sport, squad, now)
+    fun effective(clubId: UUID, sport: Sport, stored: Lineup?, squad: List<Athlete>, now: Instant, first: Set<UUID> = emptySet()): Lineup {
+        val valid = stored?.takeIf { runCatching { validate(sport, it.starters, it.bench, squad) }.isSuccess } ?: return defaultFor(clubId, sport, squad, now, first)
         val byId = squad.associateBy { it.id }
         val required = Sections.profile(sport).requiredRoles.keys
         val used = valid.starters.toMutableSet()
