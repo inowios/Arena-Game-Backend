@@ -70,10 +70,10 @@ object EventCalendar {
             if (d.monthValue == 10 && d.dayOfMonth == 24)
                 out += GameEvent("halloween-${d.year}", "halloween", day(d), day(d.plusDays(10)), obstacleGoldPct = 200,
                     goal = ProgressEvent.GOAL_SCORED, goalTarget = 15,
-                    rewardGold = 30, rewardItem = "decor_pumpkins")
+                    rewardGold = 60)
             if (d.monthValue == 12 && d.dayOfMonth == 24)
                 out += GameEvent("newyear-${d.year}", "new_year", day(d), day(d.plusDays(15)), incomePct = 125,
-                    goal = ProgressEvent.LIVE_WON, goalTarget = 10, rewardGold = 50, rewardItem = "decor_snow_tree")
+                    goal = ProgressEvent.LIVE_WON, goalTarget = 10, rewardGold = 100)
             d = d.plusDays(1)
         }
         return out.filter { it.endsAt.isAfter(from) && it.startsAt.isBefore(to) }

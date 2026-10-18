@@ -50,20 +50,22 @@ class ProgressRoadsTest {
     }
 
     @Test
-    fun `road items go to the inventory, a second copy turns into gold, a pack brings a player`() = runBlocking<Unit> {
-        newClub(trophies = 600)
-        val r = roads.claim(user, Road.TROPHY, 4)
-        assertEquals("decor_led_pole", r.item)
-        assertTrue("decor_led_pole" in cosmetics.owned(club().id))
-        val pack = roads.claim(user, Road.TROPHY, 6)
-        assertNotNull(pack.athlete)
-        assertEquals(1, athletes.listByClub(club().id).size)
-        // the level road: decor_bench at level 3; owned already -> gold instead
-        clubs.update(club().copy(level = 3))
-        cosmetics.grant(club().id, Cosmetics.find("decor_bench")!!, CosmeticSource.SHOP)
+    fun `road items go to the inventory, a second copy turns into gold, no step gives a player or a decoration`() = runBlocking<Unit> {
+        newClub(trophies = 2_300)
+        val r = roads.claim(user, Road.TROPHY, 13)   // 2 200: a kit
+        assertEquals("kit_halves", r.item)
+        assertTrue("kit_halves" in cosmetics.owned(club().id))
+        val g0 = club().gold
+        val step6 = roads.claim(user, Road.TROPHY, 6)   // 500: gold, not a pack
+        assertNull(step6.athlete); assertEquals(g0 + 30, club().gold)
+        assertTrue(athletes.listByClub(club().id).isEmpty())
+        assertTrue((Roads.TROPHY + Roads.LEVEL).none { it.reward.pack || it.reward.item?.startsWith("decor_") == true })
+        // the level road's last step: frame_gold; owned already -> gold instead
+        clubs.update(club().copy(level = 10))
+        cosmetics.grant(club().id, Cosmetics.find("frame_gold")!!, CosmeticSource.SHOP)
         val g = club().gold
-        val lv = roads.claim(user, Road.LEVEL, 2)
-        assertNull(lv.item); assertEquals(g + Cosmetics.DUPLICATE_GOLD, club().gold)
+        val lv = roads.claim(user, Road.LEVEL, 9)
+        assertNull(lv.item); assertEquals(g + 150 + Cosmetics.DUPLICATE_GOLD, club().gold)
     }
 
     @Test
@@ -71,9 +73,10 @@ class ProgressRoadsTest {
         newClub()
         val (sets0, pct0) = collections.list(user)
         assertEquals(0, pct0); assertTrue(sets0.none { it.complete })
-        for (id in Collections.ALL.first { it.id == "park" }.items) cosmetics.grant(club().id, Cosmetics.find(id)!!, CosmeticSource.SHOP)
+        for (id in Collections.ALL.first { it.id == "frames" }.items) cosmetics.grant(club().id, Cosmetics.find(id)!!, CosmeticSource.SHOP)
         val (sets, pct) = collections.list(user)
-        assertEquals(4, pct); assertTrue(sets.single { it.complete }.set.id == "park")
+        assertEquals(2, pct); assertTrue(sets.single { it.complete }.set.id == "frames")
+        assertTrue(Collections.ALL.none { s -> s.items.any { it.startsWith("decor_") } })   // no town decorations
     }
 
     @Test
@@ -90,12 +93,12 @@ class ProgressRoadsTest {
 
 class SeasonThemesTest {
     @Test
-    fun `each time of year has its theme and its own decoration`() {
+    fun `each time of year has its theme, no decoration any more`() {
         assertEquals("autumn", SeasonThemes.of(java.time.LocalDate.of(2026, 10, 10)).id)
         assertEquals("winter", SeasonThemes.of(java.time.LocalDate.of(2027, 1, 3)).id)
         assertEquals("spring", SeasonThemes.of(java.time.LocalDate.of(2027, 4, 1)).id)
         assertEquals("summer", SeasonThemes.of(java.time.LocalDate.of(2027, 7, 1)).id)
-        for (t in SeasonThemes.ALL) assertEquals("theme:${t.id}", Cosmetics.find(t.item)?.unlock)
+        for (t in SeasonThemes.ALL) assertEquals("", t.item)
         // road cosmetics exist for every road item
         for (s in Roads.TROPHY + Roads.LEVEL) s.reward.item?.let { assertNotNull(Cosmetics.find(it), it) }
     }

@@ -116,7 +116,8 @@ class MonetizationTest {
         economyRepo.upsertPass(economyRepo.passes.getValue(key).copy(premium = true, xp = Economy.PASS_LEVELS * Economy.XP_PER_LEVEL))
         val squadBefore = athletes.rows.size
         val r = pass.claimLevels(user)
-        assertTrue(r.items.containsAll(listOf("frame_gold", "decor_statue", "kit_pinstripe", "cel_dance", "decor_banner")), r.items.toString())
+        assertTrue(r.items.containsAll(listOf("frame_gold", "kit_gold_trim", "kit_pinstripe", "cel_dance", "frame_flame")), r.items.toString())
+        assertTrue(r.items.none { it.startsWith("decor_") })
         val elite = assertNotNull(r.elite)
         assertEquals(Rarity.ELITE, elite.rarity); assertEquals(Sport.FOOTBALL, elite.sport); assertTrue(elite.overall >= 60, "overall ${elite.overall}")
         assertEquals(squadBefore + 1, athletes.rows.size)
