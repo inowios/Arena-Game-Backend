@@ -76,6 +76,7 @@ class ClubService(private val clubs: ClubRepository, private val clock: Clock, p
 }
 
 class CreateClubUseCase(private val clubs: ClubRepository, private val clock: Clock, private val initializers: List<ClubInitializer>, private val tx: Tx = NoTx) {
+    companion object { const val DEFAULT_EMBLEM = """{"crest":1}""" }
     private val hex = Regex("^#[0-9A-Fa-f]{6}$")
 
     suspend operator fun invoke(userId: UUID, name: String, primaryColor: String, secondaryColor: String, timezone: String): Club {
@@ -86,7 +87,8 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val clock: Cl
             if (clubs.findByUserId(userId) != null) throw ConflictException("Club already exists")
             val now = clock.now()
             // the stadium is open from the start (rules.MapSpots): nothing to store for it
-            val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), null, 1, 0, 2_500, 50, timezone, now, null, now, now))
+            // every club starts with crest 1 of the 15 painted ones and picks another in its profile (emblemJson {"crest": N})
+            val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), DEFAULT_EMBLEM, 1, 0, 2_500, 50, timezone, now, null, now, now))
             initializers.forEach { it.onClubCreated(club) }
             club
         }
