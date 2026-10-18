@@ -255,13 +255,13 @@ class ApiIT {
         val roster = call(HttpMethod.Get, "/club/heroes", t).data.o()
         val list = roster["heroes"]!!.jsonArray.map { it.o() }
         assertEquals(51, list.size); assertEquals(6, roster["owned"]!!.jsonPrimitive.int); assertEquals(1, roster["stadium"]!!.jsonPrimitive.int)
-        assertEquals(setOf("p001", "p003", "p007", "p009", "p010", "p011"), list.filter { it["owned"]!!.jsonPrimitive.boolean }.map { it["id"]!!.jsonPrimitive.content }.toSet())
+        assertEquals(setOf("p001", "p003", "p007", "p009", "p004", "p011"), list.filter { it["owned"]!!.jsonPrimitive.boolean }.map { it["id"]!!.jsonPrimitive.content }.toSet())
         val kai = list.first { it["id"]!!.jsonPrimitive.content == "p001" }
         assertEquals("START", kai["source"]!!.jsonPrimitive.content); assertEquals(1, kai["level"]!!.jsonPrimitive.int); assertEquals(100, kai["xpToNext"]!!.jsonPrimitive.int)
         assertEquals(3, kai["skills"]!!.jsonArray.size); assertEquals(0, kai["unlockedSkills"]!!.jsonArray.size); assertEquals(4, kai["nextSkillLevel"]!!.jsonPrimitive.int)
-        val mirai = list.first { it["id"]!!.jsonPrimitive.content == "p004" }
-        assertEquals("STORY", mirai["unlock"]!!.o()["kind"]!!.jsonPrimitive.content); assertEquals(2, mirai["unlock"]!!.o()["chapter"]!!.jsonPrimitive.int)
-        assertEquals(900, mirai["unlock"]!!.o()["price"]!!.jsonPrimitive.int); assertEquals(false, mirai["canBuy"]!!.jsonPrimitive.boolean)
+        val shizuku = list.first { it["id"]!!.jsonPrimitive.content == "p010" }
+        assertEquals("STORY", shizuku["unlock"]!!.o()["kind"]!!.jsonPrimitive.content); assertEquals(2, shizuku["unlock"]!!.o()["chapter"]!!.jsonPrimitive.int)
+        assertEquals(300, shizuku["unlock"]!!.o()["price"]!!.jsonPrimitive.int); assertEquals(false, shizuku["canBuy"]!!.jsonPrimitive.boolean)
         val beast = list.first { it["id"]!!.jsonPrimitive.content == "p012" }
         assertEquals("BEAST", beast["folk"]!!.jsonPrimitive.content); assertEquals(4, beast["unlock"]!!.o()["stadium"]!!.jsonPrimitive.int)
         assertEquals(false, beast["available"]!!.jsonPrimitive.boolean)
@@ -275,7 +275,7 @@ class ApiIT {
         call(HttpMethod.Post, "/club/heroes/p999/unlock", t, expect = 404)
         assertEquals(7, call(HttpMethod.Get, "/club/heroes", t).data.o()["owned"]!!.jsonPrimitive.int)
         // a card match result: the heroes who played earn by the result
-        val result = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p004"]}""").data.o()
+        val result = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p010"]}""").data.o()
         assertEquals(50, result["heroXp"]!!.jsonPrimitive.int)
         assertEquals(listOf("p001", "p006"), result["heroes"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
         assertEquals(50, result["heroes"]!!.jsonArray[0].o()["xp"]!!.jsonPrimitive.int)
@@ -284,10 +284,10 @@ class ApiIT {
         // the «Склад» lineup: none saved, then saved and validated
         val none = call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()
         assertEquals(false, none["saved"]!!.jsonPrimitive.boolean); assertEquals(0, none["field"]!!.jsonArray.size); assertEquals(5, none["maxField"]!!.jsonPrimitive.int)
-        val saved = call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p001","p003","p007","p009","p010"],"keeper":"p011","bench":["p006"]}""").data.o()
+        val saved = call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p001","p003","p007","p009","p004"],"keeper":"p011","bench":["p006"]}""").data.o()
         assertEquals(true, saved["saved"]!!.jsonPrimitive.boolean); assertEquals("p011", saved["keeper"]!!.jsonPrimitive.content)
         assertEquals(listOf("p006"), call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()["bench"]!!.jsonArray.map { it.jsonPrimitive.content })
-        call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p004"],"keeper":"p011"}""", expect = 400)   // not owned
+        call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p010"],"keeper":"p011"}""", expect = 400)   // not owned
         call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p003"],"keeper":"p001"}""", expect = 400)   // not a goalkeeper
         call(HttpMethod.Put, "/club/heroes/lineup", t, """{"field":["p001"],"bench":["p001"]}""", expect = 400)   // twice
         // training: at the stadium's level (stadium 1 from the start) for coins, the experience after the timer
@@ -320,7 +320,7 @@ class ApiIT {
         assertEquals(listOf("ACTIVE", "LOCKED", "LOCKED", "LOCKED", "LOCKED", "LOCKED"), chapters.map { it["state"]!!.jsonPrimitive.content })
         assertEquals("story.c1.intro", chapters[0]["introKey"]!!.jsonPrimitive.content)
         assertEquals("p002", chapters[5]["rival"]!!.o()["star"]!!.jsonPrimitive.content)
-        assertEquals("p004", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
+        assertEquals("p010", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
         // a match with Kai and Itsuki, 3 goals; then the chapter's story match
         val r1 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":1,"won":true,"goalsFor":3,"goalsAgainst":1,"heroes":["p001","p003"]}""").data.o()
@@ -342,10 +342,10 @@ class ApiIT {
             it.createStatement().executeUpdate("UPDATE club_story SET progress = 'c2.o1=2,c2.o2=5,c2.o3=1' WHERE club_id = (SELECT id FROM clubs WHERE name = 'Story FC')")
         }
         val c2 = call(HttpMethod.Post, "/club/story/2/claim", t).data.o()
-        assertEquals("p004", c2["hero"]!!.o()["id"]!!.jsonPrimitive.content); assertEquals(true, c2["newHero"]!!.jsonPrimitive.boolean)
+        assertEquals("p010", c2["hero"]!!.o()["id"]!!.jsonPrimitive.content); assertEquals(true, c2["newHero"]!!.jsonPrimitive.boolean)
         assertEquals("STORY", c2["hero"]!!.o()["source"]!!.jsonPrimitive.content)
         assertEquals(3, call(HttpMethod.Get, "/club/story", t).data.o()["chapter"]!!.jsonPrimitive.int)
-        assertEquals(true, call(HttpMethod.Get, "/club/heroes", t).data.o()["heroes"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == "p004" }["owned"]!!.jsonPrimitive.boolean)
+        assertEquals(true, call(HttpMethod.Get, "/club/heroes", t).data.o()["heroes"]!!.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == "p010" }["owned"]!!.jsonPrimitive.boolean)
     }
 
     @Test

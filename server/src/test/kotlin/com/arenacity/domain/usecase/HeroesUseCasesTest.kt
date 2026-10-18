@@ -40,9 +40,9 @@ class HeroesUseCasesTest {
         val r = use.roster(u1)
         assertEquals(51, r.heroes.size); assertEquals(1, r.stadium)
         assertEquals(Heroes.START.toSet(), r.heroes.filter { it.owned != null }.map { it.spec.id }.toSet())
-        val mirai = r.heroes.single { it.spec.id == "p004" }
-        assertNull(mirai.owned); assertEquals(UnlockKind.STORY, mirai.rule.kind); assertEquals(2, mirai.rule.chapter)
-        assertTrue(mirai.available); assertFalse(mirai.canBuy)   // 50 gold at the start
+        val shizuku = r.heroes.single { it.spec.id == "p010" }
+        assertNull(shizuku.owned); assertEquals(UnlockKind.STORY, shizuku.rule.kind); assertEquals(2, shizuku.rule.chapter)
+        assertTrue(shizuku.available); assertFalse(shizuku.canBuy)   // 50 gold at the start
         val beast = r.heroes.single { it.spec.id == "p012" }
         assertFalse(beast.available); assertFalse(beast.canBuy); assertEquals(4, beast.rule.stadium)
     }
@@ -84,7 +84,7 @@ class HeroesUseCasesTest {
     fun `heroes who played a card match earn experience by the result, capped a day`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         fun report(won: Boolean, vararg ids: String) = CardMatchReport(7, won = won, draw = false, goalsFor = if (won) 2 else 0, goalsAgainst = 1, cards = emptyMap(), heroes = ids.toList())
-        val o = cards.report(u1, report(true, "p001", "p003", "p001", "p004", "p777"))
+        val o = cards.report(u1, report(true, "p001", "p003", "p001", "p010", "p777"))
         assertEquals(50, o.heroXp)
         assertEquals(listOf("p001", "p003"), o.heroes.map { it.spec.id })   // not owned / unknown ids are skipped, duplicates count once
         assertEquals(50, o.heroes[0].owned!!.xp)
@@ -110,22 +110,22 @@ class HeroesUseCasesTest {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val none = use.lineup(u1)
         assertFalse(none.saved); assertTrue(none.field.isEmpty()); assertNull(none.keeper); assertNull(none.updatedAt)
-        val saved = use.saveLineup(u1, listOf("p001", "p003", "p007", "p009"), "p011", listOf("p010"))
-        assertTrue(saved.saved); assertEquals(listOf("p001", "p003", "p007", "p009"), saved.field); assertEquals("p011", saved.keeper); assertEquals(listOf("p010"), saved.bench)
+        val saved = use.saveLineup(u1, listOf("p001", "p003", "p007", "p009"), "p011", listOf("p004"))
+        assertTrue(saved.saved); assertEquals(listOf("p001", "p003", "p007", "p009"), saved.field); assertEquals("p011", saved.keeper); assertEquals(listOf("p004"), saved.bench)
         assertEquals(saved, use.lineup(u1))
         assertEquals(listOf("p001", "p003", "p007", "p009"), heroes.lineups.getValue(club.id).field)
         // an academy pupil in goal: a blank keeper is none
         assertNull(use.saveLineup(u1, listOf("p001"), " ", emptyList()).keeper)
-        val notMine = assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p004"), "p011", emptyList()) }
-        assertEquals("Hero {0} is not in your club", notMine.template); assertEquals(listOf<Any?>("p004"), notMine.args)
+        val notMine = assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p010"), "p011", emptyList()) }
+        assertEquals("Hero {0} is not in your club", notMine.template); assertEquals(listOf<Any?>("p010"), notMine.args)
         assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p001", "p001"), "p011", emptyList()) }
         assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p003"), "p001", emptyList()) }
         assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p011"), null, emptyList()) }
-        assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p001", "p003", "p007", "p009", "p010", "p006"), null, emptyList()) }
+        assertFailsWith<ValidationException> { use.saveLineup(u1, listOf("p001", "p003", "p007", "p009", "p004", "p006"), null, emptyList()) }
         assertEquals(listOf("p001"), use.lineup(u1).field)   // the bad ones changed nothing
         // a hero bought later can join it
         gold(club.id, 1000); use.unlock(u1, "p006")
-        assertEquals(listOf("p006"), use.saveLineup(u1, listOf("p001", "p003", "p007", "p009", "p010"), "p011", listOf("p006")).bench)
+        assertEquals(listOf("p006"), use.saveLineup(u1, listOf("p001", "p003", "p007", "p009", "p004"), "p011", listOf("p006")).bench)
     }
 
     @Test
@@ -141,7 +141,7 @@ class HeroesUseCasesTest {
         assertEquals(listOf("p001"), t.status.training.map { it.spec.id })
         assertFailsWith<ConflictException> { use.train(u1, "p001") }     // already training
         assertFailsWith<ConflictException> { use.train(u1, "p003") }     // one slot at level 1
-        assertFailsWith<ValidationException> { use.train(u1, "p004") }   // not owned
+        assertFailsWith<ValidationException> { use.train(u1, "p010") }   // not owned
         assertFailsWith<NotFoundException> { use.train(u1, "p999") }
         assertFailsWith<ConflictException> { use.claimTraining(u1, "p003") }   // not training
         clock.advanceSeconds(3600)

@@ -50,12 +50,13 @@ object Story {
             o(1, 2, ObjectiveKind.GOALS, 3),
             o(1, 3, ObjectiveKind.STORY_WIN, 1),
         ), hero = null, coins = 500, gems = 5),
-        // 2 «Та, що бачить наперед» — Mirai watches the pair beat the bay's best youth team and joins
+        // 2 «Тиха вода» — Shizuku, the Bay Sails' left back, joins once the pair beat her team (she was Mirai's chapter until
+        // 18 October 2026, when Mirai moved to the start six)
         StoryChapter(2, StoryRival("story.rival.c2", 65), listOf(
             o(2, 1, ObjectiveKind.WIN_WITH, 2, "p001", "p003"),
             o(2, 2, ObjectiveKind.GOALS, 5),
             o(2, 3, ObjectiveKind.STORY_WIN, 1),
-        ), hero = "p004", coins = 800, gems = 10),
+        ), hero = "p010", coins = 800, gems = 10),
         // 3 «Король двору» — Raiga's street team: Mirai draws the lines for Kai
         StoryChapter(3, StoryRival("story.rival.c3", 67, star = "p005", starLevel = 3), listOf(
             o(3, 1, ObjectiveKind.WIN_WITH, 3, "p001", "p004"),

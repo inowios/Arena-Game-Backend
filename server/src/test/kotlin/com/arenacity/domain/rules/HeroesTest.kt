@@ -21,7 +21,7 @@ class HeroesTest {
     @Test
     fun `the start six are the approved humans and are never sold`() {
         val names = Heroes.START.map { hero(it).name }
-        assertEquals(listOf("Kaito Homura", "Itsuki Neiro", "Hikaru Tobita", "Ganji Tsuchiya", "Hayate Kazama", "Shizuku Isonami"), names)
+        assertEquals(listOf("Kaito Homura", "Itsuki Neiro", "Hikaru Tobita", "Ganji Tsuchiya", "Hayate Kazama", "Mirai Shion"), names)
         assertEquals("GK", hero("p011").position)
         assertEquals(1, Heroes.START.count { hero(it).position == "GK" })
         Heroes.START.forEach { id ->
@@ -33,7 +33,7 @@ class HeroesTest {
 
     @Test
     fun `story heroes open by chapter and can be bought for gold at any stadium`() {
-        val expected = mapOf("Mirai Shion" to (2 to 900), "Raiga Kamiya" to (3 to 900), "Rei Kasumi" to (4 to 500), "Jun Omori" to (5 to 500), "Toya Shimotsuki" to (6 to 1500))
+        val expected = mapOf("Shizuku Isonami" to (2 to 300), "Raiga Kamiya" to (3 to 900), "Rei Kasumi" to (4 to 500), "Jun Omori" to (5 to 500), "Toya Shimotsuki" to (6 to 1500))
         for ((name, cp) in expected) {
             val h = HeroCatalog.ALL.single { it.name == name }
             val rule = Heroes.rule(h)
@@ -100,13 +100,13 @@ class HeroesTest {
     @Test
     fun `a lineup takes owned heroes once, a goalkeeper in goal, at most five, four and ten`() {
         val owned = (Heroes.START + "p006").associateWith { hero(it) }
-        val five = listOf("p001", "p003", "p007", "p009", "p010")
+        val five = listOf("p001", "p003", "p007", "p009", "p004")
         assertNull(Heroes.lineupError(five, "p011", listOf("p006"), owned))
         assertNull(Heroes.lineupError(emptyList(), null, emptyList(), owned))   // the academy's pupils fill everything
         assertNull(Heroes.lineupError(listOf("p001"), null, emptyList(), owned))
         assertEquals("Too many heroes" to null, Heroes.lineupError(five + "p006", "p011", emptyList(), owned))
-        assertEquals("Too many heroes" to null, Heroes.lineupError(emptyList(), null, listOf("p001", "p003", "p007", "p009", "p010"), owned))
-        assertEquals("Hero {0} is not in your club" to "p004", Heroes.lineupError(listOf("p001", "p004"), "p011", emptyList(), owned))
+        assertEquals("Too many heroes" to null, Heroes.lineupError(emptyList(), null, listOf("p001", "p003", "p007", "p009", "p004"), owned))
+        assertEquals("Hero {0} is not in your club" to "p010", Heroes.lineupError(listOf("p001", "p010"), "p011", emptyList(), owned))
         assertEquals("Hero {0} is not in your club" to "p999", Heroes.lineupError(emptyList(), null, listOf("p999"), owned))
         assertEquals("A hero can only be picked once" to null, Heroes.lineupError(listOf("p001"), "p011", listOf("p001"), owned))
         assertEquals("The keeper must be a goalkeeper" to null, Heroes.lineupError(listOf("p003"), "p001", emptyList(), owned))

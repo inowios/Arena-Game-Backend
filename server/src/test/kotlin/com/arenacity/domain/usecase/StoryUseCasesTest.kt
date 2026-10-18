@@ -53,7 +53,7 @@ class StoryUseCasesTest {
         assertTrue(o1.story!!.completed.isEmpty()); assertFalse(o1.story!!.chapterDone)
         assertEquals(1, o1.story!!.chapter.progressOf("c1.o1")); assertEquals(2, o1.story!!.chapter.progressOf("c1.o2"))
         // a story match for another chapter does not count; a heroes' id the club does not own does not count either
-        assertEquals(listOf("c1.o2"), cards.report(u1, match(true, 1, 0, "p004", story = 2)).story!!.completed)
+        assertEquals(listOf("c1.o2"), cards.report(u1, match(true, 1, 0, "p010", story = 2)).story!!.completed)
         assertEquals(0, story.story(u1).chapters[0].progressOf("c1.o3"))
         assertEquals(3, story.story(u1).chapters[0].progressOf("c1.o2"))
         // the chapter's story match, won with the pair: the last two goals at once
@@ -77,13 +77,13 @@ class StoryUseCasesTest {
     }
 
     @Test
-    fun `claiming chapter 2 gives Mirai, a story hero bought before gets experience instead`() = runBlocking<Unit> {
+    fun `claiming chapter 2 gives Shizuku, a story hero bought before gets experience instead`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val c2 = Story.chapter(2)!!
         stories.save(StoryProgress(club.id, 2, c2.objectives.associate { it.id to it.target }, clock.now()))
         val r = story.claim(u1, 2)
-        assertTrue(r.hero!!.joined); assertEquals("p004", r.hero!!.hero.spec.id)
-        assertEquals(HeroSource.STORY, heroes.listByClub(club.id).single { it.heroId == "p004" }.source)
+        assertTrue(r.hero!!.joined); assertEquals("p010", r.hero!!.hero.spec.id)
+        assertEquals(HeroSource.STORY, heroes.listByClub(club.id).single { it.heroId == "p010" }.source)
         assertEquals(3, r.story.current)
         // chapter 3's hero Raiga bought for gems first: claiming gives him experience, the coins and gems as usual
         clubs.update(clubs.findById(club.id)!!.copy(gold = 2000))
