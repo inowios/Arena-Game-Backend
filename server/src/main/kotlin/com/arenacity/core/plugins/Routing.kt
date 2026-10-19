@@ -18,11 +18,14 @@ fun Application.configureRouting() {
         }
         linkRoutes()
         legalRoutes()
+        val manga = mangaDir()
+        mangaFileRoutes(manga)
         val adminToken = environment.config.propertyOrNull("admin.token")?.getString()?.trim().orEmpty()
         if (adminToken.length >= ADMIN_TOKEN_MIN) rateLimit(AUTH_RATE_LIMIT) { adminRoutes(adminToken) }
         else if (adminToken.isNotEmpty()) environment.log.warn("ADMIN_TOKEN shorter than $ADMIN_TOKEN_MIN characters: admin endpoints and /metrics are disabled")
         route("/api/v1") {
             configRoutes()
+            mangaCatalogRoutes(manga)
             rateLimit(AUTH_RATE_LIMIT) { authRoutes() }
             rateLimit(API_RATE_LIMIT) { apiRoutes() }
             if (developmentMode) devRoutes()
