@@ -18,8 +18,10 @@ services:
       KTOR_DEVELOPMENT: "false"
       IAP_DEV_MODE: "false"
       ADS_CLIENT_REWARDS: "false"
+      MANGA_DIR: /app/manga
     volumes:
       - ./secrets:/app/secrets:ro
+      - ./manga:/app/manga:ro   # the game's manga pages, uploaded by the mobile repo's tools/publish_manga.py --upload
     mem_limit: 1g            # the JVM takes 75 % of it (-XX:MaxRAMPercentage=75)
     logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
     depends_on:
