@@ -79,8 +79,9 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val clock: Cl
     companion object { const val DEFAULT_EMBLEM = """{"crest":1}""" }
     private val hex = Regex("^#[0-9A-Fa-f]{6}$")
 
-    suspend operator fun invoke(userId: UUID, name: String, primaryColor: String, secondaryColor: String, timezone: String): Club {
-        if (name.trim().length !in 3..24) throw ValidationException("Club name must be 3..24 characters")
+    suspend operator fun invoke(userId: UUID, rawName: String, primaryColor: String, secondaryColor: String, timezone: String): Club {
+        val name = com.arenacity.domain.rules.ClubNames.normalize(rawName)
+        com.arenacity.domain.rules.ClubNames.problem(name)?.let { throw ValidationException(it) }
         if (!hex.matches(primaryColor) || !hex.matches(secondaryColor)) throw ValidationException("Colors must be #RRGGBB")
         runCatching { java.time.ZoneId.of(timezone) }.getOrElse { throw ValidationException("Unknown timezone") }
         return tx {
@@ -117,8 +118,9 @@ class UnlockSpotUseCase(private val service: ClubService, private val spots: Clu
 
 class UpdateClubUseCase(private val service: ClubService, private val clubs: ClubRepository, private val clock: Clock, private val tx: Tx = NoTx) {
     private val hex = Regex("^#[0-9A-Fa-f]{6}$")
-    suspend operator fun invoke(userId: UUID, name: String?, primaryColor: String?, secondaryColor: String?, emblemJson: String?): Club {
-        if (name != null && name.trim().length !in 3..24) throw ValidationException("Club name must be 3..24 characters")
+    suspend operator fun invoke(userId: UUID, rawName: String?, primaryColor: String?, secondaryColor: String?, emblemJson: String?): Club {
+        val name = rawName?.let { com.arenacity.domain.rules.ClubNames.normalize(it) }
+        if (name != null) com.arenacity.domain.rules.ClubNames.problem(name)?.let { throw ValidationException(it) }
         if (primaryColor != null && !hex.matches(primaryColor)) throw ValidationException("Colors must be #RRGGBB")
         if (secondaryColor != null && !hex.matches(secondaryColor)) throw ValidationException("Colors must be #RRGGBB")
         if (emblemJson != null && emblemJson.length > 2048) throw ValidationException("Emblem too large")
