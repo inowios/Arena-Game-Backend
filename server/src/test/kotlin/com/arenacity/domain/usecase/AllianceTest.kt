@@ -22,7 +22,7 @@ class AllianceTest {
 
     private fun club(u: UUID) = clubs.rows.values.first { it.userId == u }
     private fun setup() = runBlocking {
-        for ((u, n) in listOf(a to "Alpha FC", b to "Beta FC", c to "Gamma FC")) {
+        for ((u, n) in listOf(a to "Alpha_FC", b to "Beta_FC", c to "Gamma_FC")) {
             create(u, n, "#AA0000", "#FFFFFF", "UTC"); clubs.update(club(u).copy(coins = 50_000, gold = 100))
         }
         spots.open(club(a).id, MapSpots.ACADEMY)   // stadium 2: one spot open
@@ -92,7 +92,7 @@ class AllianceTest {
         assertEquals(1, alliances.like(a, club(b).id))
         assertFailsWith<ConflictException> { alliances.like(a, club(b).id) }
         alliances.like(c, club(b).id); alliances.like(b, club(c).id)
-        assertEquals(listOf("Beta FC", "Gamma FC"), alliances.topLiked().map { it.first.name })
+        assertEquals(listOf("Beta_FC", "Gamma_FC"), alliances.topLiked().map { it.first.name })
         assertTrue(alliances.likeState(a, club(b).id).likedByMe)
     }
 }

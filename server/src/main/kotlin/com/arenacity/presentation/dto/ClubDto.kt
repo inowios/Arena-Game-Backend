@@ -10,7 +10,7 @@ import com.arenacity.domain.usecase.club.ClubSpots
 import com.arenacity.domain.usecase.club.ClubState
 import kotlinx.serialization.Serializable
 
-@Serializable data class CreateClubRequest(val name: String, val primaryColor: String, val secondaryColor: String, val timezone: String = "UTC")
+@Serializable data class CreateClubRequest(val name: String = "", val primaryColor: String, val secondaryColor: String, val timezone: String = "UTC")
 @Serializable data class UpdateClubRequest(val name: String? = null, val primaryColor: String? = null, val secondaryColor: String? = null, val emblemJson: String? = null)
 
 @Serializable data class ClubDto(

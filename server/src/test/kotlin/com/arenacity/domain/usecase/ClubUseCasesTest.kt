@@ -29,14 +29,26 @@ class ClubUseCasesTest {
     private val update = UpdateClubUseCase(service, clubs, clock)
     private val user = UUID.randomUUID()
 
-    private fun newClub() = runBlocking { create(user, "Red Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv") }
+    private fun newClub() = runBlocking { create(user, "Red_Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv") }
     private fun coins(n: Long) = runBlocking { clubs.update(clubs.rows.values.first().copy(coins = n)) }
+
+    @Test
+    fun `a new player gets a generated username, and names are unique without regard to case`() = runBlocking {
+        val auto = create(user, null, "#AA0000", "#FFFFFF", "UTC")
+        assertNull(ClubNames.problem(auto.name), auto.name)
+        assertTrue(Regex("[A-Za-z]+_\\d{4}").matches(auto.name), auto.name)
+        val other = UUID.randomUUID()
+        assertFailsWith<ConflictException> { create(other, auto.name.uppercase(), "#AA0000", "#FFFFFF", "UTC") }
+        create(other, "Kai_11", "#AA0000", "#FFFFFF", "UTC")
+        assertFailsWith<ConflictException> { update(user, "kai_11", null, null, null) }
+        assertEquals("Kai_7", update(user, "Kai 7", null, null, null).name)   // a space becomes an underscore
+    }
 
     @Test
     fun `update club validates and keeps unspecified fields`() = runBlocking<Unit> {
         newClub()
         val c = update(user, null, "#112233", null, """{"shape":"shield","icon":"ball"}""")
-        assertEquals("Red Lions", c.name); assertEquals("#112233", c.primaryColor); assertEquals("#FFFFFF", c.secondaryColor); assertTrue(c.emblemJson!!.contains("shield"))
+        assertEquals("Red_Lions", c.name); assertEquals("#112233", c.primaryColor); assertEquals("#FFFFFF", c.secondaryColor); assertTrue(c.emblemJson!!.contains("shield"))
         assertFailsWith<ValidationException> { update(user, "a", null, null, null) }
         assertFailsWith<ValidationException> { update(user, null, "red", null, null) }
         Unit

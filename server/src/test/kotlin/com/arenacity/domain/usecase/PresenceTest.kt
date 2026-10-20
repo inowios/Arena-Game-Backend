@@ -53,7 +53,7 @@ class PresenceTest {
     @Test
     fun `the members list says who is online and when the others were last seen`() = runBlocking<Unit> {
         val a = UUID.randomUUID(); val b = UUID.randomUUID(); val c = UUID.randomUUID()
-        for ((u, n) in listOf(a to "Alpha FC", b to "Beta FC", c to "Gamma FC")) { create(u, n, "#AA0000", "#FFFFFF", "UTC"); clubs.update(club(u).copy(coins = 50_000)) }
+        for ((u, n) in listOf(a to "Alpha_FC", b to "Beta_FC", c to "Gamma_FC")) { create(u, n, "#AA0000", "#FFFFFF", "UTC"); clubs.update(club(u).copy(coins = 50_000)) }
         spots.stadium(club(a).id, 2)
         val id = alliances.create(a, "Night Owls", "NO", "", true, 0, null).alliance.id
         alliances.join(b, id); alliances.join(c, id)
@@ -61,11 +61,11 @@ class PresenceTest {
         clock.advanceSeconds(600)
         presence.seen(a)                                   // a: just now; c: never
         val members = alliances.mine(a)!!.toDto().members.associateBy { it.club.name }
-        assertTrue(members.getValue("Alpha FC").online)
-        assertEquals(clock.now().toString(), members.getValue("Alpha FC").lastSeenAt)
-        assertFalse(members.getValue("Beta FC").online)
-        assertEquals(clock.now().minusSeconds(600).toString(), members.getValue("Beta FC").lastSeenAt)
-        assertFalse(members.getValue("Gamma FC").online)
-        assertNull(members.getValue("Gamma FC").lastSeenAt)
+        assertTrue(members.getValue("Alpha_FC").online)
+        assertEquals(clock.now().toString(), members.getValue("Alpha_FC").lastSeenAt)
+        assertFalse(members.getValue("Beta_FC").online)
+        assertEquals(clock.now().minusSeconds(600).toString(), members.getValue("Beta_FC").lastSeenAt)
+        assertFalse(members.getValue("Gamma_FC").online)
+        assertNull(members.getValue("Gamma_FC").lastSeenAt)
     }
 }

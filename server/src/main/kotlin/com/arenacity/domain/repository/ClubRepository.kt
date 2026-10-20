@@ -8,6 +8,8 @@ interface ClubRepository {
     suspend fun findByUserId(userId: UUID): Club?
     suspend fun findById(id: UUID): Club?
     suspend fun findByIds(ids: Collection<UUID>): List<Club>
+    /** Whether another club ([except] aside) already has this name, without regard to case (usernames are unique). */
+    suspend fun nameTaken(name: String, except: UUID? = null): Boolean
     suspend fun listBots(tzBucket: Int): List<Club>
     /** Clubs within [spread] levels of [level] other than [except], at most [limit], in no particular order. */
     suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int = 20): List<Club>

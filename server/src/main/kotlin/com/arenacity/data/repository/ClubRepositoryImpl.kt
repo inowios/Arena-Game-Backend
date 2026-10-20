@@ -15,6 +15,9 @@ import java.util.UUID
 class ClubRepositoryImpl : ClubRepository {
     override suspend fun findByUserId(userId: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.userId eq userId }.singleOrNull()?.toClub() }
     override suspend fun findById(id: UUID) = dbQuery { ClubTable.selectAll().where { ClubTable.id eq id }.singleOrNull()?.toClub() }
+    override suspend fun nameTaken(name: String, except: UUID?) = dbQuery {
+        ClubTable.selectAll().where { (ClubTable.name.lowerCase() eq name.lowercase()).let { c -> if (except != null) c and (ClubTable.id neq except) else c } }.limit(1).any()
+    }
     override suspend fun findByIds(ids: Collection<UUID>) = if (ids.isEmpty()) emptyList() else dbQuery { ClubTable.selectAll().where { ClubTable.id inList ids }.map { it.toClub() } }
     override suspend fun listBots(tzBucket: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.isBot eq true) and (ClubTable.tzBucket eq tzBucket) }.map { it.toClub() } }
     override suspend fun listNear(level: Int, spread: Int, except: UUID, limit: Int) = dbQuery { ClubTable.selectAll().where { (ClubTable.level greaterEq (level - spread)) and (ClubTable.level lessEq (level + spread)) and (ClubTable.id neq except) }.limit(limit).map { it.toClub() } }

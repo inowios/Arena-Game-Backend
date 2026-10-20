@@ -79,9 +79,12 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val clock: Cl
     companion object { const val DEFAULT_EMBLEM = """{"crest":1}""" }
     private val hex = Regex("^#[0-9A-Fa-f]{6}$")
 
-    suspend operator fun invoke(userId: UUID, rawName: String, primaryColor: String, secondaryColor: String, timezone: String): Club {
-        val name = com.arenacity.domain.rules.ClubNames.normalize(rawName)
+    /** A blank [rawName] gets a generated username (ClubNames.generate): the game no longer asks for one at the start. */
+    suspend operator fun invoke(userId: UUID, rawName: String?, primaryColor: String, secondaryColor: String, timezone: String): Club {
+        val given = rawName?.let { com.arenacity.domain.rules.ClubNames.normalize(it) }.orEmpty()
+        val name = if (given.isEmpty()) com.arenacity.domain.rules.ClubNames.generate({ clubs.nameTaken(it) }) else given
         com.arenacity.domain.rules.ClubNames.problem(name)?.let { throw ValidationException(it) }
+        if (clubs.nameTaken(name)) throw ConflictException("This name is taken")
         if (!hex.matches(primaryColor) || !hex.matches(secondaryColor)) throw ValidationException("Colors must be #RRGGBB")
         runCatching { java.time.ZoneId.of(timezone) }.getOrElse { throw ValidationException("Unknown timezone") }
         return tx {
@@ -126,6 +129,7 @@ class UpdateClubUseCase(private val service: ClubService, private val clubs: Clu
         if (emblemJson != null && emblemJson.length > 2048) throw ValidationException("Emblem too large")
         return tx {
             val club = service.lockedClubOf(userId)
+            if (name != null && !name.equals(club.name, ignoreCase = true) && clubs.nameTaken(name, club.id)) throw ConflictException("This name is taken")
             clubs.update(club.copy(
                 name = name?.trim() ?: club.name, primaryColor = primaryColor?.uppercase() ?: club.primaryColor, secondaryColor = secondaryColor?.uppercase() ?: club.secondaryColor,
                 emblemJson = emblemJson ?: club.emblemJson, updatedAt = clock.now(),
