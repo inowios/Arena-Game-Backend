@@ -1,0 +1,74 @@
+{
+ "name": "14h_tykhyi_udar_plain",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p006",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    70,
+    100,
+    100
+   ]
+  ]
+ }
+}

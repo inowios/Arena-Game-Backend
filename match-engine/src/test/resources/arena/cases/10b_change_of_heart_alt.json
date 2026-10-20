@@ -1,0 +1,101 @@
+{
+ "name": "10b_change_of_heart_alt",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    2,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "statuses": [
+   [
+    "Alt×2"
+   ],
+   [],
+   [],
+   [
+    "Stun×3",
+    "NoReduce×3",
+    "NoInvuln×3"
+   ]
+  ],
+  "cooldown": [
+   [
+    [
+     0,
+     4,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ]
+  ],
+  "events": [
+   "alt s0f0",
+   "cast s0f0→s1f0 v2 p004.s1"
+  ]
+ },
+ "note": "3 ходи стан; слот 1 на 2 ходи стає Ударом із засідки"
+}

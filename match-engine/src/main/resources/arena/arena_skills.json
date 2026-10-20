@@ -1,0 +1,2152 @@
+{
+ "version": 4,
+ "note": "Матч «Арена v4» (docs/claude/ARENA-SKILLS-V4.md, ARENA-MATCH-V3.md §16): точний перенос 11 прототипів Naruto-Arena як дані для Arena engine. Згенеровано tools/cardsim/arena_skills_gen.py — правити там. Cost: T Швидкість (Tai), N Техніка (Nin), G Тактика (Gen), B Сила (Blood), . будь-яка. colour героя — лише декор (енергія не залежить від героїв). icon — ім'я файлу іконки в skills/ (0..3, a0, p0).",
+ "rules": {
+  "stamina": 100,
+  "maxTurns": 40,
+  "exchange": 5,
+  "firstTurnIncome": 1,
+  "note": "Правила оригіналу: 1 випадкова енергія за живого героя на початку свого ходу, перший гравець на 1-му ході отримує 1; 5 будь-яких → 1 потрібна; 40 ходів — більше сумарної витривалості виграє."
+ },
+ "colours": {
+  "speed": "Швидкість",
+  "technique": "Техніка",
+  "tactics": "Тактика",
+  "strength": "Сила"
+ },
+ "heroes": [
+  {
+   "id": "p001",
+   "number": 11,
+   "name": "Kaito Homura",
+   "nameUk": "Кайто Хомура",
+   "power": "fire",
+   "colour": "speed",
+   "proto": "Uzumaki Naruto",
+   "skills": [
+    {
+     "id": "p001.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "burst",
+     "name": "Вогняний ривок",
+     "proto": "Uzumaki Naruto Combo",
+     "cost": ".",
+     "cooldown": 1,
+     "classes": [
+      "Physical",
+      "Action",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 20,
+       "bonus": [
+        {
+         "amount": 10,
+         "cond": "during:p001.s2"
+        }
+       ]
+      }
+     ],
+     "text": "20 тиску одному. Під час «Запалення» — ще +10.",
+     "name_en": "Fire Dash",
+     "text_en": "20 pressure to one. During «Ignition» — +10 more.",
+     "name_es": "Embestida de fuego",
+     "text_es": "20 de presión a uno. Durante «Ignición», +10 más.",
+     "name_ru": "Огненный рывок",
+     "text_ru": "20 прессинга одному. Во время «Возгорания» — ещё +10.",
+     "name_pt": "Arranque de fogo",
+     "text_pt": "20 de pressão a um. Durante «Ignição», mais +10."
+    },
+    {
+     "id": "p001.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "one_two",
+     "name": "Вогняний фенікс",
+     "proto": "Rasengan",
+     "cost": "N.",
+     "cooldown": 1,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "requires": "p001.s2",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 45
+      },
+      {
+       "kind": "stun",
+       "turns": 1
+      }
+     ],
+     "text": "45 тиску одному і стан усіх його скілів на 1 хід. Потребує «Запалення».",
+     "name_en": "Fire Phoenix",
+     "text_en": "45 pressure to one and all his skills off rhythm for 1 turn. Needs «Ignition».",
+     "name_es": "Fénix de fuego",
+     "text_es": "45 de presión a uno y todas sus habilidades sin ritmo 1 turno. Requiere «Ignición».",
+     "name_ru": "Огненный феникс",
+     "text_ru": "45 прессинга одному и стан всех его умений на 1 ход. Требует «Возгорание».",
+     "name_pt": "Fênix de fogo",
+     "text_pt": "45 de pressão a um e todas as suas habilidades sem ritmo por 1 turno. Requer «Ignição»."
+    },
+    {
+     "id": "p001.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "high_press",
+     "name": "Запалення",
+     "proto": "Shadow Clones",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 15,
+       "turns": 5,
+       "to": "self"
+      },
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "turns": 5,
+       "to": "self",
+       "flags": [
+        "unpierceable"
+       ],
+       "cond": "passive"
+      }
+     ],
+     "text": "Кай отримує Блок 15 на 5 ходів. Увесь цей час «Вогняний ривок» +10, «Вогняний фенікс» доступний.",
+     "name_en": "Ignition",
+     "text_en": "Kai gets Block 15 for 5 turns. All that time «Fire Dash» +10 and «Fire Phoenix» is available.",
+     "name_es": "Ignición",
+     "text_es": "Kai recibe Bloqueo 15 durante 5 turnos. Mientras tanto, «Embestida de fuego» +10 y «Fénix de fuego» disponible.",
+     "name_ru": "Возгорание",
+     "text_ru": "Кай получает Блок 15 на 5 ходов. Всё это время «Огненный рывок» +10, «Огненный феникс» доступен.",
+     "name_pt": "Ignição",
+     "text_pt": "Kai recebe Bloqueio 15 por 5 turnos. Nesse tempo, «Arranque de fogo» +10 e «Fênix de fogo» disponível."
+    },
+    {
+     "id": "p001.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "power_shot",
+     "name": "Крок убік",
+     "proto": "Sexy Technique",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Sidestep",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Paso lateral",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Шаг в сторону",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Passo lateral",
+     "text_pt": "Invulnerável por 1 turno."
+    },
+    {
+     "id": "p001.p0",
+     "slot": -1,
+     "role": "passive",
+     "icon": "p0",
+     "template": "p0",
+     "name": "Серце вогню",
+     "proto": "Kyuubi's Chakra Awakening",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Instant"
+     ],
+     "target": "self",
+     "trigger": "hp:50",
+     "effects": [
+      {
+       "kind": "regen",
+       "amount": 5,
+       "to": "self",
+       "flags": [
+        "permanent"
+       ]
+      }
+     ],
+     "text": "Коли Кай уперше опускається до 50 витривалості: відновлення 5 щоходу назавжди; «Запалення» дає ще Блок 10, що не пробивається.",
+     "name_en": "Heart of Fire",
+     "text_en": "When Kai first drops to 50 stamina: recovers 5 every turn forever; «Ignition» also gives Block 10 that cannot be pierced.",
+     "name_es": "Corazón de fuego",
+     "text_es": "Cuando Kai baja por primera vez a 50 de resistencia: recupera 5 cada turno para siempre; «Ignición» da además Bloqueo 10 imperforable.",
+     "name_ru": "Сердце огня",
+     "text_ru": "Когда Кай впервые опускается до 50 выносливости: восстановление 5 каждый ход навсегда; «Возгорание» даёт ещё Блок 10, который не пробивается.",
+     "name_pt": "Coração de fogo",
+     "text_pt": "Quando Kai cai pela primeira vez a 50 de resistência: recupera 5 a cada turno para sempre; «Ignição» dá ainda Bloqueio 10 que não se perfura."
+    }
+   ]
+  },
+  {
+   "id": "p002",
+   "number": 10,
+   "name": "Toya Shimotsuki",
+   "nameUk": "Тоя Сімоцукі",
+   "power": "ice",
+   "colour": "technique",
+   "proto": "Uchiha Sasuke",
+   "skills": [
+    {
+     "id": "p002.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "striker",
+     "name": "Холодний удар",
+     "proto": "Lion Combo",
+     "cost": "T.",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 30,
+       "bonus": [
+        {
+         "amount": 15,
+         "cond": "target_has:p002.s2"
+        }
+       ]
+      }
+     ],
+     "text": "30 тиску одному; +15 по цілі під «Прицілом».",
+     "name_en": "Cold Strike",
+     "text_en": "30 pressure to one; +15 on a target under «Aim».",
+     "name_es": "Golpe frío",
+     "text_es": "30 de presión a uno; +15 a un objetivo bajo «Puntería».",
+     "name_ru": "Холодный удар",
+     "text_ru": "30 прессинга одному; +15 по цели под «Прицелом».",
+     "name_pt": "Golpe frio",
+     "text_pt": "30 de pressão a um; +15 a um alvo sob «Mira»."
+    },
+    {
+     "id": "p002.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "header",
+     "name": "Льодовий спис",
+     "proto": "Chidori",
+     "cost": "N.",
+     "cooldown": 1,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "requires": "p002.s2",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 40,
+       "flags": [
+        "piercing"
+       ],
+       "bonus": [
+        {
+         "amount": 15,
+         "cond": "target_has:p002.s2"
+        }
+       ]
+      }
+     ],
+     "text": "40 пробивного тиску одному; +15 по цілі під «Прицілом». Потребує активного «Прицілу».",
+     "name_en": "Ice Spear",
+     "text_en": "40 piercing pressure to one; +15 on a target under «Aim». Needs an active «Aim».",
+     "name_es": "Lanza de hielo",
+     "text_es": "40 de presión perforante a uno; +15 a un objetivo bajo «Puntería». Requiere «Puntería» activa.",
+     "name_ru": "Ледяное копьё",
+     "text_ru": "40 пробивного прессинга одному; +15 по цели под «Прицелом». Требует активный «Прицел».",
+     "name_pt": "Lança de gelo",
+     "text_pt": "40 de pressão perfurante a um; +15 a um alvo sob «Mira». Requer «Mira» ativa."
+    },
+    {
+     "id": "p002.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "press",
+     "name": "Приціл",
+     "proto": "Sharingan",
+     "cost": "",
+     "cooldown": 3,
+     "classes": [
+      "Mental",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 5,
+       "turns": 4,
+       "to": "self"
+      },
+      {
+       "kind": "mark",
+       "turns": 4
+      },
+      {
+       "kind": "no_reduce",
+       "turns": 4,
+       "cond": "passive"
+      },
+      {
+       "kind": "no_invuln",
+       "turns": 4,
+       "cond": "passive"
+      }
+     ],
+     "text": "Ціль — один суперник. 4 ходи: Тоя Блок 5, «Льодовий спис» доступний, та ціль отримує +15 від «Холодного удару» і «Льодового списа».",
+     "name_en": "Aim",
+     "text_en": "Target: one rival. For 4 turns Toya has Block 5, «Ice Spear» is available, and that target takes +15 from «Cold Strike» and «Ice Spear».",
+     "name_es": "Puntería",
+     "text_es": "Objetivo: un rival. Durante 4 turnos Toya tiene Bloqueo 5, «Lanza de hielo» está disponible y ese objetivo recibe +15 de «Golpe frío» y «Lanza de hielo».",
+     "name_ru": "Прицел",
+     "text_ru": "Цель — один соперник. 4 хода: Тоя Блок 5, «Ледяное копьё» доступно, а цель получает +15 от «Холодного удара» и «Ледяного копья».",
+     "name_pt": "Mira",
+     "text_pt": "Alvo: um rival. Por 4 turnos Toya tem Bloqueio 5, «Lança de gelo» fica disponível e esse alvo recebe +15 de «Golpe frio» e «Lança de gelo»."
+    },
+    {
+     "id": "p002.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "breakaway",
+     "name": "Ковзання",
+     "proto": "Swift Block",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Glide",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Deslizamiento",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Скольжение",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Deslize",
+     "text_pt": "Invulnerável por 1 turno."
+    },
+    {
+     "id": "p002.p0",
+     "slot": -1,
+     "role": "passive",
+     "icon": "p0",
+     "template": "p0",
+     "name": "Крижане серце",
+     "proto": "Cursed Seal Awakening",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Instant"
+     ],
+     "target": "self",
+     "trigger": "hp:50",
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "to": "self",
+       "flags": [
+        "unpierceable",
+        "permanent"
+       ]
+      }
+     ],
+     "text": "Уперше на 50 витривалості: Блок 10 назавжди (не пробивається); «Приціл» ще й забороняє цілі блок і невразливість.",
+     "name_en": "Ice Heart",
+     "text_en": "First time at 50 stamina: Block 10 forever (cannot be pierced); «Aim» also denies the target block and invulnerability.",
+     "name_es": "Corazón de hielo",
+     "text_es": "La primera vez a 50 de resistencia: Bloqueo 10 para siempre (imperforable); «Puntería» además niega al objetivo bloqueo e invulnerabilidad.",
+     "name_ru": "Ледяное сердце",
+     "text_ru": "Впервые на 50 выносливости: Блок 10 навсегда (не пробивается); «Прицел» ещё и запрещает цели блок и неуязвимость.",
+     "name_pt": "Coração de gelo",
+     "text_pt": "Na primeira vez a 50 de resistência: Bloqueio 10 para sempre (não se perfura); «Mira» ainda nega ao alvo bloqueio e invulnerabilidade."
+    }
+   ]
+  },
+  {
+   "id": "p003",
+   "number": 9,
+   "name": "Itsuki Neiro",
+   "nameUk": "Іцукі Нейро",
+   "power": "melody",
+   "colour": "tactics",
+   "proto": "Nara Shikamaru",
+   "skills": [
+    {
+     "id": "p003.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "one_two",
+     "name": "Партитура",
+     "proto": "Meditate",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Mental",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "notOnAffected": true,
+     "uncounterable": true,
+     "unreflectable": true,
+     "effects": [
+      {
+       "kind": "mark",
+       "turns": 5
+      }
+     ],
+     "text": "Позначає одного суперника на 5 ходів: «Стаккато» і «Пауза» діють на нього на 1 хід довше. Не контриться й не відбивається; не на вже позначеного.",
+     "name_en": "Score Sheet",
+     "text_en": "Marks one rival for 5 turns: «Staccato» and «Pause» last 1 turn longer on him. Cannot be intercepted or reflected; not on one already marked.",
+     "name_es": "Partitura",
+     "text_es": "Marca a un rival durante 5 turnos: «Staccato» y «Pausa» duran 1 turno más sobre él. No se intercepta ni se refleja; no sobre uno ya marcado.",
+     "name_ru": "Партитура",
+     "text_ru": "Помечает одного соперника на 5 ходов: «Стаккато» и «Пауза» действуют на него на 1 ход дольше. Не перехватывается и не отражается; не на уже помеченного.",
+     "name_pt": "Partitura",
+     "text_pt": "Marca um rival por 5 turnos: «Staccato» e «Pausa» duram 1 turno a mais nele. Não se intercepta nem se reflete; não em quem já está marcado."
+    },
+    {
+     "id": "p003.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "long_ball",
+     "name": "Стаккато",
+     "proto": "Shadow-Neck Bind",
+     "cost": "G",
+     "cooldown": 0,
+     "classes": [
+      "Chakra",
+      "Action",
+      "Instant*",
+      "Ranged"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "no_reduce",
+       "turns": 1,
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p003.s0"
+        }
+       ]
+      },
+      {
+       "kind": "no_invuln",
+       "turns": 1,
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p003.s0"
+        }
+       ]
+      },
+      {
+       "kind": "damage",
+       "amount": 15,
+       "turns": 1,
+       "flags": [
+        "action"
+       ],
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p003.s0"
+        }
+       ]
+      }
+     ],
+     "text": "Усім суперникам: не можуть блокувати, не можуть стати невразливими, 15 тиску — 1 хід.",
+     "name_en": "Staccato",
+     "text_en": "All rivals: cannot block, cannot turn invulnerable, 15 pressure — for 1 turn.",
+     "name_es": "Staccato",
+     "text_es": "Todos los rivales: no pueden bloquear ni volverse invulnerables, 15 de presión — 1 turno.",
+     "name_ru": "Стаккато",
+     "text_ru": "Всем соперникам: не могут блокировать, не могут стать неуязвимыми, 15 прессинга — 1 ход.",
+     "name_pt": "Staccato",
+     "text_pt": "Todos os rivais: não podem bloquear nem ficar invulneráveis, 15 de pressão — 1 turno."
+    },
+    {
+     "id": "p003.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "press",
+     "name": "Пауза",
+     "proto": "Shadow Imitation",
+     "cost": "G.",
+     "cooldown": 3,
+     "classes": [
+      "Chakra",
+      "Control",
+      "Ranged"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "stun",
+       "turns": 1,
+       "flags": [
+        "control"
+       ],
+       "classes": [
+        "non-mental"
+       ],
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p003.s0"
+        }
+       ]
+      }
+     ],
+     "text": "Стан не-ментальних скілів усіх суперників на 1 хід.",
+     "name_en": "Pause",
+     "text_en": "All rivals' non-mental skills off rhythm for 1 turn.",
+     "name_es": "Pausa",
+     "text_es": "Las habilidades no mentales de todos los rivales quedan sin ritmo 1 turno.",
+     "name_ru": "Пауза",
+     "text_ru": "Стан не-ментальных умений всех соперников на 1 ход.",
+     "name_pt": "Pausa",
+     "text_pt": "As habilidades não mentais de todos os rivais ficam sem ritmo por 1 turno."
+    },
+    {
+     "id": "p003.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "conductor",
+     "name": "Тиша",
+     "proto": "Shikamaru Hide",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Mental",
+      "Instant",
+      "Helpful"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Silence",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Silencio",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Тишина",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Silêncio",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p004",
+   "number": 8,
+   "name": "Mirai Shion",
+   "nameUk": "Мірай Сіон",
+   "power": "foresight",
+   "colour": "tactics",
+   "proto": "Yamanaka Ino",
+   "skills": [
+    {
+     "id": "p004.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "one_two",
+     "name": "Збити з думки",
+     "proto": "Mind Body Disturbance",
+     "cost": "G",
+     "cooldown": 0,
+     "classes": [
+      "Mental",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "stun",
+       "turns": 1,
+       "classes": [
+        "non-mental"
+       ]
+      },
+      {
+       "kind": "no_reduce",
+       "turns": 1,
+       "extend": [
+        {
+         "turns": 2,
+         "cond": "target_has:p004.s2",
+         "replace": true
+        }
+       ]
+      },
+      {
+       "kind": "no_invuln",
+       "turns": 1,
+       "extend": [
+        {
+         "turns": 2,
+         "cond": "target_has:p004.s2",
+         "replace": true
+        }
+       ]
+      },
+      {
+       "kind": "damage",
+       "amount": 20,
+       "to": "random_other_enemy",
+       "flags": [
+        "ignore_invuln"
+       ]
+      }
+     ],
+     "text": "Стан не-ментальних скілів одного суперника на 1 хід; він не може блокувати й ставати невразливим. Інший випадковий суперник отримує 20 тиску, що ігнорує невразливість.",
+     "name_en": "Mind Jolt",
+     "text_en": "One rival's non-mental skills off rhythm for 1 turn; he cannot block or turn invulnerable. Another random rival takes 20 pressure that ignores invulnerability.",
+     "name_es": "Desconcierto",
+     "text_es": "Las habilidades no mentales de un rival quedan sin ritmo 1 turno; no puede bloquear ni volverse invulnerable. Otro rival al azar recibe 20 de presión que ignora la invulnerabilidad.",
+     "name_ru": "Сбить с мысли",
+     "text_ru": "Стан не-ментальных умений одного соперника на 1 ход; он не может блокировать и становиться неуязвимым. Другой случайный соперник получает 20 прессинга, игнорирующего неуязвимость.",
+     "name_pt": "Desconcerto",
+     "text_pt": "As habilidades não mentais de um rival ficam sem ritmo por 1 turno; ele não pode bloquear nem ficar invulnerável. Outro rival aleatório recebe 20 de pressão que ignora invulnerabilidade."
+    },
+    {
+     "id": "p004.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "finta",
+     "name": "Перехоплення гри",
+     "proto": "Change of Heart",
+     "cost": "GG",
+     "cooldown": 3,
+     "classes": [
+      "Mental",
+      "Control",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "alt": "p004.a0",
+     "altTurns": 2,
+     "effects": [
+      {
+       "kind": "stun",
+       "turns": 3,
+       "flags": [
+        "control"
+       ],
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p004.s2"
+        }
+       ]
+      },
+      {
+       "kind": "no_reduce",
+       "turns": 3,
+       "flags": [
+        "control"
+       ],
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p004.s2"
+        }
+       ]
+      },
+      {
+       "kind": "no_invuln",
+       "turns": 3,
+       "flags": [
+        "control"
+       ],
+       "extend": [
+        {
+         "turns": 1,
+         "cond": "target_has:p004.s2"
+        }
+       ]
+      }
+     ],
+     "text": "Бере контроль над суперником: 3 ходи стан, без блоку й невразливості. Наступні 2 ходи цей скіл замінюється на «Удар із засідки».",
+     "name_en": "Game Takeover",
+     "text_en": "Takes control of a rival: off rhythm for 3 turns, no block, no invulnerability. For the next 2 turns this skill becomes «Ambush Strike».",
+     "name_es": "Toma del juego",
+     "text_es": "Toma el control de un rival: sin ritmo 3 turnos, sin bloqueo ni invulnerabilidad. Los 2 turnos siguientes esta habilidad se convierte en «Golpe de emboscada».",
+     "name_ru": "Перехват игры",
+     "text_ru": "Берёт контроль над соперником: 3 хода стан, без блока и неуязвимости. Следующие 2 хода это умение заменяется на «Удар из засады».",
+     "name_pt": "Tomada do jogo",
+     "text_pt": "Toma o controle de um rival: sem ritmo por 3 turnos, sem bloqueio nem invulnerabilidade. Nos 2 turnos seguintes esta habilidade vira «Golpe de emboscada»."
+    },
+    {
+     "id": "p004.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "mark",
+     "name": "Пастка",
+     "proto": "Chakra Hair Strand Trap",
+     "cost": "",
+     "cooldown": 1,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "invisible": true,
+     "effects": [
+      {
+       "kind": "trap",
+       "turns": 1
+      }
+     ],
+     "text": "1 хід: якщо ціль використає шкідливий скіл — 2 ходи «Перехоплення гри» діє на неї на 1 хід довше, а «Збити з думки» забирає блок і невразливість на 2 ходи. Невидимий.",
+     "name_en": "Trap",
+     "text_en": "1 turn: if the target uses a harmful skill — for 2 turns «Game Takeover» lasts 1 turn longer on him and «Mind Jolt» takes his block and invulnerability for 2 turns. Invisible.",
+     "name_es": "Trampa",
+     "text_es": "1 turno: si el objetivo usa una habilidad dañina, durante 2 turnos «Toma del juego» dura 1 turno más sobre él y «Desconcierto» le quita bloqueo e invulnerabilidad 2 turnos. Invisible.",
+     "name_ru": "Ловушка",
+     "text_ru": "1 ход: если цель применит вредное умение — 2 хода «Перехват игры» действует на неё на 1 ход дольше, а «Сбить с мысли» забирает блок и неуязвимость на 2 хода. Невидимая.",
+     "name_pt": "Armadilha",
+     "text_pt": "1 turno: se o alvo usar uma habilidade nociva, por 2 turnos «Tomada do jogo» dura 1 turno a mais nele e «Desconcerto» tira o bloqueio e a invulnerabilidade por 2 turnos. Invisível."
+    },
+    {
+     "id": "p004.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "steal_response",
+     "name": "Читання",
+     "proto": "Ino Block",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Reading",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Lectura",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Чтение",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Leitura",
+     "text_pt": "Invulnerável por 1 turno."
+    },
+    {
+     "id": "p004.a0",
+     "slot": 1,
+     "role": "alt",
+     "icon": "a0",
+     "template": "a0",
+     "name": "Удар із засідки",
+     "proto": "Art of the Valentine",
+     "cost": ".",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 25,
+       "bonus": [
+        {
+         "amount": 5,
+         "cond": "target_has:p004.s1"
+        }
+       ]
+      }
+     ],
+     "text": "25 тиску одному; по цілі під «Перехопленням гри» — 30.",
+     "name_en": "Ambush Strike",
+     "text_en": "25 pressure to one; 30 on a target under «Game Takeover».",
+     "name_es": "Golpe de emboscada",
+     "text_es": "25 de presión a uno; 30 a un objetivo bajo «Toma del juego».",
+     "name_ru": "Удар из засады",
+     "text_ru": "25 прессинга одному; по цели под «Перехватом игры» — 30.",
+     "name_pt": "Golpe de emboscada",
+     "text_pt": "25 de pressão a um; 30 a um alvo sob «Tomada do jogo»."
+    }
+   ]
+  },
+  {
+   "id": "p005",
+   "number": 7,
+   "name": "Raiga Kamiya",
+   "nameUk": "Райґа Камія",
+   "power": "lightning",
+   "colour": "speed",
+   "proto": "Inuzuka Kiba",
+   "skills": [
+    {
+     "id": "p005.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "burst",
+     "name": "Розряд",
+     "proto": "Garouga",
+     "cost": "T.",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "costMods": [
+      {
+       "any": -1,
+       "cond": "during:p005.s1"
+      }
+     ],
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 30,
+       "bonus": [
+        {
+         "amount": 10,
+         "cond": "target_has:p005.s2"
+        }
+       ]
+      }
+     ],
+     "text": "30 тиску одному. Під час «Грози» — на 1 «·» дешевше.",
+     "name_en": "Discharge",
+     "text_en": "30 pressure to one. During «Thunderstorm» — 1 «·» cheaper.",
+     "name_es": "Descarga",
+     "text_es": "30 de presión a uno. Durante «Tormenta», 1 «·» más barata.",
+     "name_ru": "Разряд",
+     "text_ru": "30 прессинга одному. Во время «Грозы» — на 1 «·» дешевле.",
+     "name_pt": "Descarga",
+     "text_pt": "30 de pressão a um. Durante «Tempestade», 1 «·» mais barata."
+    },
+    {
+     "id": "p005.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "finta",
+     "name": "Гроза",
+     "proto": "Double Headed Wolf",
+     "cost": "TB",
+     "cooldown": 3,
+     "classes": [
+      "Physical",
+      "Action",
+      "Melee"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 15,
+       "turns": 3,
+       "flags": [
+        "action"
+       ],
+       "bonus": [
+        {
+         "amount": 10,
+         "cond": "target_has:p005.s2"
+        }
+       ]
+      },
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "turns": 3,
+       "to": "self",
+       "flags": [
+        "unpierceable"
+       ]
+      }
+     ],
+     "text": "15 тиску всім суперникам 3 ходи. Ці 3 ходи «Розряд» дешевший на 1 «·»; Райґа Блок 10 (не пробивається).",
+     "name_en": "Thunderstorm",
+     "text_en": "15 pressure to all rivals for 3 turns. Those 3 turns «Discharge» is 1 «·» cheaper; Raiga has Block 10 (cannot be pierced).",
+     "name_es": "Tormenta",
+     "text_es": "15 de presión a todos los rivales durante 3 turnos. Esos 3 turnos «Descarga» cuesta 1 «·» menos; Raiga tiene Bloqueo 10 (imperforable).",
+     "name_ru": "Гроза",
+     "text_ru": "15 прессинга всем соперникам 3 хода. Эти 3 хода «Разряд» дешевле на 1 «·»; Райга Блок 10 (не пробивается).",
+     "name_pt": "Tempestade",
+     "text_pt": "15 de pressão a todos os rivais por 3 turnos. Nesses 3 turnos «Descarga» custa 1 «·» a menos; Raiga tem Bloqueio 10 (não se perfura)."
+    },
+    {
+     "id": "p005.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "tackle",
+     "name": "Мітка",
+     "proto": "Dynamic Air Marking",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Affliction",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "notOnAffected": true,
+     "effects": [
+      {
+       "kind": "mark",
+       "turns": 3
+      },
+      {
+       "kind": "no_reduce",
+       "turns": 3
+      },
+      {
+       "kind": "no_invuln",
+       "turns": 3
+      }
+     ],
+     "text": "Ціль 3 ходи не може блокувати й ставати невразливою; «Гроза» і «Розряд» по ній +10. Не на вже позначеного.",
+     "name_en": "Tag",
+     "text_en": "For 3 turns the target cannot block or turn invulnerable; «Thunderstorm» and «Discharge» do +10 to him. Not on one already tagged.",
+     "name_es": "Marca",
+     "text_es": "Durante 3 turnos el objetivo no puede bloquear ni volverse invulnerable; «Tormenta» y «Descarga» le hacen +10. No sobre uno ya marcado.",
+     "name_ru": "Метка",
+     "text_ru": "Цель 3 хода не может блокировать и становиться неуязвимой; «Гроза» и «Разряд» по ней +10. Не на уже помеченного.",
+     "name_pt": "Marca",
+     "text_pt": "Por 3 turnos o alvo não pode bloquear nem ficar invulnerável; «Tempestade» e «Descarga» fazem +10 nele. Não em quem já está marcado."
+    },
+    {
+     "id": "p005.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "overload",
+     "name": "Зигзаг",
+     "proto": "Smoke Bomb",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Zigzag",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Zigzag",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Зигзаг",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Zigue-zague",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p006",
+   "number": 6,
+   "name": "Rei Kasumi",
+   "nameUk": "Рей Касумі",
+   "power": "mist",
+   "colour": "tactics",
+   "proto": "Momochi Zabuza",
+   "skills": [
+    {
+     "id": "p006.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "one_two",
+     "name": "Тихий удар",
+     "proto": "Silent Homicide Technique",
+     "cost": "T.",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "ignoresInvuln": "during:p006.s2",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 30,
+       "flags": [
+        "piercing"
+       ],
+       "bonus": [
+        {
+         "amount": 15,
+         "cond": "during:p006.s2"
+        }
+       ]
+      }
+     ],
+     "text": "30 пробивного тиску одному. У «Тумані» — 45 пробивного, ігнорує невразливість.",
+     "name_en": "Silent Strike",
+     "text_en": "30 piercing pressure to one. In «Fog» — 45 piercing, ignores invulnerability.",
+     "name_es": "Golpe silencioso",
+     "text_es": "30 de presión perforante a uno. En «Niebla», 45 perforante e ignora la invulnerabilidad.",
+     "name_ru": "Тихий удар",
+     "text_ru": "30 пробивного прессинга одному. В «Тумане» — 45 пробивного, игнорирует неуязвимость.",
+     "name_pt": "Golpe silencioso",
+     "text_pt": "30 de pressão perfurante a um. Na «Névoa», 45 perfurante e ignora invulnerabilidade."
+    },
+    {
+     "id": "p006.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "finta",
+     "name": "Хвиля",
+     "proto": "Great Waterfall Technique",
+     "cost": "N",
+     "cooldown": 3,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 10
+      },
+      {
+       "kind": "stun",
+       "turns": 1,
+       "classes": [
+        "Physical",
+        "Affliction"
+       ]
+      }
+     ],
+     "text": "10 тиску всім суперникам і стан їхніх фізичних та тривалих скілів на 1 хід.",
+     "name_en": "Wave",
+     "text_en": "10 pressure to all rivals and their physical and lasting skills off rhythm for 1 turn.",
+     "name_es": "Ola",
+     "text_es": "10 de presión a todos los rivales y sus habilidades físicas y persistentes quedan sin ritmo 1 turno.",
+     "name_ru": "Волна",
+     "text_ru": "10 прессинга всем соперникам и стан их физических и длительных умений на 1 ход.",
+     "name_pt": "Onda",
+     "text_pt": "10 de pressão a todos os rivais e as suas habilidades físicas e persistentes ficam sem ritmo por 1 turno."
+    },
+    {
+     "id": "p006.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "track_back",
+     "name": "Туман",
+     "proto": "Hidden Mist Technique",
+     "cost": "G",
+     "cooldown": 3,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemies",
+     "ignoresInvuln": "always",
+     "effects": [
+      {
+       "kind": "cost_mod",
+       "amount": 1,
+       "turns": 2,
+       "flags": [
+        "unignorable"
+       ],
+       "classes": [
+        "Physical",
+        "Mental"
+       ]
+      },
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "turns": 2,
+       "to": "self"
+      }
+     ],
+     "text": "2 ходи: фізичні й ментальні скіли суперників коштують +1 «·» (не ігнорується). Ці 2 ходи Рей Блок 10, «Тихий удар» посилений. Ігнорує невразливість.",
+     "name_en": "Fog",
+     "text_en": "2 turns: the rivals' physical and mental skills cost +1 «·» (cannot be ignored). Those 2 turns Rei has Block 10 and «Silent Strike» is stronger. Ignores invulnerability.",
+     "name_es": "Niebla",
+     "text_es": "2 turnos: las habilidades físicas y mentales de los rivales cuestan +1 «·» (no se ignora). Esos 2 turnos Rei tiene Bloqueo 10 y «Golpe silencioso» es más fuerte. Ignora la invulnerabilidad.",
+     "name_ru": "Туман",
+     "text_ru": "2 хода: физические и ментальные умения соперников стоят +1 «·» (не игнорируется). Эти 2 хода Рей Блок 10, «Тихий удар» усилен. Игнорирует неуязвимость.",
+     "name_pt": "Névoa",
+     "text_pt": "2 turnos: as habilidades físicas e mentais dos rivais custam +1 «·» (não se ignora). Nesses 2 turnos Rei tem Bloqueio 10 e «Golpe silencioso» fica mais forte. Ignora invulnerabilidade."
+    },
+    {
+     "id": "p006.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "shadow_double",
+     "name": "Розчинення",
+     "proto": "Water Clone Zabuza",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Dissolve",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Disolución",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Растворение",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Dissolução",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p007",
+   "number": 4,
+   "name": "Ganji Tsuchiya",
+   "nameUk": "Ґандзі Цутія",
+   "power": "earth",
+   "colour": "strength",
+   "proto": "Akimichi Chouji",
+   "skills": [
+    {
+     "id": "p007.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "leader",
+     "name": "Скеля",
+     "proto": "Partial Double Size",
+     "cost": "T",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 20,
+       "bonus": [
+        {
+         "amount": 20,
+         "per": "uses:p007.s2"
+        }
+       ]
+      }
+     ],
+     "text": "20 тиску одному.",
+     "name_en": "Boulder",
+     "text_en": "20 pressure to one.",
+     "name_es": "Roca",
+     "text_es": "20 de presión a uno.",
+     "name_ru": "Скала",
+     "text_ru": "20 прессинга одному.",
+     "name_pt": "Rocha",
+     "text_pt": "20 de pressão a um."
+    },
+    {
+     "id": "p007.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "counter",
+     "name": "Таран",
+     "proto": "Meat Tank",
+     "cost": "B",
+     "cooldown": 2,
+     "classes": [
+      "Physical",
+      "Action",
+      "Instant*",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 2,
+       "to": "self"
+      },
+      {
+       "kind": "damage",
+       "amount": 10,
+       "turns": 2,
+       "flags": [
+        "action"
+       ],
+       "bonus": [
+        {
+         "amount": 10,
+         "per": "uses:p007.s2"
+        }
+       ]
+      }
+     ],
+     "text": "Невразливий 2 ходи; якщо ціль доступна — 10 тиску їй 2 ходи.",
+     "name_en": "Ram",
+     "text_en": "Invulnerable for 2 turns; if the target is reachable — 10 pressure to him for 2 turns.",
+     "name_es": "Ariete",
+     "text_es": "Invulnerable 2 turnos; si el objetivo está disponible, 10 de presión a él durante 2 turnos.",
+     "name_ru": "Таран",
+     "text_ru": "Неуязвим 2 хода; если цель доступна — 10 прессинга ей 2 хода.",
+     "name_pt": "Aríete",
+     "text_pt": "Invulnerável por 2 turnos; se o alvo estiver disponível, 10 de pressão nele por 2 turnos."
+    },
+    {
+     "id": "p007.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "mark",
+     "name": "Шахтарський дух",
+     "proto": "Akimichi Pills",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Affliction",
+      "Instant"
+     ],
+     "target": "self",
+     "maxUses": 3,
+     "costMods": [
+      {
+       "any": 2,
+       "per": "uses:p007.s2"
+      }
+     ],
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 15,
+       "to": "self",
+       "flags": [
+        "affliction"
+       ],
+       "bonus": [
+        {
+         "amount": 5,
+         "per": "uses:p007.s2"
+        }
+       ]
+      }
+     ],
+     "text": "Ґандзі отримує 15 тривалого тиску; «Скеля» +20 і «Таран» +10 назавжди. Кожне наступне використання: +5 тривалого тиску і +2 «·» до ціни. Лише 3 рази.",
+     "name_en": "Miner's Spirit",
+     "text_en": "Ganji takes 15 lasting pressure; «Boulder» +20 and «Ram» +10 forever. Each next use: +5 lasting pressure and +2 «·» to the cost. Only 3 times.",
+     "name_es": "Espíritu minero",
+     "text_es": "Ganji recibe 15 de presión persistente; «Roca» +20 y «Ariete» +10 para siempre. Cada uso siguiente: +5 de presión persistente y +2 «·» al coste. Solo 3 veces.",
+     "name_ru": "Шахтёрский дух",
+     "text_ru": "Гандзи получает 15 длительного прессинга; «Скала» +20 и «Таран» +10 навсегда. Каждое следующее применение: +5 длительного прессинга и +2 «·» к цене. Только 3 раза.",
+     "name_pt": "Espírito mineiro",
+     "text_pt": "Ganji recebe 15 de pressão persistente; «Rocha» +20 e «Aríete» +10 para sempre. Cada uso seguinte: +5 de pressão persistente e +2 «·» no custo. Só 3 vezes."
+    },
+    {
+     "id": "p007.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "granite_screen",
+     "name": "Опора",
+     "proto": "Effortless Block",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Pillar",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Apoyo",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Опора",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Apoio",
+     "text_pt": "Invulnerável por 1 turno."
+    },
+    {
+     "id": "p007.p0",
+     "slot": -1,
+     "role": "passive",
+     "icon": "p0",
+     "template": "p0",
+     "name": "Капітан",
+     "proto": "Butterfly Mode",
+     "cost": "",
+     "cooldown": 0,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "self",
+     "trigger": "uses:p007.s2:3",
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 75,
+       "to": "self",
+       "flags": [
+        "unpierceable",
+        "percent",
+        "permanent"
+       ]
+      },
+      {
+       "kind": "extra_income",
+       "amount": 1,
+       "to": "self",
+       "flags": [
+        "permanent"
+       ]
+      }
+     ],
+     "text": "Після 3-го «Шахтарського духу»: Блок 75 % назавжди (не пробивається), +1 «·» щоходу.",
+     "name_en": "Captain",
+     "text_en": "After the 3rd «Miner's Spirit»: Block 75 % forever (cannot be pierced), +1 «·» every turn.",
+     "name_es": "Capitán",
+     "text_es": "Tras el 3.º «Espíritu minero»: Bloqueo 75 % para siempre (imperforable), +1 «·» cada turno.",
+     "name_ru": "Капитан",
+     "text_ru": "После 3-го «Шахтёрского духа»: Блок 75 % навсегда (не пробивается), +1 «·» каждый ход.",
+     "name_pt": "Capitão",
+     "text_pt": "Após o 3.º «Espírito mineiro»: Bloqueio 75 % para sempre (não se perfura), +1 «·» a cada turno."
+    }
+   ]
+  },
+  {
+   "id": "p008",
+   "number": 5,
+   "name": "Jun Omori",
+   "nameUk": "Дзюн Оморі",
+   "power": "gravity",
+   "colour": "strength",
+   "proto": "Hyuuga Neji",
+   "skills": [
+    {
+     "id": "p008.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "anchor",
+     "name": "Тиск маси",
+     "proto": "Neji Gentle Fist",
+     "cost": "T.",
+     "cooldown": 2,
+     "classes": [
+      "Physical",
+      "Action",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 25,
+       "turns": 2,
+       "flags": [
+        "action"
+       ]
+      },
+      {
+       "kind": "cost_mod",
+       "amount": 1,
+       "turns": 2,
+       "param": 1
+      },
+      {
+       "kind": "used",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "25 тиску одному 2 ходи; щоходу його не-шкідливі скіли +1 «·». Наступного ходу «Чорна діра» коштує ⚡+·.",
+     "name_en": "Mass Pressure",
+     "text_en": "25 pressure to one for 2 turns; each turn his non-harmful skills cost +1 «·». Next turn «Black Hole» costs ⚡+·.",
+     "name_es": "Presión de masa",
+     "text_es": "25 de presión a uno durante 2 turnos; cada turno sus habilidades no dañinas cuestan +1 «·». El turno siguiente «Agujero negro» cuesta ⚡+·.",
+     "name_ru": "Давление массы",
+     "text_ru": "25 прессинга одному 2 хода; каждый ход его невредные умения +1 «·». В следующий ход «Чёрная дыра» стоит ⚡+·.",
+     "name_pt": "Pressão de massa",
+     "text_pt": "25 de pressão a um por 2 turnos; a cada turno as suas habilidades não nocivas custam +1 «·». No turno seguinte «Buraco negro» custa ⚡+·."
+    },
+    {
+     "id": "p008.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "counter",
+     "name": "Орбіта",
+     "proto": "Eight Trigram Heavenly Spin",
+     "cost": "B",
+     "cooldown": 1,
+     "classes": [
+      "Chakra",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      },
+      {
+       "kind": "damage",
+       "amount": 15
+      },
+      {
+       "kind": "used",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід і 15 тиску всім суперникам. Наступного ходу «Чорна діра» коштує 💪+·.",
+     "name_en": "Orbit",
+     "text_en": "Invulnerable for 1 turn and 15 pressure to all rivals. Next turn «Black Hole» costs 💪+·.",
+     "name_es": "Órbita",
+     "text_es": "Invulnerable 1 turno y 15 de presión a todos los rivales. El turno siguiente «Agujero negro» cuesta 💪+·.",
+     "name_ru": "Орбита",
+     "text_ru": "Неуязвим 1 ход и 15 прессинга всем соперникам. В следующий ход «Чёрная дыра» стоит 💪+·.",
+     "name_pt": "Órbita",
+     "text_pt": "Invulnerável por 1 turno e 15 de pressão a todos os rivais. No turno seguinte «Buraco negro» custa 💪+·."
+    },
+    {
+     "id": "p008.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "press",
+     "name": "Чорна діра",
+     "proto": "Eight Trigram Sixty-Four Palms",
+     "cost": "TB",
+     "cooldown": 1,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "costMods": [
+      {
+       "cost": "T.",
+       "cond": "after:p008.s0"
+      },
+      {
+       "cost": "B.",
+       "cond": "after:p008.s1"
+      }
+     ],
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 40
+      },
+      {
+       "kind": "remove_energy",
+       "amount": 1
+      }
+     ],
+     "text": "40 тиску одному і забирає в нього 1 «·».",
+     "name_en": "Black Hole",
+     "text_en": "40 pressure to one and takes 1 «·» from him.",
+     "name_es": "Agujero negro",
+     "text_es": "40 de presión a uno y le quita 1 «·».",
+     "name_ru": "Чёрная дыра",
+     "text_ru": "40 прессинга одному и забирает у него 1 «·».",
+     "name_pt": "Buraco negro",
+     "text_pt": "40 de pressão a um e tira-lhe 1 «·»."
+    },
+    {
+     "id": "p008.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "jammer",
+     "name": "Невагомість",
+     "proto": "Neji Byakugan",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Mental",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Zero Gravity",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Ingravidez",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Невесомость",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Gravidade zero",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p009",
+   "number": 2,
+   "name": "Hayate Kazama",
+   "nameUk": "Хаяте Кадзама",
+   "power": "wind",
+   "colour": "speed",
+   "proto": "Temari",
+   "skills": [
+    {
+     "id": "p009.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "tackle",
+     "name": "Порив",
+     "proto": "Cutting Whirlwind",
+     "cost": "N",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 20,
+       "flags": [
+        "piercing"
+       ]
+      },
+      {
+       "kind": "damage",
+       "amount": 10,
+       "to": "other_enemies",
+       "flags": [
+        "piercing"
+       ]
+      },
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self",
+       "classes": [
+        "non-mental"
+       ]
+      },
+      {
+       "kind": "used",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "20 пробивного одному, 10 пробивного всім іншим. 1 хід: невразливий до не-ментальних скілів.",
+     "name_en": "Gust",
+     "text_en": "20 piercing to one, 10 piercing to all others. 1 turn: invulnerable to non-mental skills.",
+     "name_es": "Ráfaga",
+     "text_es": "20 perforante a uno, 10 perforante a todos los demás. 1 turno: invulnerable a habilidades no mentales.",
+     "name_ru": "Порыв",
+     "text_ru": "20 пробивного одному, 10 пробивного всем остальным. 1 ход: неуязвим к не-ментальным умениям.",
+     "name_pt": "Rajada",
+     "text_pt": "20 perfurante a um, 10 perfurante a todos os outros. 1 turno: invulnerável a habilidades não mentais."
+    },
+    {
+     "id": "p009.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "one_two",
+     "name": "Шквал",
+     "proto": "Summoning Quick Beheading Dance",
+     "cost": "N..",
+     "cooldown": 2,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "enemies",
+     "costMods": [
+      {
+       "any": -1,
+       "cond": "after:p009.s0"
+      }
+     ],
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 35
+      }
+     ],
+     "text": "35 тиску всім суперникам. Через хід після «Пориву» — на 1 «·» дешевше.",
+     "name_en": "Squall",
+     "text_en": "35 pressure to all rivals. The turn after «Gust» — 1 «·» cheaper.",
+     "name_es": "Vendaval",
+     "text_es": "35 de presión a todos los rivales. El turno después de «Ráfaga», 1 «·» más barata.",
+     "name_ru": "Шквал",
+     "text_ru": "35 прессинга всем соперникам. Через ход после «Порыва» — на 1 «·» дешевле.",
+     "name_pt": "Vendaval",
+     "text_pt": "35 de pressão a todos os rivais. No turno após «Rajada», 1 «·» mais barata."
+    },
+    {
+     "id": "p009.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "track_back",
+     "name": "Пилова завіса",
+     "proto": "Dust Wind",
+     "cost": "N.",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "allies",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "allies"
+      },
+      {
+       "kind": "weaken",
+       "amount": 20,
+       "turns": 1,
+       "to": "enemies",
+       "classes": [
+        "non-affliction"
+       ],
+       "extend": [
+        {
+         "turns": 2,
+         "cond": "after:p009.s0",
+         "replace": true
+        }
+       ]
+      }
+     ],
+     "text": "Вся команда невразлива 1 хід; суперники −20 до не-тривалого тиску на 1 хід (через хід після «Пориву» — 2 ходи).",
+     "name_en": "Dust Veil",
+     "text_en": "The whole team invulnerable for 1 turn; the rivals deal −20 non-lasting pressure for 1 turn (the turn after «Gust» — 2 turns).",
+     "name_es": "Cortina de polvo",
+     "text_es": "Todo el equipo invulnerable 1 turno; los rivales hacen −20 de presión no persistente durante 1 turno (el turno después de «Ráfaga», 2 turnos).",
+     "name_ru": "Пылевая завеса",
+     "text_ru": "Вся команда неуязвима 1 ход; соперники −20 к не-длительному прессингу на 1 ход (через ход после «Порыва» — 2 хода).",
+     "name_pt": "Cortina de poeira",
+     "text_pt": "Toda a equipe invulnerável por 1 turno; os rivais causam −20 de pressão não persistente por 1 turno (no turno após «Rajada», 2 turnos)."
+    },
+    {
+     "id": "p009.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "offside_trap_ult",
+     "name": "Віяло",
+     "proto": "Fan Defence Technique",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Fan",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Abanico",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Веер",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Leque",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p010",
+   "number": 3,
+   "name": "Shizuku Isonami",
+   "nameUk": "Сідзуку Ісонамі",
+   "power": "water",
+   "colour": "technique",
+   "proto": "Hyuuga Hinata",
+   "skills": [
+    {
+     "id": "p010.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "low_block",
+     "name": "М'який удар",
+     "proto": "Hinata Gentle Fist",
+     "cost": "T",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 15,
+       "bonus": [
+        {
+         "amount": 10,
+         "per": "stacks:p010.s0"
+        }
+       ]
+      },
+      {
+       "kind": "remove_energy",
+       "amount": 1,
+       "colours": [
+        "speed",
+        "technique"
+       ],
+       "cond": "during:p010.s2"
+      },
+      {
+       "kind": "mark",
+       "amount": 10,
+       "flags": [
+        "permanent",
+        "stacks"
+       ]
+      }
+     ],
+     "text": "15 тиску одному. Під «Оком хвилі» — забирає в цілі 1 ⚡ або 🎯. Назавжди: ця ціль отримує +10 від скілів Сідзуку.",
+     "name_en": "Soft Touch",
+     "text_en": "15 pressure to one. Under «Eye of the Wave» — takes 1 ⚡ or 🎯 from the target. Forever: that target takes +10 from Shizuku's skills.",
+     "name_es": "Toque suave",
+     "text_es": "15 de presión a uno. Bajo «Ojo de la ola», quita al objetivo 1 ⚡ o 🎯. Para siempre: ese objetivo recibe +10 de las habilidades de Shizuku.",
+     "name_ru": "Мягкий удар",
+     "text_ru": "15 прессинга одному. Под «Оком волны» — забирает у цели 1 ⚡ или 🎯. Навсегда: эта цель получает +10 от умений Сидзуку.",
+     "name_pt": "Toque suave",
+     "text_pt": "15 de pressão a um. Sob «Olho da onda», tira do alvo 1 ⚡ ou 🎯. Para sempre: esse alvo recebe +10 das habilidades de Shizuku."
+    },
+    {
+     "id": "p010.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "cross",
+     "name": "Захисний приплив",
+     "proto": "Eight Trigrams 64 Palms Protection",
+     "cost": "N.",
+     "cooldown": 2,
+     "classes": [
+      "Chakra",
+      "Action",
+      "Melee"
+     ],
+     "target": "enemies",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 10,
+       "turns": 2,
+       "flags": [
+        "piercing",
+        "action"
+       ],
+       "bonus": [
+        {
+         "amount": 5,
+         "cond": "during:p010.s2"
+        },
+        {
+         "amount": 10,
+         "per": "stacks:p010.s0"
+        }
+       ]
+      },
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "turns": 2,
+       "to": "allies",
+       "flags": [
+        "unpierceable"
+       ]
+      }
+     ],
+     "text": "10 пробивного всім суперникам 2 ходи; усі союзники (і вона) Блок 10, що не пробивається, 2 ходи. Під «Оком хвилі» +5 тиску.",
+     "name_en": "Guarding Tide",
+     "text_en": "10 piercing to all rivals for 2 turns; all allies (her too) get Block 10 that cannot be pierced for 2 turns. Under «Eye of the Wave» +5 pressure.",
+     "name_es": "Marea protectora",
+     "text_es": "10 perforante a todos los rivales durante 2 turnos; todos los aliados (ella incluida) reciben Bloqueo 10 imperforable 2 turnos. Bajo «Ojo de la ola» +5 de presión.",
+     "name_ru": "Защитный прилив",
+     "text_ru": "10 пробивного всем соперникам 2 хода; все союзники (и она) Блок 10, который не пробивается, 2 хода. Под «Оком волны» +5 прессинга.",
+     "name_pt": "Maré protetora",
+     "text_pt": "10 perfurante a todos os rivais por 2 turnos; todos os aliados (ela inclusive) recebem Bloqueio 10 que não se perfura por 2 turnos. Sob «Olho da onda» +5 de pressão."
+    },
+    {
+     "id": "p010.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "tackle",
+     "name": "Око хвилі",
+     "proto": "Byakugan",
+     "cost": "",
+     "cooldown": 3,
+     "classes": [
+      "Mental",
+      "Instant",
+      "Ranged"
+     ],
+     "target": "self",
+     "uncounterable": true,
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 5,
+       "turns": 3,
+       "to": "self"
+      },
+      {
+       "kind": "reveal",
+       "turns": 3,
+       "to": "self"
+      }
+     ],
+     "text": "Блок 5 на 3 ходи; 3 ходи бачить невидимі скіли суперника; скіли Сідзуку посилені. Не контриться; закінчується, якщо вона видихлась.",
+     "name_en": "Eye of the Wave",
+     "text_en": "Block 5 for 3 turns; for 3 turns sees the rival's invisible skills; Shizuku's skills are stronger. Cannot be intercepted; ends if she is out.",
+     "name_es": "Ojo de la ola",
+     "text_es": "Bloqueo 5 durante 3 turnos; 3 turnos ve las habilidades invisibles del rival; las habilidades de Shizuku son más fuertes. No se intercepta; termina si ella se agota.",
+     "name_ru": "Око волны",
+     "text_ru": "Блок 5 на 3 хода; 3 хода видит невидимые умения соперника; умения Сидзуку усилены. Не перехватывается; заканчивается, если она выдохлась.",
+     "name_pt": "Olho da onda",
+     "text_pt": "Bloqueio 5 por 3 turnos; por 3 turnos vê as habilidades invisíveis do rival; as habilidades de Shizuku ficam mais fortes. Não se intercepta; termina se ela se esgotar."
+    },
+    {
+     "id": "p010.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "ball_steal",
+     "name": "Підводна течія",
+     "proto": "Hinata Block",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Physical",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Undercurrent",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Corriente submarina",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Подводное течение",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Corrente submarina",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  },
+  {
+   "id": "p011",
+   "number": 1,
+   "name": "Hikaru Tobita",
+   "nameUk": "Хікару Тобіта",
+   "power": "light",
+   "colour": "technique",
+   "proto": "Haruno Sakura",
+   "skills": [
+    {
+     "id": "p011.s0",
+     "slot": 0,
+     "role": "skill",
+     "icon": "0",
+     "template": "gk_psych",
+     "name": "Кулак-маяк",
+     "proto": "KO Punch",
+     "cost": "T",
+     "cooldown": 0,
+     "classes": [
+      "Physical",
+      "Instant",
+      "Melee"
+     ],
+     "target": "enemy",
+     "effects": [
+      {
+       "kind": "damage",
+       "amount": 20,
+       "bonus": [
+        {
+         "amount": 10,
+         "cond": "during:p011.s2"
+        }
+       ]
+      },
+      {
+       "kind": "stun",
+       "turns": 1,
+       "classes": [
+        "Physical",
+        "Mental"
+       ]
+      }
+     ],
+     "text": "20 тиску одному і стан його фізичних та ментальних скілів на 1 хід. У «Світлі маяка» +10.",
+     "name_en": "Beacon Fist",
+     "text_en": "20 pressure to one and his physical and mental skills off rhythm for 1 turn. In «Beacon Light» +10.",
+     "name_es": "Puño faro",
+     "text_es": "20 de presión a uno y sus habilidades físicas y mentales quedan sin ritmo 1 turno. En «Luz del faro» +10.",
+     "name_ru": "Кулак-маяк",
+     "text_ru": "20 прессинга одному и стан его физических и ментальных умений на 1 ход. В «Свете маяка» +10.",
+     "name_pt": "Punho farol",
+     "text_pt": "20 de pressão a um e as suas habilidades físicas e mentais ficam sem ritmo por 1 turno. Na «Luz do farol» +10."
+    },
+    {
+     "id": "p011.s1",
+     "slot": 1,
+     "role": "skill",
+     "icon": "1",
+     "template": "gk_distribution",
+     "name": "Промінь",
+     "proto": "Cure",
+     "cost": "N",
+     "cooldown": 0,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "ally",
+     "effects": [
+      {
+       "kind": "heal",
+       "amount": 20,
+       "bonus": [
+        {
+         "amount": 10,
+         "cond": "during:p011.s2"
+        }
+       ]
+      }
+     ],
+     "text": "Відновлення 20 собі або союзнику. У «Світлі маяка» +10.",
+     "name_en": "Ray",
+     "text_en": "Recovers 20 for self or an ally. In «Beacon Light» +10.",
+     "name_es": "Rayo",
+     "text_es": "Recupera 20 a sí mismo o a un aliado. En «Luz del faro» +10.",
+     "name_ru": "Луч",
+     "text_ru": "Восстановление 20 себе или союзнику. В «Свете маяка» +10.",
+     "name_pt": "Raio",
+     "text_pt": "Recupera 20 para si ou para um aliado. Na «Luz do farol» +10."
+    },
+    {
+     "id": "p011.s2",
+     "slot": 2,
+     "role": "skill",
+     "icon": "2",
+     "template": "gk_rush",
+     "name": "Світло маяка",
+     "proto": "Inner Sakura",
+     "cost": ".",
+     "cooldown": 3,
+     "classes": [
+      "Mental",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "reduce",
+       "amount": 10,
+       "turns": 4,
+       "to": "self"
+      },
+      {
+       "kind": "ignore_harm",
+       "turns": 4,
+       "to": "self"
+      }
+     ],
+     "text": "4 ходи: Блок 10, ігнорує не-тискові ефекти; скіли Хікару посилені.",
+     "name_en": "Beacon Light",
+     "text_en": "4 turns: Block 10, ignores non-pressure effects; Hikaru's skills are stronger.",
+     "name_es": "Luz del faro",
+     "text_es": "4 turnos: Bloqueo 10, ignora los efectos que no son presión; las habilidades de Hikaru son más fuertes.",
+     "name_ru": "Свет маяка",
+     "text_ru": "4 хода: Блок 10, игнорирует не-прессинговые эффекты; умения Хикару усилены.",
+     "name_pt": "Luz do farol",
+     "text_pt": "4 turnos: Bloqueio 10, ignora efeitos que não sejam pressão; as habilidades de Hikaru ficam mais fortes."
+    },
+    {
+     "id": "p011.s3",
+     "slot": 3,
+     "role": "skill",
+     "icon": "3",
+     "template": "miracle_save",
+     "name": "Мавпячий стрибок",
+     "proto": "Sakura Replacement Technique",
+     "cost": ".",
+     "cooldown": 4,
+     "classes": [
+      "Chakra",
+      "Instant"
+     ],
+     "target": "self",
+     "effects": [
+      {
+       "kind": "invuln",
+       "turns": 1,
+       "to": "self"
+      }
+     ],
+     "text": "Невразливий 1 хід.",
+     "name_en": "Monkey Leap",
+     "text_en": "Invulnerable for 1 turn.",
+     "name_es": "Salto de mono",
+     "text_es": "Invulnerable 1 turno.",
+     "name_ru": "Обезьяний прыжок",
+     "text_ru": "Неуязвим 1 ход.",
+     "name_pt": "Salto de macaco",
+     "text_pt": "Invulnerável por 1 turno."
+    }
+   ]
+  }
+ ]
+}

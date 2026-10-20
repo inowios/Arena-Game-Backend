@@ -1,0 +1,91 @@
+{
+ "name": "02h_percent_reduce",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 75,
+       "turns": 1,
+       "srcSide": 1,
+       "srcSlot": 1,
+       "skill": "p007.p0",
+       "unpierceable": true,
+       "percent": true,
+       "permanent": true
+      }
+     ]
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 1
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    100,
+    95,
+    100
+   ]
+  ],
+  "events": [
+   "v5 p001.s0|raw 20 reduce 15"
+  ]
+ },
+ "note": "Капітан 75 %: 20 → 5"
+}

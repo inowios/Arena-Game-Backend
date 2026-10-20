@@ -1,0 +1,77 @@
+{
+ "name": "03b_heal_caps_at_100",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 95
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 2,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "events": [
+   "heal s0f2→s0f0 v5"
+  ]
+ }
+}

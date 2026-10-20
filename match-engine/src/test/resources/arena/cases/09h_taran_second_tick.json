@@ -1,0 +1,86 @@
+{
+ "name": "09h_taran_second_tick",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100,
+     "uses": {
+      "p007.s2": 1
+     }
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 1,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    60,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "noStatuses": [
+   [
+    "Action"
+   ]
+  ],
+  "events": [
+   "tick s1f1→s0f0 v20"
+  ]
+ },
+ "thenTurns": 2
+}

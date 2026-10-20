@@ -1,0 +1,77 @@
+{
+ "name": "14b_tuman_cost_applies_to_physical",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    1,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "CostMod",
+       "amount": 1,
+       "turns": 2,
+       "skill": "p006.s2",
+       "classes": [
+        "Physical",
+        "Mental"
+       ],
+       "unignorable": true
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "error": "не вистачає енергії"
+ },
+ "note": "Холодний удар коштує ⚡+·+·"
+}

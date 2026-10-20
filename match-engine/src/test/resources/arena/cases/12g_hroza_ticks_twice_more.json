@@ -1,0 +1,90 @@
+{
+ "name": "12g_hroza_ticks_twice_more",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    1
+   ],
+   "fighters": [
+    {
+     "id": "p005",
+     "stamina": 100
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    55,
+    55,
+    55
+   ]
+  ],
+  "noStatuses": [
+   [],
+   [],
+   [],
+   [
+    "Action"
+   ],
+   [
+    "Action"
+   ],
+   [
+    "Action"
+   ]
+  ]
+ },
+ "thenTurns": 4,
+ "note": "15 × 3 ходи"
+}

@@ -1,0 +1,131 @@
+{
+ "name": "09d_pills_third_butterfly",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100,
+     "uses": {
+      "p007.s2": 2
+     }
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 1,
+   "skill": 2,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    100,
+    75,
+    100
+   ]
+  ],
+  "pool": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "statuses": [
+   [],
+   [],
+   [],
+   [],
+   [
+    "Reduce 75%u∞",
+    "ExtraIncome 1∞"
+   ]
+  ],
+  "passive": [
+   [
+    false,
+    false,
+    false
+   ],
+   [
+    false,
+    true,
+    false
+   ]
+  ],
+  "events": [
+   "passive s1f1"
+  ],
+  "uses": [
+   [
+    {},
+    {},
+    {}
+   ],
+   [
+    {},
+    {
+     "p007.s2": 3
+    },
+    {}
+   ]
+  ]
+ },
+ "note": "третій: +4 «·», 25 тривалого, Капітан"
+}

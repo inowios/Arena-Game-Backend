@@ -1,0 +1,106 @@
+{
+ "name": "02e_affliction_ignores_reduce_and_defense",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 10,
+       "turns": 2,
+       "srcSide": 1,
+       "srcSlot": 1,
+       "skill": "case",
+       "unpierceable": true
+      },
+      {
+       "kind": "Defense",
+       "amount": 20,
+       "turns": 2,
+       "srcSide": 1,
+       "srcSlot": 1,
+       "skill": "case"
+      }
+     ]
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 1,
+   "skill": 2,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    100,
+    85,
+    100
+   ]
+  ],
+  "statuses": [
+   [],
+   [],
+   [],
+   [],
+   [
+    "Defense 20"
+   ]
+  ],
+  "events": [
+   "damage s1f1→s1f1 v15 p007.s2|raw 15 affliction"
+  ]
+ },
+ "note": "Шахтарський дух: 15 тривалого тиску собі крізь Блок 10u і Опіку 20"
+}

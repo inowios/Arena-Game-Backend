@@ -1,0 +1,113 @@
+{
+ "name": "17d_ignore_harm_blocks_stun",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 10,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      },
+      {
+       "kind": "IgnoreHarm",
+       "amount": 0,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    1,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 15,
+       "turns": 5,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "p001.s2"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 2
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    65
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "noStatuses": [
+   [],
+   [],
+   [
+    "Stun"
+   ]
+  ],
+  "events": [
+   "ignored s0f2→s1f0 v0 Stun|p001.s1"
+  ]
+ },
+ "note": "Фенікс по Хікару у Світлі маяка: 45 − 10, стан проігноровано"
+}

@@ -1,0 +1,91 @@
+{
+ "name": "10j_trap_ignores_helpful",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Trap",
+       "amount": 0,
+       "turns": 1,
+       "skill": "p004.s2",
+       "invisible": true
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 3,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "statuses": [
+   [],
+   [],
+   [],
+   [
+    "Invuln×1"
+   ]
+  ],
+  "noStatuses": [
+   [],
+   [],
+   [],
+   [
+    "Trap"
+   ]
+  ],
+  "noEvents": [
+   "trap"
+  ]
+ },
+ "note": "Пастка не спрацьовує на не-шкідливий скіл і спливає після цього ходу Тої («1 хід»)"
+}

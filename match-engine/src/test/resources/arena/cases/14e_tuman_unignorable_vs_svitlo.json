@@ -1,0 +1,95 @@
+{
+ "name": "14e_tuman_unignorable_vs_svitlo",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 10,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      },
+      {
+       "kind": "IgnoreHarm",
+       "amount": 0,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p006",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 2,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "statuses": [
+   [
+    "CostMod 1 PM×2"
+   ],
+   [
+    "CostMod 1 PM×2"
+   ],
+   [
+    "CostMod 1 PM×2"
+   ]
+  ],
+  "noEvents": [
+   "ignored"
+  ]
+ },
+ "note": "«не ігнорується»: Туман лягає і на Хікару у Світлі маяка"
+}

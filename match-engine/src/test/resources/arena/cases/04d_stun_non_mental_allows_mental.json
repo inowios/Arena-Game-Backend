@@ -1,0 +1,83 @@
+{
+ "name": "04d_stun_non_mental_allows_mental",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Stun",
+       "amount": 0,
+       "turns": 1,
+       "classes": [
+        "non-mental"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 2,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "statuses": [
+   [
+    "Mark×4"
+   ],
+   [],
+   [],
+   [
+    "Reduce 5×4"
+   ]
+  ]
+ },
+ "note": "Пауза на Тої: Приціл (Mental) можна"
+}

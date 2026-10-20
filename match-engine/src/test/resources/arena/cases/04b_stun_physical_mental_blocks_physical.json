@@ -1,0 +1,75 @@
+{
+ "name": "04b_stun_physical_mental_blocks_physical",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Stun",
+       "amount": 0,
+       "turns": 1,
+       "classes": [
+        "Physical",
+        "Mental"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "error": "збитий з ритму"
+ },
+ "note": "Кулак-маяк: стан фізичних і ментальних — Вогняний ривок (Physical) заборонено"
+}

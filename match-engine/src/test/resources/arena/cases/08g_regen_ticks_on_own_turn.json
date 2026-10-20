@@ -1,0 +1,84 @@
+{
+ "name": "08g_regen_ticks_on_own_turn",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 30,
+     "statuses": [
+      {
+       "kind": "Regen",
+       "amount": 5,
+       "turns": 1,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p001.p0",
+       "permanent": true
+      }
+     ],
+     "passiveOn": true
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "stamina": [
+   [
+    35,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "events": [
+   "tick s0f0→s0f0 v5 p001.p0|regen"
+  ]
+ },
+ "thenTurns": 1
+}

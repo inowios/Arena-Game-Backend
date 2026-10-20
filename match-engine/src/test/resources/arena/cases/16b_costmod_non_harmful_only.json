@@ -1,0 +1,73 @@
+{
+ "name": "16b_costmod_non_harmful_only",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "CostMod",
+       "amount": 1,
+       "turns": 2,
+       "skill": "p008.s0",
+       "param": 1
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 3,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "error": "не вистачає енергії"
+ },
+ "note": "Ковзання (не-шкідливий) коштує ·+·"
+}

@@ -1,0 +1,80 @@
+{
+ "name": "18e_pay_wrong_colour",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    2,
+    0,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 15,
+       "turns": 5,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p001.s2"
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 0,
+   "pay": [
+    2,
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "expect": {
+  "error": "не відповідає ціні"
+ },
+ "note": "Фенікс потребує 🎯"
+}

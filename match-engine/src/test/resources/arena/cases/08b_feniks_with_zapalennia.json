@@ -1,0 +1,129 @@
+{
+ "name": "08b_feniks_with_zapalennia",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    1,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 15,
+       "turns": 5,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p001.s2"
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    55,
+    100,
+    100
+   ]
+  ],
+  "statuses": [
+   [],
+   [],
+   [],
+   [
+    "Stun×1"
+   ]
+  ],
+  "pool": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "cooldown": [
+   [
+    [
+     0,
+     2,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ]
+  ]
+ },
+ "note": "45 і стан усіх скілів"
+}

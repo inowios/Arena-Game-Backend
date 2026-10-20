@@ -1,0 +1,111 @@
+{
+ "name": "05e_tuman_ignores_invuln",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p006",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Invuln",
+       "amount": 0,
+       "turns": 1,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "p002.s3"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 2,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "statuses": [
+   [
+    "Reduce 10×2"
+   ],
+   [],
+   [],
+   [
+    "CostMod 1 PM×2"
+   ],
+   [
+    "CostMod 1 PM×2"
+   ],
+   [
+    "CostMod 1 PM×2"
+   ]
+  ],
+  "cooldown": [
+   [
+    [
+     0,
+     0,
+     4,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ]
+  ]
+ },
+ "note": "Туман лягає і на невразливого Тою"
+}

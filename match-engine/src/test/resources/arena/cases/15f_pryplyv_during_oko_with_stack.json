@@ -1,0 +1,95 @@
+{
+ "name": "15f_pryplyv_during_oko_with_stack",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    1,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p010",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 5,
+       "turns": 3,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p010.s2"
+      }
+     ]
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Mark",
+       "amount": 10,
+       "turns": 1,
+       "skill": "p010.s0",
+       "permanent": true,
+       "stacks": true
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": -1
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    75,
+    85,
+    85
+   ]
+  ]
+ },
+ "note": "10 + 5 (Око) + 10 (стек) по Тої, 15 іншим"
+}

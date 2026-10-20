@@ -1,0 +1,143 @@
+{
+ "name": "07e_lodovyi_spys_with_pritsil",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Mark",
+       "amount": 0,
+       "turns": 4,
+       "skill": "p002.s2"
+      },
+      {
+       "kind": "Reduce",
+       "amount": 10,
+       "turns": 2,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "case"
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    2,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 5,
+       "turns": 4,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "p002.s2"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    45,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "cooldown": [
+   [
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ],
+   [
+    [
+     0,
+     2,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ]
+  ]
+ },
+ "note": "40 + 15 пробивного крізь Блок 10 Кая"
+}

@@ -1,0 +1,100 @@
+{
+ "name": "20b_action_skipped_target_invulnerable",
+ "turn": 4,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p005",
+     "stamina": 100
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Action",
+       "amount": 15,
+       "turns": 2,
+       "skill": "p005.s1",
+       "srcSlot": 0,
+       "effectIndex": 0
+      },
+      {
+       "kind": "Invuln",
+       "amount": 0,
+       "turns": 1,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "p002.s3",
+       "appliedTurn": 4
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "statuses": [
+   [],
+   [],
+   [],
+   [
+    "Action 15×1"
+   ]
+  ],
+  "events": [
+   "skip s0f0→s1f0",
+   "target invulnerable"
+  ]
+ },
+ "thenTurns": 1
+}

@@ -1,0 +1,89 @@
+{
+ "name": "20d_action_tick_recomputes_bonus",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p005",
+     "stamina": 100
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Action",
+       "amount": 15,
+       "turns": 2,
+       "skill": "p005.s1",
+       "srcSlot": 0,
+       "effectIndex": 0
+      },
+      {
+       "kind": "Mark",
+       "amount": 0,
+       "turns": 3,
+       "skill": "p005.s2"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    75,
+    100,
+    100
+   ]
+  ],
+  "events": [
+   "tick s0f0→s1f0 v25"
+  ]
+ },
+ "thenTurns": 1,
+ "note": "Гроза по позначеному Міткою: 15 + 10 на кожному ударі"
+}

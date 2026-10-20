@@ -1,0 +1,61 @@
+{
+ "name": "19g_turn_limit_more_stamina_wins",
+ "turn": 40,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 50
+    },
+    {
+     "id": "p003",
+     "stamina": 50
+    },
+    {
+     "id": "p011",
+     "stamina": 50
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 40
+    },
+    {
+     "id": "p007",
+     "stamina": 50
+    },
+    {
+     "id": "p009",
+     "stamina": 50
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "finished": true,
+  "winner": 0,
+  "events": [
+   "40 turns"
+  ]
+ }
+}

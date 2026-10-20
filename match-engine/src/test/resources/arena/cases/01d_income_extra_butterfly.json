@@ -1,0 +1,72 @@
+{
+ "name": "01d_income_extra_butterfly",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "ExtraIncome",
+       "amount": 1,
+       "turns": 1,
+       "srcSide": 1,
+       "srcSlot": 1,
+       "skill": "p007.p0",
+       "permanent": true
+      }
+     ]
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "events": [
+   "T4 income s1f-1 v4"
+  ]
+ },
+ "thenTurns": 1,
+ "note": "Капітан: +1 випадкова щоходу"
+}

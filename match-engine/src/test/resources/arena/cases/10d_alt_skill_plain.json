@@ -1,0 +1,86 @@
+{
+ "name": "10d_alt_skill_plain",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Alt",
+       "amount": 0,
+       "turns": 2,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p004.s1",
+       "param": 1,
+       "altSkill": "p004.a0"
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 1,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    75,
+    100,
+    100
+   ]
+  ]
+ }
+}

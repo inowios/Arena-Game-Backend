@@ -1,0 +1,63 @@
+{
+ "name": "01b_income_second_mover_gets_three",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [],
+ "expect": {
+  "events": [
+   "T1 income s0f-1 v1",
+   "T2 income s1f-1 v3"
+  ]
+ },
+ "thenTurns": 1,
+ "start": true,
+ "note": "другий гравець на 2-му ході — по 1 за живого героя"
+}

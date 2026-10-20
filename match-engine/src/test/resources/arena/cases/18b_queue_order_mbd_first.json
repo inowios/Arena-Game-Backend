@@ -1,0 +1,93 @@
+{
+ "name": "18b_queue_order_mbd_first",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 100
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 15,
+       "turns": 2,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "case"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 0
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  },
+  {
+   "slot": 1,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    80,
+    80,
+    0
+   ]
+  ],
+  "events": [
+   "damage s0f1→s1f0 v20"
+  ]
+ },
+ "note": "Збити з думки першим — Тоя без блоку, Кай б'є на 20"
+}

@@ -1,0 +1,90 @@
+{
+ "name": "15c_gentle_fist_during_oko_removes_energy",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p010",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 5,
+       "turns": 3,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p010.s2"
+      }
+     ]
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    2,
+    0,
+    1
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "pool": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0,
+    1
+   ]
+  ],
+  "events": [
+   "energy s0f0→s1f-1 v-1 remove technique"
+  ]
+ },
+ "note": "забирає ⚡ або 🎯 — у суперника є лише 🎯"
+}

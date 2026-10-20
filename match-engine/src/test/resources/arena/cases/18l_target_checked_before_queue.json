@@ -1,0 +1,79 @@
+{
+ "name": "18l_target_checked_before_queue",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    0,
+    1,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 100
+    },
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Invuln",
+       "amount": 0,
+       "turns": 1,
+       "srcSide": 1,
+       "srcSlot": 0,
+       "skill": "p002.s3"
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 0
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 0,
+   "target": 0
+  },
+  {
+   "slot": 1,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "error": "недоступна"
+ },
+ "note": "Кай не може обрати невразливого Тою, хоч Збити з думки зняло б невразливість раніше в черзі (цілі — за станом до ходу)"
+}

@@ -1,0 +1,102 @@
+{
+ "name": "16d_chorna_dira_after_tysk_masy",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    1,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p008",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Used",
+       "amount": 0,
+       "turns": 1,
+       "srcSide": 0,
+       "srcSlot": 0,
+       "skill": "p008.s0"
+      }
+     ]
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 0,
+   "skill": 2,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    100
+   ],
+   [
+    60,
+    100,
+    100
+   ]
+  ],
+  "pool": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "events": [
+   "remove technique"
+  ]
+ },
+ "note": "⚡+· замість ⚡+💪; забирає 1 енергію"
+}

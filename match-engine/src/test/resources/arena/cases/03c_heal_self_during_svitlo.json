@@ -1,0 +1,96 @@
+{
+ "name": "03c_heal_self_during_svitlo",
+ "turn": 3,
+ "sideToMove": 0,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    1,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p001",
+     "stamina": 100
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 40,
+     "statuses": [
+      {
+       "kind": "Reduce",
+       "amount": 10,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      },
+      {
+       "kind": "IgnoreHarm",
+       "amount": 0,
+       "turns": 4,
+       "srcSide": 0,
+       "srcSlot": 2,
+       "skill": "p011.s2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 2,
+   "skill": 1,
+   "target": 2
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    100,
+    100,
+    70
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "events": [
+   "heal s0f2→s0f2 v30"
+  ]
+ },
+ "note": "у «Світлі маяка» +10, ціль — вона сама"
+}

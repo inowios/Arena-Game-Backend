@@ -1,0 +1,95 @@
+{
+ "name": "10f_control_breaks_when_caster_dies",
+ "turn": 3,
+ "sideToMove": 1,
+ "first": 0,
+ "seed": 1,
+ "sides": [
+  {
+   "pool": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p004",
+     "stamina": 10
+    },
+    {
+     "id": "p003",
+     "stamina": 100
+    },
+    {
+     "id": "p011",
+     "stamina": 100
+    }
+   ]
+  },
+  {
+   "pool": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "fighters": [
+    {
+     "id": "p002",
+     "stamina": 100,
+     "statuses": [
+      {
+       "kind": "Stun",
+       "amount": 0,
+       "turns": 3,
+       "skill": "p004.s1",
+       "control": true
+      }
+     ]
+    },
+    {
+     "id": "p007",
+     "stamina": 100
+    },
+    {
+     "id": "p009",
+     "stamina": 100
+    }
+   ]
+  }
+ ],
+ "queue": [
+  {
+   "slot": 1,
+   "skill": 0,
+   "target": 0
+  }
+ ],
+ "expect": {
+  "stamina": [
+   [
+    0,
+    100,
+    100
+   ],
+   [
+    100,
+    100,
+    100
+   ]
+  ],
+  "noStatuses": [
+   [],
+   [],
+   [],
+   [
+    "Stun"
+   ]
+  ],
+  "events": [
+   "out s0f0",
+   "contact s0f0→s1f0"
+  ]
+ }
+}
