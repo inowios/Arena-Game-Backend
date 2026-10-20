@@ -15,8 +15,8 @@ import java.util.UUID
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Live game (GAME-PLAN phase 5): events the server switches on without a build — a calendar of recurring and seasonal
-// events plus any the admin adds — with a goal and a reward; mail from the developers with gifts; the store's starter
-// pack and daily offers. The modifiers (shorter constructions, more income, more gold in obstacles) are kept as data
+// events plus any the admin adds — with a goal and a reward; mail from the developers with gifts (the store's
+// starter pack and daily offers went on 20 October 2026). The modifiers (shorter constructions, more income, more gold in obstacles) are kept as data
 // (stored admin events have them) but act on nothing since the city builder went (17 October 2026).
 
 /** An event: [id] stable ("weekend-2026-10-10", "halloween-2026", or an admin event's UUID). Percentages: 100 = no change. */
@@ -45,9 +45,6 @@ interface LiveOpsRepository {
     suspend fun claimedMails(clubId: UUID): Set<UUID>
     suspend fun createMail(m: DevMail)
     suspend fun claimMail(clubId: UUID, mailId: UUID, at: Instant): Boolean
-
-    suspend fun offerBought(clubId: UUID, day: Int, offerId: String): Boolean
-    suspend fun markOffer(clubId: UUID, day: Int, offerId: String, at: Instant): Boolean
 }
 
 /** The built-in calendar: every weekend, every Wednesday, Halloween, the New Year (UTC days). */
@@ -81,8 +78,6 @@ object EventCalendar {
 }
 
 data class EventView(val event: GameEvent, val progress: EventProgress?, val running: Boolean)
-data class Offer(val id: String, val kind: String, val gold: Int, val coins: Long = 0, val oldGold: Int = 0, val bought: Boolean = false)
-data class OffersView(val starterAvailable: Boolean, val daily: List<Offer>, val endsAt: Instant)
 
 class LiveOps(
     private val service: ClubService,
@@ -91,7 +86,6 @@ class LiveOps(
     private val cosmetics: CosmeticsService,
     private val clock: Clock,
     private val tx: Tx = NoTx,
-    private val purchases: (suspend (UUID, String) -> Boolean)? = null,
 ) {
     @Volatile private var cached: Pair<Instant, List<GameEvent>>? = null
     /** Admin events, re-read at most every 30 s (they are read on every club view). */
@@ -175,34 +169,6 @@ class LiveOps(
         val m = DevMail(UUID.randomUUID(), title.trim(), body.trim(), coins.coerceIn(0, 10_000_000), gold.coerceIn(0, 10_000), item, clubId, now, now.plusSeconds(days.coerceIn(1, 60) * 86_400L))
         repo.createMail(m); return m
     }
-
-    // ---- offers ----
-    private fun dayKey(now: Instant) = now.atZone(ZoneOffset.UTC).toLocalDate().let { it.year * 1000 + it.dayOfYear }
-
-    /** Two offers a day for gold, the same for a club all day: a discounted coin pack (sized by the stadium) and a
-     * builder's rush (gold for a fixed chunk of coins at the best rate). */
-    suspend fun offers(userId: UUID): OffersView {
-        val st = service.state(userId); val now = clock.now(); val day = dayKey(now)
-        val coinsK = (1L shl (st.stadium - 1).coerceIn(0, MapSpots.MAX_STADIUM - 1)).coerceAtMost(256)
-        val pack = Offer("coins-$day", "COINS", 60, coins = 6_000L * coinsK.coerceAtLeast(1), oldGold = 100)
-        val rush = Offer("rush-$day", "COINS", 150, coins = 20_000L * coinsK.coerceAtLeast(1), oldGold = 250)
-        val list = listOf(pack, rush).map { it.copy(bought = repo.offerBought(st.club.id, day, it.id)) }
-        val starter = purchases?.invoke(st.club.id, STARTER_PACK) == false
-        val tomorrow = now.atZone(ZoneOffset.UTC).toLocalDate().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
-        return OffersView(starter, list, tomorrow)
-    }
-
-    suspend fun buyOffer(userId: UUID, offerId: String): Club = tx {
-        val view = offers(userId)
-        val o = view.daily.firstOrNull { it.id == offerId } ?: throw NotFoundException("Offer not found")
-        if (o.bought) throw ConflictException("Already bought")
-        val club = service.lockedClubOf(userId); val now = clock.now()
-        if (club.gold < o.gold) throw InsufficientFundsException("Not enough gold")
-        if (!repo.markOffer(club.id, dayKey(now), o.id, now)) throw ConflictException("Already bought")
-        clubs.update(club.copy(gold = club.gold - o.gold, coins = club.coins + o.coins, updatedAt = now))
-    }
-
-    companion object { const val STARTER_PACK = "starter_pack" }
 }
 
 /** Forwards progress events to the running events' goals. */

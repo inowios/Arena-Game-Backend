@@ -15,8 +15,6 @@ data class Club(
     val coins: Long,
     val gold: Int,
     val timezone: String,
-    val academyNextAt: Instant?,
-    val medicalNextAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
     val isBot: Boolean = false,
@@ -33,20 +31,14 @@ data class Club(
     val kit: String? = null,
     val emblemFrame: String? = null,
     val celebration: String? = null,
-    /** Club-local day of the last scouting signing (one a day). */
-    val scoutSignedDate: java.time.LocalDate? = null,
-    /** Live-match trophies (arena ladder) and the current run of live wins (a player pack every third). */
+    /** Arena trophies (the ladder, rules.Arenas) and the current run of Arena wins. */
     val trophies: Int = 0,
     val liveStreak: Int = 0,
-    /** Bumped by a paid market refresh: a new set of listings for the same period. */
-    val marketSalt: Int = 0,
     /** ISO week (year*100 + week) the arena chest was last opened in. */
     val arenaChestWeek: Int = 0,
     /** Energy (rules.Energy): the amount at [energyAt], refilling on read; null [energyAt] = full. */
     val energy: Int = com.arenacity.domain.rules.Energy.MAX,
     val energyAt: Instant? = null,
-    /** The UTC day the club last bought the daily pack offer (rules.DailyOffers; once a day). */
-    val offerDay: java.time.LocalDate? = null,
     /**
      * When the owner was last seen (an authenticated request; usecase.club.PresenceTracker, at most once a minute); null =
      * not since V42. Read-only in [com.arenacity.domain.repository.ClubRepository.update]: only touchSeen writes it.

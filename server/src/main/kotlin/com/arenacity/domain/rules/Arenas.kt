@@ -1,13 +1,11 @@
 package com.arenacity.domain.rules
 
-import kotlin.math.roundToInt
-
-/** One rung of the live-match ladder: trophies needed, coin multiplier, the division whose bots play here. */
+/** One rung of the Arena ladder: trophies needed, coin multiplier, the division whose bots stand here. */
 data class Arena(val index: Int, val key: String, val trophies: Int, val rewardK: Double, val botDivision: Int)
 
 /**
- * Arenas and trophies of live matches (the Clash-style ladder): a win moves you up, a loss down, the arena sets the
- * rewards and who you meet. Separate from the league divisions.
+ * Arenas and trophies of the Arena matches (the Clash-style ladder): a win moves you up, a loss down, the arena sets
+ * the weekly chest (usecase.arena.ArenaChestUseCase) and the trophy road (rules.Roads). Separate from the league divisions.
  */
 object Arenas {
     /** Bot "division" of the legends arena: live-match only, never a league division. */
@@ -31,25 +29,10 @@ object Arenas {
         }
     }
 
-    /** What the club whose line-up was played against (its "defence") gets: a third of the attacker's swing, the other way. */
-    fun defenderDelta(attackerDelta: Int) = (-attackerDelta / 3.0).roundToInt()
-
-    fun coins(outcome: Outcome, arena: Arena): Long = ((when (outcome) { Outcome.WIN -> 160L; Outcome.DRAW -> 80L; Outcome.LOSS -> 40L }) * arena.rewardK).toLong()
-    fun reputation(outcome: Outcome) = when (outcome) { Outcome.WIN -> 4; Outcome.DRAW -> 2; Outcome.LOSS -> 1 }
-
-    /** Fatigue a live match adds to a starter (the match is the "army" cost): 22, more at a high tempo / pressing. */
-    const val MATCH_FATIGUE = 22
-    /** Starters above this fatigue cannot start a live match. */
-    const val MAX_FATIGUE_TO_PLAY = 85
-    /** A player pack (a new athlete) every this many wins in a row. */
-    const val PACK_EVERY_WINS = 3
     /** The weekly chest of the arena you stand in: coins and gold scale with the rung. */
     fun chestCoins(arena: Arena): Long = (400 * arena.rewardK).toLong()
     fun chestGold(arena: Arena): Int = 3 + arena.index * 2
     fun isoWeek(now: java.time.Instant, zone: java.time.ZoneId): Int { val d = now.atZone(zone).toLocalDate(); val wf = java.time.temporal.WeekFields.ISO; return d.get(wf.weekBasedYear()) * 100 + d.get(wf.weekOfWeekBasedYear()) }
     /** Start of the next ISO week in the club's zone. */
     fun nextWeek(now: java.time.Instant, zone: java.time.ZoneId): java.time.Instant { val d = now.atZone(zone).toLocalDate(); val monday = d.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY)); return monday.atStartOfDay(zone).toInstant() }
-
-    /** Quality range of a pack athlete by arena: the ladder hands out better players higher up. */
-    fun packQuality(arena: Arena): IntRange { val lo = 46 + arena.index * 5; return lo..(lo + 12) }
 }

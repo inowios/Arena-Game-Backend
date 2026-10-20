@@ -1,6 +1,5 @@
 package com.arenacity.domain.usecase
 
-import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.*
 import com.arenacity.domain.rules.MapSpots
 import com.arenacity.domain.rules.Sections
@@ -18,7 +17,7 @@ import kotlin.test.*
 class SectionsTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository(); private val lineups = FakeLineupRepository()
+    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val sections = SectionService(athletes)
     private val spots = FakeClubSpotRepository()
@@ -26,10 +25,6 @@ class SectionsTest {
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val squads = SquadService(service, athletes, trainings, clock)
-    private val academy = ClaimAcademyUseCase(service, clubs, athletes, clock, sections = sections)
-    private val getLineup = GetLineupUseCase(service, squads, lineups, clock)
-    private val setLineup = SetLineupUseCase(service, squads, lineups, clock)
     private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = sections)
     private val user = UUID.randomUUID()
 
@@ -49,10 +44,7 @@ class SectionsTest {
         assertEquals(listOf(Sport.FOOTBALL), Sections.ORDER)
         // bots field football at every division
         for (d in 1..8) assertEquals(listOf(Sport.FOOTBALL), Sections.botSections(d))
-        // the academy graduates footballers only (its spot is open: MapSpots.BUYABLE's first)
         assertTrue(service.state(user).isOpen(MapSpots.ACADEMY))
-        assertFailsWith<ValidationException> { academy(user, Sport.BASKETBALL) }
-        assertEquals(Sport.FOOTBALL, academy(user, Sport.FOOTBALL).sport)
     }
 
     @Test
@@ -72,8 +64,9 @@ class SectionsTest {
     @Test
     fun `injured starter is replaced by a fit player of the same role`() = runBlocking<Unit> {
         val c = create(user, "Subs FC", "#AA0000", "#FFFFFF", "UTC")
-        val (l, squad) = getLineup(user, Sport.FOOTBALL)
-        setLineup(user, Sport.FOOTBALL, l.starters, l.bench, l.tactics)
+        val squad = athletes.listByClub(c.id)
+        val l = LineupRules.defaultFor(c.id, Sport.FOOTBALL, squad, clock.now())
+        lineups.upsert(l.copy(isDefault = false))
         val victim = squad.first { it.id == l.starters.first { id -> squad.first { a -> a.id == id }.position == Position.DEF } }
         athletes.update(victim.copy(injuredUntil = clock.now().plusSeconds(86_400)))
         val effective = LineupService(athletes, lineups).lineup(clubs.rows.getValue(c.id), Sport.FOOTBALL, clock.now())

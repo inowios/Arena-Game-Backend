@@ -19,7 +19,7 @@ import kotlin.test.*
 class MonetizationTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val trainings = FakeTrainingRepository()
+    private val athletes = FakeAthleteRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val economyRepo = FakeEconomyRepository()
     private val inventory = FakeInventoryRepository(); private val achievementsRepo = FakeAchievementRepository(); private val seasons = FakeSeasonRepository()
     private val spots = FakeClubSpotRepository()
@@ -29,11 +29,6 @@ class MonetizationTest {
     private val bots = BotService(users, clubs, athletes, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val squads = SquadService(service, athletes, trainings, clock)
-    private val startTraining = StartTrainingUseCase(service, squads, athletes, trainings, clock, economy)
-    private val speedTraining = SpeedUpTrainingUseCase(service, squads, trainings, clock)
-    private val speedMedical = SpeedUpMedicalUseCase(service, clubs, clock)
-    private val heal = HealAthleteUseCase(service, squads, clubs, athletes, clock)
     private val coinPacks = BuyCoinPackUseCase(service, clubs, clock)
     private val achievementService = AchievementService(achievementsRepo, service, seasons)
     private val achievements = AchievementUseCases(service, clubs, achievementsRepo, achievementService, cosmetics, clock)
@@ -132,29 +127,6 @@ class MonetizationTest {
         assertTrue(r2.items.isEmpty()); assertNull(r2.elite)
         val levelGold = (1..15).sumOf { Economy.freeReward(it).gold + Economy.premiumReward(it).gold }
         assertEquals(goldBefore + levelGold + 2 * Cosmetics.DUPLICATE_GOLD, club().gold)   // frame_gold (10) + decor_statue (15)
-    }
-
-    @Test
-    fun `training and medical speed-ups cost gold by remaining time`() = runBlocking<Unit> {
-        setup(gold = 100, level = 3, MapSpots.HOSPITAL)
-        val a = athletes.rows.values.first { it.clubId == club().id && it.sport == Sport.FOOTBALL && it.position.name != "GK" && it.attack < 55 }
-        val t = startTraining(user, a.id, AttributeKind.ATTACK)
-        clock.advanceSeconds(10 * 60)
-        val (trained, c) = speedTraining(user, t.id)
-        assertEquals(100 - Economy.speedUpGold(50 * 60), c.gold)                   // 50 min left → 5 gold
-        assertEquals(a.attack + t.delta, trained.attack)
-        assertTrue(trainings.rows.isEmpty())
-        assertFailsWith<NotFoundException> { speedTraining(user, t.id) }
-        assertFailsWith<ConflictException> { speedMedical(user) }                        // nothing to speed up
-        athletes.update(a.copy(injuredUntil = clock.now().plusSeconds(86_400)))
-        heal(user, a.id)
-        val before = club().gold
-        val after = speedMedical(user)
-        assertNull(after.medicalNextAt); assertTrue(after.gold < before)
-        val b = athletes.rows.values.first { it.clubId == club().id && it.id != a.id }
-        athletes.update(b.copy(injuredUntil = clock.now().plusSeconds(86_400)))
-        heal(user, b.id)                                                                  // healed right away
-        Unit
     }
 
     @Test

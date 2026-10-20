@@ -3,7 +3,7 @@ package com.arenacity.domain.usecase
 import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.rules.Energy
-import com.arenacity.domain.usecase.athlete.CardMatchUseCases
+import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
 import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
@@ -20,7 +20,7 @@ class EnergyTest {
     private val service = ClubService(clubs, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val energy = EnergyUseCases(service, clubs, clock)
-    private val cards = CardMatchUseCases(service, clubs, athletes, clock)
+    private val cards = ArenaMatchUseCases(service, clubs, clock)
     private val u1 = UUID.randomUUID()
 
     @Test
@@ -51,7 +51,7 @@ class EnergyTest {
     }
 
     @Test
-    fun `a card match start costs five, refused with a clear error when short, and gems refill it`() = runBlocking<Unit> {
+    fun `an Arena match start costs five, refused with a clear error when short, and gems refill it`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         assertEquals(25, cards.start(u1).current)
         assertEquals(25, energy.state(u1).current)

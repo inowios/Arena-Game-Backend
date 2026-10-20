@@ -38,7 +38,6 @@ fun Route.socialRoutes() {
     val h2h: HeadToHeadUseCase by inject()
     val grounds: GetGroundsUseCase by inject()
     val friends: FriendsUseCase by inject()
-    val museum: com.arenacity.domain.usecase.progress.MuseumService by inject()
     val challenges: ChallengeUseCases by inject()
     val clubs: ClubRepository by inject()
     val clubService: ClubService by inject()
@@ -58,8 +57,6 @@ fun Route.socialRoutes() {
         }
         delete("/messages/{id}") { chat.delete(call.userId(), call.id("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
         post("/clubs/{id}/block") { chat.block(call.userId(), call.id("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
-        delete("/clubs/{id}/block") { chat.unblock(call.userId(), call.id("id")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
-        get("/club/blocks") { call.respond(chat.blocked(call.userId()).map { it.toString() }.toSuccessResponse()) }
 
         get("/leagues/private/code/{code}") {
             val code = call.parameters["code"]!!.trim().uppercase()
@@ -68,11 +65,7 @@ fun Route.socialRoutes() {
             val me = clubService.clubOf(call.userId())
             call.respond(LeagueInviteDto(l.toDto(members.size), l.createdBy?.let { clubs.findById(it) }?.toRef(), me.id in members).toSuccessResponse())
         }
-        route("/leagues/private/{id}") {
-            post("/restart") { call.respond(admin.restart(call.userId(), call.id("id")).toDto(0).toSuccessResponse()) }
-            delete("/members/{clubId}") { admin.kick(call.userId(), call.id("id"), call.id("clubId")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
-            get("/history") { call.respond(admin.history(call.userId(), call.id("id")).map { it.toDto() }.toSuccessResponse()) }
-        }
+        delete("/leagues/private/{id}/members/{clubId}") { admin.kick(call.userId(), call.id("id"), call.id("clubId")); call.respond(mapOf("ok" to true).toSuccessResponse()) }
 
         get("/clubs/{id}/h2h") {
             val r = h2h(call.userId(), call.id("id"))
@@ -81,7 +74,6 @@ fun Route.socialRoutes() {
         }
         get("/friends") { call.respond(friends(call.userId()).map { it.toDto() }.toSuccessResponse()) }
         get("/clubs/{id}/grounds") { call.respond(grounds(call.id("id")).toDto().toSuccessResponse()) }
-        get("/clubs/{id}/museum") { call.respond(museum.of(call.id("id")).toDto().toSuccessResponse()) }
 
         route("/challenges") {
             val cfg = application.environment.config
@@ -90,10 +82,6 @@ fun Route.socialRoutes() {
             post {
                 val c = challenges.create(call.userId())
                 call.respond(HttpStatusCode.Created, c.toDto(clubService.clubOf(call.userId()), base, scheme).toSuccessResponse(201))
-            }
-            get("/mine") {
-                val me = clubService.clubOf(call.userId())
-                call.respond(challenges.mine(call.userId()).map { it.toDto(me, base, scheme) }.toSuccessResponse())
             }
             get("/{code}") { call.respond(challenges.view(call.parameters["code"]!!).toDto(base, scheme).toSuccessResponse()) }
             post("/{code}/accept") { call.respond(HttpStatusCode.Created, challenges.accept(call.userId(), call.parameters["code"]!!).toDto().toSuccessResponse(201)) }

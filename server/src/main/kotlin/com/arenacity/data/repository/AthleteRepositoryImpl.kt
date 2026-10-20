@@ -2,12 +2,10 @@ package com.arenacity.data.repository
 
 import com.arenacity.common.extension.dbQuery
 import com.arenacity.data.database.AthleteTable
-import com.arenacity.data.database.PackOpenTable
 import com.arenacity.data.database.LineupTable
 import com.arenacity.data.database.TrainingTable
 import com.arenacity.domain.model.*
 import com.arenacity.domain.repository.AthleteRepository
-import com.arenacity.domain.repository.PackRepository
 import com.arenacity.domain.repository.LineupRepository
 import com.arenacity.domain.repository.TrainingRepository
 import com.arenacity.engine.model.Position
@@ -83,22 +81,4 @@ class LineupRepositoryImpl : LineupRepository {
         }
         lineup
     }
-}
-
-class PackRepositoryImpl : PackRepository {
-    override suspend fun listByClub(clubId: UUID, limit: Int) = dbQuery {
-        PackOpenTable.selectAll().where { PackOpenTable.clubId eq clubId }.orderBy(PackOpenTable.createdAt, SortOrder.DESC).limit(limit).map { it.toOpen() }
-    }
-    override suspend fun create(open: PackOpen) = dbQuery {
-        PackOpenTable.insert {
-            it[id] = open.id; it[clubId] = open.clubId; it[kind] = open.kind.name; it[priceCoins] = open.priceCoins; it[priceGold] = open.priceGold
-            it[tiers] = open.tiers.joinToString(",") { t -> t.name }; it[athleteIds] = open.athleteIds.joinToString(","); it[createdAt] = open.createdAt
-        }
-        open
-    }
-    private fun ResultRow.toOpen() = PackOpen(
-        this[PackOpenTable.id], this[PackOpenTable.clubId], CardKind.valueOf(this[PackOpenTable.kind]), this[PackOpenTable.priceCoins], this[PackOpenTable.priceGold],
-        this[PackOpenTable.tiers].split(",").filter { it.isNotBlank() }.map { com.arenacity.domain.rules.PullTier.valueOf(it) },
-        this[PackOpenTable.athleteIds].split(",").filter { it.isNotBlank() }.map { UUID.fromString(it) }, this[PackOpenTable.createdAt],
-    )
 }

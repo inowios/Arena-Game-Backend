@@ -17,8 +17,7 @@ class LiveOpsTest {
     private val repo = FakeLiveOpsRepository()
     private val service = ClubService(clubs, clock)
     private val cosmetics = CosmeticsService(FakeInventoryRepository(), clock)
-    private val bought = mutableSetOf<String>()
-    private val ops = LiveOps(service, clubs, repo, cosmetics, clock, purchases = { _, pid -> pid in bought })
+    private val ops = LiveOps(service, clubs, repo, cosmetics, clock)
     private val create = CreateClubUseCase(clubs, clock, emptyList())
     private val user = UUID.randomUUID()
     private fun club() = clubs.rows.values.first()
@@ -73,29 +72,11 @@ class LiveOpsTest {
         assertFailsWith<ConflictException> { ops.claimMail(user, all.id) }
         assertTrue(ops.mail(user).single().claimed)
     }
-
-    @Test
-    fun `daily offers sell once a day, the starter pack shows until bought`() = runBlocking<Unit> {
-        setup()
-        val v = ops.offers(user)
-        assertTrue(v.starterAvailable)
-        assertEquals(2, v.daily.size)
-        assertTrue(v.daily.all { it.kind == "COINS" })   // coin offers only, no cosmetic look
-        val pack = v.daily.first()
-        val gold = club().gold; val coins = club().coins
-        ops.buyOffer(user, pack.id)
-        assertEquals(gold - pack.gold, club().gold); assertEquals(coins + pack.coins, club().coins)
-        assertFailsWith<ConflictException> { ops.buyOffer(user, pack.id) }
-        bought += LiveOps.STARTER_PACK
-        assertFalse(ops.offers(user).starterAvailable)
-        clock.advanceSeconds(86_400)
-        assertFalse(ops.offers(user).daily.first().bought)   // a new day, new offers
-    }
 }
 
 class FakeLiveOpsRepository : LiveOpsRepository {
     val events = mutableListOf<GameEvent>(); val prog = mutableMapOf<Pair<UUID, String>, EventProgress>()
-    val mails = mutableListOf<DevMail>(); val mailClaims = mutableSetOf<Pair<UUID, UUID>>(); val offers = mutableSetOf<Triple<UUID, Int, String>>()
+    val mails = mutableListOf<DevMail>(); val mailClaims = mutableSetOf<Pair<UUID, UUID>>()
     override suspend fun adminEvents() = events.toList()
     override suspend fun createEvent(e: GameEvent) { events += e }
     override suspend fun deleteEvent(id: String) { events.removeAll { it.id == id } }
@@ -112,6 +93,4 @@ class FakeLiveOpsRepository : LiveOpsRepository {
     override suspend fun claimedMails(clubId: UUID) = mailClaims.filter { it.second == clubId }.map { it.first }.toSet()
     override suspend fun createMail(m: DevMail) { mails += m }
     override suspend fun claimMail(clubId: UUID, mailId: UUID, at: Instant) = mailClaims.add(mailId to clubId)
-    override suspend fun offerBought(clubId: UUID, day: Int, offerId: String) = Triple(clubId, day, offerId) in offers
-    override suspend fun markOffer(clubId: UUID, day: Int, offerId: String, at: Instant) = offers.add(Triple(clubId, day, offerId))
 }

@@ -1,8 +1,6 @@
 package com.arenacity.domain.usecase
 
-import com.arenacity.core.auth.VerifiedIdentity
 import com.arenacity.domain.exception.AuthenticationException
-import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.usecase.auth.*
 import com.arenacity.testutil.*
 import kotlinx.coroutines.runBlocking
@@ -14,8 +12,6 @@ class AuthUseCasesTest {
     private val tokens = FakeRefreshTokenRepository()
     private val issuer = TokenIssuer(tokens, testJwt, clock)
     private val guest = GuestLoginUseCase(users, issuer, clock)
-    private val verifier = FakeIdTokenVerifier(mapOf("g-ok" to VerifiedIdentity("google-sub-1", "a@b.com", "Ann"), "ap-ok" to VerifiedIdentity("apple-sub-1", "c@d.com", null)))
-    private val oauth = OAuthLoginUseCase(users, issuer, clock, mapOf(AuthProvider.GOOGLE to verifier, AuthProvider.APPLE to verifier))
     private val refresh = RefreshTokenUseCase(tokens, users, testJwt, clock)
 
     @Test
@@ -24,21 +20,6 @@ class AuthUseCasesTest {
         val b = guest("device-12345678")
         assertTrue(a.isNewUser); assertFalse(b.isNewUser); assertEquals(a.user.id, b.user.id)
         assertEquals(1, users.rows.size); assertEquals(2, tokens.rows.size)
-    }
-
-    @Test
-    fun `guest upgrades to google in place keeping id`() = runBlocking<Unit> {
-        val g = guest("device-12345678")
-        val up = oauth(AuthProvider.GOOGLE, "g-ok", g.user.id)
-        assertEquals(g.user.id, up.user.id); assertEquals(AuthProvider.GOOGLE, up.user.authProvider); assertEquals("a@b.com", up.user.email); assertFalse(up.isNewUser)
-        val again = oauth(AuthProvider.GOOGLE, "g-ok", null)
-        assertEquals(g.user.id, again.user.id)
-    }
-
-    @Test
-    fun `oauth with bad token fails`() = runBlocking<Unit> {
-        assertFailsWith<AuthenticationException> { oauth(AuthProvider.APPLE, "nope", null) }
-        Unit
     }
 
     @Test

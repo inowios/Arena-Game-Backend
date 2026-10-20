@@ -14,8 +14,6 @@ object ClubTable : BaseTable("clubs") {
     val coins = long("coins")
     val gold = integer("gold")
     val timezone = varchar("timezone", 64)
-    val academyNextAt = timestamp("academy_next_at").nullable()
-    val medicalNextAt = timestamp("medical_next_at").nullable()
     val isBot = bool("is_bot")
     val division = integer("division")
     val tzBucket = integer("tz_bucket")
@@ -28,26 +26,13 @@ object ClubTable : BaseTable("clubs") {
     val kit = varchar("kit", 40).nullable()
     val emblemFrame = varchar("emblem_frame", 40).nullable()
     val celebration = varchar("celebration", 40).nullable()
-    val scoutSignedDate = date("scout_signed_date").nullable()
     val trophies = integer("trophies")
     val liveStreak = integer("live_streak")
-    val marketSalt = integer("market_salt")
     val arenaChestWeek = integer("arena_chest_week")
     val energy = integer("energy")
     val energyAt = timestamp("energy_at").nullable()
-    val offerDay = date("offer_day").nullable()
     /** When the owner was last seen (V42); written only by [com.arenacity.domain.repository.ClubRepository.touchSeen]. */
     val lastSeenAt = timestamp("last_seen_at").nullable()
-}
-
-object MarketPurchaseTable : org.jetbrains.exposed.sql.Table("market_purchases") {
-    val clubId = uuid("club_id").references(ClubTable.id)
-    val period = long("period")
-    val salt = integer("salt")
-    val idx = integer("idx")
-    val athleteId = uuid("athlete_id")
-    val createdAt = timestamp("created_at")
-    override val primaryKey = PrimaryKey(clubId, period, salt, idx)
 }
 
 /**

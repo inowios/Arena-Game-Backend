@@ -88,7 +88,7 @@ class CreateClubUseCase(private val clubs: ClubRepository, private val clock: Cl
             val now = clock.now()
             // the stadium is open from the start (rules.MapSpots): nothing to store for it
             // every club starts with crest 1 of the 15 painted ones and picks another in its profile (emblemJson {"crest": N})
-            val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), DEFAULT_EMBLEM, 1, 0, 2_500, 50, timezone, now, null, now, now))
+            val club = clubs.create(Club(UUID.randomUUID(), userId, name.trim(), primaryColor.uppercase(), secondaryColor.uppercase(), DEFAULT_EMBLEM, 1, 0, 2_500, 50, timezone, now, now))
             initializers.forEach { it.onClubCreated(club) }
             club
         }

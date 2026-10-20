@@ -26,8 +26,3 @@ interface LineupRepository {
     suspend fun upsert(lineup: Lineup): Lineup
 }
 
-interface PackRepository {
-    /** The club's openings, newest first, at most [limit]. */
-    suspend fun listByClub(clubId: UUID, limit: Int = 60): List<com.arenacity.domain.model.PackOpen>
-    suspend fun create(open: com.arenacity.domain.model.PackOpen): com.arenacity.domain.model.PackOpen
-}

@@ -52,7 +52,7 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
         users.create(User(userId, AuthProvider.BOT, "bot-$userId", null, null, null, true, now, now))
         val clubId = UUID.randomUUID()
         val (p, s) = palette[index % palette.size]
-        val club = clubs.create(Club(clubId, userId, "FC ${names[index % names.size]}", p, s, null, 1, 0, 0, 0, timezone, null, null, now, now, isBot = true, division = division, tzBucket = tzBucket,
+        val club = clubs.create(Club(clubId, userId, "FC ${names[index % names.size]}", p, s, null, 1, 0, 0, 0, timezone, now, now, isBot = true, division = division, tzBucket = tzBucket,
             kit = com.arenacity.domain.rules.Cosmetics.botKit(clubId.leastSignificantBits).takeUnless { com.arenacity.domain.rules.Cosmetics.isDefault(it) }))
         val (lo, hi) = botQuality(division)
         for (sport in com.arenacity.domain.rules.Sections.botSections(division)) athletes.createAll(AthleteFactory.squad(clubId, now, lo, hi, sport))

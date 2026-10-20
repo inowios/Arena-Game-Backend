@@ -6,4 +6,4 @@ scrape_configs:
     scheme: https
     metrics_path: /metrics
     authorization: { type: Bearer, credentials_file: /etc/prometheus/arenacity_admin_token }
-    static_configs: [ { targets: [ "api.example.com" ] } ]
+    static_configs: [ { targets: [ "arenacity.arenaproplay.com" ] } ]

@@ -11,7 +11,7 @@ import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import java.util.UUID
 
-/** Live game for players: events with goals, developer mail, the store's offers. */
+/** Live game for players: events with goals and developer mail. */
 fun Route.liveOpsRoutes() {
     val ops: LiveOps by inject()
     authenticate(AUTH_JWT) {
@@ -22,7 +22,5 @@ fun Route.liveOpsRoutes() {
             val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrElse { throw ValidationException("Mail not found") }
             call.respond(ops.claimMail(call.userId(), id).toDto().toSuccessResponse())
         }
-        get("/store/offers") { call.respond(ops.offers(call.userId()).toDto().toSuccessResponse()) }
-        post("/store/offers/{id}/buy") { call.respond(ops.buyOffer(call.userId(), call.parameters["id"] ?: "").toDto().toSuccessResponse()) }
     }
 }

@@ -22,7 +22,3 @@ object DevMailClaimTable : Table("dev_mail_claims") {
     val mailId = uuid("mail_id"); val clubId = uuid("club_id"); val claimedAt = timestamp("claimed_at")
     override val primaryKey = PrimaryKey(mailId, clubId)
 }
-object OfferPurchaseTable : Table("offer_purchases") {
-    val clubId = uuid("club_id"); val day = integer("day"); val offerId = varchar("offer_id", 32); val createdAt = timestamp("created_at")
-    override val primaryKey = PrimaryKey(clubId, day, offerId)
-}

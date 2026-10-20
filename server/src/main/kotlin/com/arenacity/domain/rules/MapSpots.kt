@@ -72,7 +72,7 @@ object MapSpots {
 
     /** The highest an athlete's attribute grows (training, matches) at [stadium]. */
     fun attributeCap(stadium: Int) = at(ATTRIBUTE_CAP, stadium)
-    /** The seats a live match fills at home (the gate: rules.LiveRules). */
+    /** The seats of the home stadium at [stadium] (the crowd the device draws). */
     fun seats(stadium: Int) = at(SEATS, stadium)
     fun trainingSlots(stadium: Int) = at(TRAINING_SLOTS, stadium)
     fun trainingDelta(stadium: Int) = at(TRAINING_DELTA, stadium)

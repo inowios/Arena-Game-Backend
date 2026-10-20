@@ -51,10 +51,4 @@ class LiveOpsRepositoryImpl : LiveOpsRepository {
     override suspend fun claimMail(clubId: UUID, mailId: UUID, at: Instant) = dbQuery {
         DevMailClaimTable.insertIgnore { it[this.mailId] = mailId; it[this.clubId] = clubId; it[claimedAt] = at }.insertedCount == 1
     }
-    override suspend fun offerBought(clubId: UUID, day: Int, offerId: String) = dbQuery {
-        OfferPurchaseTable.selectAll().where { (OfferPurchaseTable.clubId eq clubId) and (OfferPurchaseTable.day eq day) and (OfferPurchaseTable.offerId eq offerId) }.count() > 0
-    }
-    override suspend fun markOffer(clubId: UUID, day: Int, offerId: String, at: Instant) = dbQuery {
-        OfferPurchaseTable.insertIgnore { it[this.clubId] = clubId; it[this.day] = day; it[this.offerId] = offerId; it[createdAt] = at }.insertedCount == 1
-    }
 }

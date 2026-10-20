@@ -8,7 +8,7 @@ Kotlin backend for the Arena City mobile game. Design spec and plans live in
 | Module | Purpose |
 |---|---|
 | `match-engine` | Pure Kotlin, deterministic match simulator. No Ktor/DB dependencies. |
-| `server` | Ktor 3 API: auth, clubs and their map spots, athletes, lineups, public/private leagues, matchday scheduler, friendlies. |
+| `server` | Ktor 3 API: auth, clubs and the five islands map, heroes, the story «Іскра», the Arena match, public/private leagues, matchday scheduler, friendlies, cups, alliances. |
 
 ## Commands
 
@@ -20,7 +20,7 @@ Kotlin backend for the Arena City mobile game. Design spec and plans live in
     ./scripts/smoke.sh                        # end-to-end smoke against a running server
 
 Config: `server/src/main/resources/application.conf` (HOCON, `${?ENV}` overrides: `DATABASE_URL`, `DATABASE_USER`,
-`DATABASE_PASSWORD`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `APPLE_BUNDLE_ID`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
+`DATABASE_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_HOSTS`, `PORT`, `PUBLIC_BASE_URL`,
 `ANDROID_PACKAGE`, `ANDROID_CERT_SHA256`, `IOS_TEAM_ID`, `PLAY_STORE_URL`, `APP_STORE_URL`, `CLIENT_MIN_VERSION`; stores and ads:
 `GOOGLE_PLAY_PACKAGE`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `APPSTORE_ISSUER_ID`, `APPSTORE_KEY_ID`, `APPSTORE_PRIVATE_KEY`,
 `APPSTORE_ROOT_CERT_PATH`, `IAP_DEV_MODE`; ops: `ADMIN_TOKEN`, `SUPPORT_EMAIL`, `LEGAL_COMPANY`).
@@ -33,29 +33,27 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/v1/auth/guest` | `{deviceId}` → tokens; creates a guest account |
-| POST | `/api/v1/auth/oauth/google`, `/apple` | `{idToken}` verified server-side; upgrades a guest in place when called with its bearer |
-| POST | `/api/v1/auth/refresh`, `/logout`, `/logout-all` | refresh rotation / revoke |
+| POST | `/api/v1/auth/refresh` | refresh rotation (Google/Apple sign-in and logout went on 20 Oct 2026: guests and device transfer only; see git history when accounts come back) |
 | GET/PATCH/DELETE | `/api/v1/me`, `{locale}` | user + `hasClub`; the app reports its language (pushes are sent in it); DELETE erases the account (sign-in data, tokens, chat lines) and retires the club into a bot |
 | POST | `/api/v1/auth/transfer-code`; `/auth/transfer` `{code, deviceId}` | move an account to another device with a one-time code (24 h) |
 | GET/POST | `/api/v1/club/inbox`, `/club/inbox/read` | in-app inbox (matchday results, season end, accepted challenges, new league members); `GET /club` has `inboxUnread` |
 | GET | `/api/v1/catalog/spots` | the five islands map's ten spots `[{id, island, cost, people?}]`: `stadium` (always open), `academy` 3 000, `hospital` 6 000, `mall` 12 000, `lighthouse` 25 000, `marina` 50 000 (main island, `island` = `main`); `android_stadium`, `stone_arena`, `beast_dome`, `shadow_ruins` (one per people's island, `cost` = the island's price; they open with the island) |
-| POST/GET | `/api/v1/club` | create / full state: `club`, `stadium` (= the number of open spots, 1..10), `spots` (open spot ids), `land` = `{maskId: null, regions: ["main", open islands…], locked: [{id, people, zone, state, requiredStadium}], peoples}`, `sections`, `inboxUnread`, `live`, `energy`; `buildings` is always `[]` (the city builder went on 17 Oct 2026) |
+| POST/GET | `/api/v1/club` | create / full state: `club`, `stadium` (= the number of open spots, 1..10), `spots` (open spot ids), `land` = `{maskId: null, regions: ["main", open islands…], locked: [{id, people, zone, state, requiredStadium}], peoples}`, `sections`, `inboxUnread`, `energy` (rules.Energy: 30, +1 per 6 min; an Arena match 5, a friendly 3; `POST /club/energy/refill` fills it for 40 gems) |
 | POST | `/api/v1/club/spots/{id}/unlock` | open a main-island spot for its coins, at once, any order; answers GET /club's body. 409 already open (the stadium always), 404 unknown id, 400 an island's spot (it opens with its island: `/club/zones/{people}/buy`), 402 not enough coins |
-| GET | `/api/v1/club/athletes` | squad, active trainings, slots |
-| POST | `/api/v1/club/academy/claim` `{sport?}` | a graduate (needs the `academy` spot open; quality and interval — 12 h … 6 h — by the stadium level) |
-| POST | `/api/v1/club/trainings`, `/trainings/{id}/complete`, `/trainings/{id}/speedup` | train one attribute for 1 h (always available: slots, gain and the attribute cap by the stadium level); finish now for gold (1 per 10 min) |
-| POST | `/api/v1/club/athletes/{id}/heal`, `/club/medical/speedup` | the hospital (needs the `hospital` spot open; its rest by the stadium level); end its cooldown for gold |
-| DELETE | `/api/v1/club/athletes/{id}` | release an athlete (free; the section must still field a lineup) |
-| GET/POST | `/api/v1/club/scouting`, `/club/scouting/{slot}/sign` | daily scouting report (needs the `lighthouse` spot open): prospect / prime / veteran from the club's sections; one free signing a day |
-| GET/PUT | `/api/v1/club/lineup/{sport}` | starters, bench, tactics per section (`football` 11+7, `basketball` 5+5, `tennis` 1+1) |
+| GET/POST | `/api/v1/club/zones`; `/club/zones/{people}/buy` | the bridges to the peoples' islands (BEAST 4, STONE 5, ANDROID 7, SHADOW 9 = the stadium level each needs); an island opens its spot and its people's heroes |
+| GET/POST | `/api/v1/club/heroes`; `/club/heroes/{id}/unlock` | the hero roster (rules.HeroCatalog, rules.Heroes: the start six, the story heroes by chapter or for gems, the peoples' heroes by their island; levels 1–10) and opening one for gems |
+| GET/PUT | `/api/v1/club/heroes/lineup` | the Arena triple («Склад») |
+| GET/POST | `/api/v1/club/heroes/training`; `/club/heroes/{id}/train`, `/train/claim` | hero training at the stadium's level (coins, 2 h, experience on claim) |
+| GET/POST | `/api/v1/club/story`; `/club/story/{chapter}/claim` | the story «Іскра»: six chapters of goals fed by Arena results; claiming gives the chapter's hero, coins and gems |
+| POST | `/api/v1/club/arena/start`, `/club/arena/result` | the Arena match (v4, played on the device): start takes energy, the result pays coins, hero experience and story progress (`/club/cards/*` are aliases for one client version) |
+| GET/POST | `/api/v1/live/chest`, `/live/chest/claim` | the weekly arena chest by the club's trophies (rules.Arenas) |
+| GET/POST | `/api/v1/club/roads`, `/club/roads/{road}/{step}/claim`; GET `/club/collections` | the trophy road and the club-level road (coins, gems, cosmetics); cosmetic collections |
 | GET | `/api/v1/leagues/mine` | public league (8 clubs, same timezone bucket) + private leagues, with tables |
-| GET | `/api/v1/leagues/{id}`, `/{id}/fixtures?round=` | table, next round, fixtures |
-| POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}`; DELETE `/private/{id}/leave` | private leagues (code, max 20) |
+| POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}` | private leagues (code, max 20) |
 | GET | `/api/v1/club/fixtures` | next scheduled + last 5 played |
 | GET | `/api/v1/club/history`, `/clubs/{id}/history` | finished seasons (position, movement, prizes) and trophies |
 | GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
-| GET | `/api/v1/clubs/{id}` | public club profile |
 | GET | `/api/v1/cups/current` | weekly cup: `state` UPCOMING (next `drawAt`, last week's result in `previous`) / ACTIVE / FINISHED, bracket `ties` (round 1–4, slot, score or section points, `shootout`, `winnerId`, `fixtureId` → `/matches/{id}`), `me` (alive, stage, prize), prize table |
 | POST | `/api/v1/club/daily/claim` | 7-day login calendar + streak |
 | GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks, 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
@@ -65,10 +63,12 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | GET | `/api/v1/ads/ssv` | AdMob server-side verification callback (signature checked with Google's keys, 403 when bad); no placement grants a reward since the double income and the free speed-up went with the city builder |
 | POST | `/api/v1/store/apple/notifications`, `/api/v1/store/google/rtdn?token=...` | store refunds (no JWT). Apple: App Store Server Notifications V2 (`REFUND`/`REVOKE` take the purchase back, `REFUND_REVERSED` restores it; the JWS chain is checked against `APPSTORE_ROOT_CERT_PATH`, required outside dev mode). Google: Pub/Sub push of Real-time developer notifications, `voidedPurchaseNotification` by order id or token hash; `GOOGLE_PLAY_RTDN_TOKEN` guards the URL. Gold/coins are taken back as far as the club still has them, the premium pass and the product's item go too; the player gets an inbox message. Dev: `POST /api/v1/dev/store/refund {externalId, action}` |
 | GET/POST | `/api/v1/leagues/{id}/messages` `?before=&after=` / `{text}` | private-league chat (members only, 2 s / 20 per 5 min, masked; system lines `join|Name`, `leave|…`, `restart|n|winner`, `kick|…`) |
-| POST/DELETE | `/api/v1/messages/{id}/report`, `/messages/{id}`; `/clubs/{id}/block` | moderation: 3 reports hide a line; author or creator deletes; blocks hide a club's lines |
-| POST/DELETE/GET | `/api/v1/leagues/private/{id}/restart`, `/members/{clubId}`, `/history` | creator: new private season (table frozen into history), remove members |
-| GET | `/api/v1/clubs/{id}/h2h`, `/clubs/{id}/grounds` | head-to-head record; another club's grounds (visit): `club`, `stadium`, `spots`, `land` as GET /club's, `buildings` always `[]` |
-| POST/GET | `/api/v1/challenges`, `/challenges/mine`, `/challenges/{code}`, `/challenges/{code}/accept` | one-off friendly by link (7 days, first taker plays; both clubs rewarded) |
+| POST/DELETE | `/api/v1/messages/{id}/report`, `/messages/{id}`; POST `/clubs/{id}/block` | moderation: 3 reports hide a line; author or creator deletes; blocks hide a club's lines |
+| DELETE | `/api/v1/leagues/private/{id}/members/{clubId}` | creator: remove a member |
+| GET | `/api/v1/clubs/{id}/h2h`, `/clubs/{id}/grounds`, `/friends` | head-to-head record; another club's grounds (visit): `club`, `stadium`, `spots`, `land` as GET /club's; friends = alliance mates, private-league members, challenge opponents |
+| GET/POST | `/api/v1/alliances?q=`, `/alliances`, `/alliances/{id}`, `/alliances/{id}/join`, `/alliances/tournament`; `/club/alliance` (GET/PATCH), `/leave`, `/requests/{clubId}/{accept\|reject}`, `/members/{clubId}/{action}`, `/messages`, `/tournament/claim`; `/clubs/{id}/like`, `/likes`, `/clubs/top-liked` | alliances (stadium 2+), roles, chat, the weekend tournament of Arena wins, likes |
+| GET/POST | `/api/v1/events`, `/events/{id}/claim`; `/club/mail`, `/club/mail/{id}/claim` | live ops: calendar events with a goal and a reward; developer mail with gifts |
+| POST/GET | `/api/v1/challenges`, `/challenges/{code}`, `/challenges/{code}/accept` | one-off friendly by link (7 days, first taker plays; both clubs rewarded) |
 | GET | `/l/{code}`, `/c/{code}`, `/.well-known/assetlinks.json`, `/.well-known/apple-app-site-association` | invite landing pages (5 languages, store links, clipboard hand-off) and app-link association |
 | GET | `/api/v1/config` | public client config: base URL, link templates, store URLs, minimum client version |
 | POST | `/api/v1/analytics/events` `{platform, appVersion, events:[{name, props?, at?}]}` | product events from the app (≤ 50 per batch; names `[a-z][a-z0-9_]`, ≤ 12 short string props; queued events may be up to 3 days old) |
@@ -77,12 +77,11 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST/DELETE | `/api/v1/push-tokens` `{token, platform}` | FCM tokens; matchday result pushes via FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`) |
 | POST | `/api/v1/dev/matchday/run` | dev only (`KTOR_DEVELOPMENT=true`): run the scheduler tick now |
 
-Monetization (spec §6): gold buys speed-ups (trainings, the hospital's cooldown) and coin packs; coins open the map's spots;
-athletes, attributes, reputation and league places are never sold. Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
+Monetization (spec §6): gold («кристали») buys heroes, energy refills and coin packs; coins open the map's spots and pay hero training;
+reputation and league places are never sold. Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
 `season_pass` — consumable bought once per season. AdMob SSV callback URL: `https://<host>/api/v1/ads/ssv`.
 
-Sections: football always; a basketball court (club level 3) or tennis court (level 5) opens that section with a starter squad
-when its construction finishes; the venue level caps that section's attributes. A matchday is one opponent across all sections either
+Sections: football only since 15 Oct 2026 (the basketball and tennis arenas went with the sport town). A matchday is one opponent across all sections either
 club fields; a section only one club has is a walkover (3:0 / 20:0 / 2:0). Table points = sum of section points (3/1/0), so a three-sport
 club can take 9 a matchday. `GET /club` returns `sections`; fixtures carry `homePoints/awayPoints` and per-section scores; `GET /matches/{id}`
 returns `sections[]` with each sport's full result (`result` stays the football match).
@@ -100,9 +99,10 @@ starters' technique and mental; `shootout` in the result). Fatigue like a friend
 2 500 / 5 000 coins × division multiplier, gold from the semi-final, reputation), a `CUP` trophy for the winner (achievement
 `cup_winner`); inbox `CUP_DRAW` / `CUP_RESULT` and pushes. Rounds missed during downtime are played in order on the next pass.
 
-Careers: every athlete has a potential (the attribute average training can reach); at season end everyone ages a year —
-young players grow, veterans decline, 34+ may retire (replaced by a youth prospect; retired rows stay for old highlights,
-inbox `RETIREMENTS`). League matchdays move morale (+5 win / +1 draw / −4 loss for starters, −2 for those left out; the
+Athletes («вихованці академії») only fill the eleven around the club's heroes in simulated matches (rules.HeroSquad); the
+club does not manage them (the squad, academy, trainings, hospital, scouting, techniques and the market went on 20 Oct 2026).
+At season end everyone ages a year — young players grow, veterans decline, 34+ may retire (replaced by a youth prospect;
+retired rows stay for old highlights, inbox `RETIREMENTS`). League matchdays move morale (+5 win / +1 draw / −4 loss for starters, −2 for those left out; the
 engine weighs morale ±10%). Squad limits: football 25, basketball 14, tennis 6.
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)

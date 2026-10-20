@@ -7,8 +7,8 @@ import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.HeroSource
 import com.arenacity.domain.rules.Heroes
 import com.arenacity.domain.rules.UnlockKind
-import com.arenacity.domain.usecase.athlete.CardMatchReport
-import com.arenacity.domain.usecase.athlete.CardMatchUseCases
+import com.arenacity.domain.usecase.arena.ArenaReport
+import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
 import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
@@ -26,7 +26,7 @@ class HeroesUseCasesTest {
     private val service = ClubService(clubs, clock, spots)
     private val use = HeroUseCases(service, heroes, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(use)))
-    private val cards = CardMatchUseCases(service, clubs, athletes, clock, heroes = use)
+    private val cards = ArenaMatchUseCases(service, clubs, clock, heroes = use)
     private val u1 = UUID.randomUUID()
 
     private suspend fun gold(clubId: UUID, gold: Int) = clubs.update(clubs.findById(clubId)!!.copy(gold = gold))
@@ -81,9 +81,9 @@ class HeroesUseCasesTest {
     }
 
     @Test
-    fun `heroes who played a card match earn experience by the result, capped a day`() = runBlocking<Unit> {
+    fun `heroes who played an Arena match earn experience by the result, capped a day`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        fun report(won: Boolean, vararg ids: String) = CardMatchReport(7, won = won, draw = false, goalsFor = if (won) 2 else 0, goalsAgainst = 1, cards = emptyMap(), heroes = ids.toList())
+        fun report(won: Boolean, vararg ids: String) = ArenaReport(7, won = won, draw = false, goalsFor = if (won) 2 else 0, goalsAgainst = 1, heroes = ids.toList())
         val o = cards.report(u1, report(true, "p001", "p003", "p001", "p010", "p777"))
         assertEquals(50, o.heroXp)
         assertEquals(listOf("p001", "p003"), o.heroes.map { it.spec.id })   // not owned / unknown ids are skipped, duplicates count once
@@ -102,7 +102,7 @@ class HeroesUseCasesTest {
         assertEquals(50, cards.report(u1, report(true, "p003")).heroes.single().owned!!.xpToday)
         assertFailsWith<ValidationException> { cards.report(u1, report(true, *(1..11).map { "p%03d".format(it) }.toTypedArray())) }
         // a conceded match gives nothing
-        assertEquals(0, cards.report(u1, CardMatchReport(1, false, false, 0, 3, emptyMap(), conceded = true, heroes = listOf("p001"))).heroXp)
+        assertEquals(0, cards.report(u1, ArenaReport(1, false, false, 0, 3, conceded = true, heroes = listOf("p001"))).heroXp)
     }
 
     @Test

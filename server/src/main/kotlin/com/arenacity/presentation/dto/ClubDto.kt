@@ -16,7 +16,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class ClubDto(
     val id: String, val name: String, val primaryColor: String, val secondaryColor: String, val emblemJson: String?,
     val level: Int, val reputation: Int, val reputationForNextLevel: Int?, val coins: Long, val gold: Int, val timezone: String,
-    val academyNextAt: String?, val medicalNextAt: String?,
     val streak: Int = 0, val loginDay: Int = 0,
     val division: Int = 1, val seasonNo: Int = 1,
     val kit: String? = null, val emblemFrame: String? = null, val celebration: String? = null,
@@ -36,7 +35,7 @@ fun MapSpot.toDto() = SpotDto(id, island, cost, people?.name)
  * GET /club. [stadium] = the stadium level: the number of open spots (1..10); [spots] = the open spot ids; [land] = the
  * islands (see [LandDto]).
  */
-@Serializable data class ClubStateResponse(val club: ClubDto, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val inboxUnread: Int = 0, val live: LiveReadyDto? = null,
+@Serializable data class ClubStateResponse(val club: ClubDto, val serverTime: String, val sections: List<String> = listOf("FOOTBALL"), val inboxUnread: Int = 0,
                                           val stadium: Int = 1,
                                           val spots: List<String> = listOf("stadium"),
                                           val land: LandDto? = null,
@@ -44,7 +43,7 @@ fun MapSpot.toDto() = SpotDto(id, island, cost, people?.name)
                                           val energy: EnergyDto? = null)
 /**
  * Energy (rules.Energy): [current] of [max], +1 every [regenSeconds]; [nextAt] = the next +1, [fullAt] = full again (both
- * null when full); [refillPrice] = gems to fill it up; [cardMatchCost] / [friendlyCost] = what a card match and a
+ * null when full); [refillPrice] = gems to fill it up; [cardMatchCost] / [friendlyCost] = what an Arena match and a
  * friendly take (league matches are free).
  */
 @Serializable data class EnergyDto(val current: Int, val max: Int, val nextAt: String?, val fullAt: String?, val regenSeconds: Long, val refillPrice: Int,
@@ -71,11 +70,8 @@ fun ClubSpots.toLandDto() = LandDto(null,
     People.entries.filter { it !in peoples }.map { p -> LockedLandDto(p.island, p.name, Zones.spec(p).requiredStadium, (zones[p] ?: ZoneState.LOCKED).name, p.name) },
     com.arenacity.domain.rules.Peoples.returned(peoples).map { it.name })
 
-/** Readiness for a live match: energy of the eleven (0–100), whether they can start, minutes until they can, gold for an instant rest. */
-@Serializable data class LiveReadyDto(val energy: Int, val ready: Boolean, val restMinutes: Int, val tired: Int, val restGold: Int)
-fun com.arenacity.domain.usecase.live.LiveReadiness.toDto() = LiveReadyDto(energy, ready, restMinutes, tired, restGold)
-fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, academyNextAt?.toString(), medicalNextAt?.toString(), streak, loginDay, division, seasonNo, kit, emblemFrame, celebration, trophies, com.arenacity.domain.rules.Arenas.of(trophies).key, liveStreak)
+fun Club.toDto() = ClubDto(id.toString(), name, primaryColor, secondaryColor, emblemJson, level, reputation, ClubLevels.reputationForNext(level), coins, gold, timezone, streak, loginDay, division, seasonNo, kit, emblemFrame, celebration, trophies, com.arenacity.domain.rules.Arenas.of(trophies).key, liveStreak)
 
-/** GET /club's body for [st]; [live], [inboxUnread] and [sections] are read by the route. */
-fun ClubState.toResponse(sections: List<String>, inboxUnread: Int, live: LiveReadyDto?) = ClubStateResponse(club.toDto(), now.toString(), sections, inboxUnread, live, stadium, spots.open, spots.toLandDto(),
+/** GET /club's body for [st]; [inboxUnread] and [sections] are read by the route. */
+fun ClubState.toResponse(sections: List<String>, inboxUnread: Int) = ClubStateResponse(club.toDto(), now.toString(), sections, inboxUnread, stadium, spots.open, spots.toLandDto(),
     com.arenacity.domain.rules.Energy.state(club, now).toDto())

@@ -126,13 +126,11 @@ class ChatService(
     }
 
     suspend fun block(userId: UUID, clubId: UUID) { val me = service.clubOf(userId); if (me.id == clubId) throw ValidationException("Cannot block yourself"); chat.block(me.id, clubId) }
-    suspend fun unblock(userId: UUID, clubId: UUID) { val me = service.clubOf(userId); chat.unblock(me.id, clubId) }
-    suspend fun blocked(userId: UUID): Set<UUID> = chat.blockedBy(service.clubOf(userId).id)
 }
 
 @Serializable data class FrozenRow(val clubId: String, val name: String, val position: Int, val played: Int, val won: Int, val drawn: Int, val lost: Int, val points: Int)
 
-/** Private-league management by its creator: restart a season (table frozen into history), remove members. */
+/** Private-league management by its creator: remove members (the season restart and its frozen history went on 20 October 2026). */
 class PrivateLeagueAdmin(
     private val service: ClubService,
     private val leagues: LeagueRepository,
@@ -150,31 +148,12 @@ class PrivateLeagueAdmin(
         return me to league
     }
 
-    suspend fun restart(userId: UUID, leagueId: UUID): League = tx {
-        val (_, league) = ownLeague(userId, leagueId)
-        val view = queries.view(league)
-        val now = clock.now()
-        val frozen = view.table.mapIndexed { i, r -> FrozenRow(r.clubId.toString(), view.clubs[r.clubId]?.name ?: "?", i + 1, r.played, r.won, r.drawn, r.lost, r.points) }
-        val winner = view.table.firstOrNull()?.takeIf { it.played > 0 }
-        social.savePrivateSeason(PrivateLeagueSeason(UUID.randomUUID(), league.id, league.seasonNumber, winner?.clubId, Json.encodeToString(frozen), now))
-        val restarted = leagues.update(league.copy(seasonNumber = league.seasonNumber + 1, seasonStart = now.atZone(ZoneId.of(league.timezone)).toLocalDate(), updatedAt = now))
-        chat.system(league.id, "restart", restarted.seasonNumber.toString(), winner?.let { view.clubs[it.clubId]?.name } ?: "")
-        restarted
-    }
-
     suspend fun kick(userId: UUID, leagueId: UUID, clubId: UUID) = tx {
         val (me, league) = ownLeague(userId, leagueId)
         if (clubId == me.id) throw ValidationException("Use leave instead")
         if (clubId !in leagues.members(league.id)) throw NotFoundException("Not a member")
         leagues.removeMember(league.id, clubId)
         chat.system(league.id, "kick", clubs.findById(clubId)?.name ?: "?")
-    }
-
-    suspend fun history(userId: UUID, leagueId: UUID): List<PrivateLeagueSeason> {
-        val me = service.clubOf(userId)
-        val league = leagues.findById(leagueId)?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League not found")
-        if (me.id !in leagues.members(league.id)) throw AuthorizationException("Not a member of this league")
-        return social.privateSeasons(league.id)
     }
 }
 
@@ -271,8 +250,6 @@ class ChallengeUseCases(
         }
         return MatchView(played.fixture, played.result, mapOf(view.challenger.id to view.challenger, me.id to me), queries.athleteNames(played.fixture))
     }
-
-    suspend fun mine(userId: UUID): List<Challenge> = social.openChallengesOf(service.clubOf(userId).id, clock.now())
 }
 
 /** Records who brought whom (k-factor) and tells the inviter. Never throws into the caller's flow. */

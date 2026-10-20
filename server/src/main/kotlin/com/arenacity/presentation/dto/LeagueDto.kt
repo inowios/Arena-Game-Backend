@@ -27,7 +27,6 @@ import java.util.UUID
 /** [result] is the football match (kept for single-sport clients); [sections] has every sport played that matchday. */
 @Serializable data class MatchResponse(val fixture: FixtureDto, val result: MatchResult?, val athletes: Map<String, String> = emptyMap(), val sections: List<SectionDto> = emptyList())
 @Serializable data class ClubFixturesResponse(val next: FixtureDto?, val recent: List<FixtureDto>)
-@Serializable data class PublicClubDto(val club: ClubRefDto, val reputation: Int, val squadOverall: Int, val pitchLevel: Int, val sections: List<String> = listOf("FOOTBALL"), val sectionOverall: Map<String, Int> = emptyMap())
 @Serializable data class ClubSeasonDto(
     val seasonNo: Int, val division: Int, val position: Int, val played: Int, val won: Int, val drawn: Int, val lost: Int, val gf: Int, val ga: Int, val points: Int,
     val movement: String, val newDivision: Int, val prizeCoins: Long, val prizeGold: Int, val prizeReputation: Int, val finishedAt: String, val leagueId: String,
@@ -59,4 +58,3 @@ fun MatchView.toDto() = MatchResponse(fixture.toDto(clubs), result?.primary, ath
 fun com.arenacity.domain.model.ClubSeason.toDto() = ClubSeasonDto(seasonNo, division, position, played, won, drawn, lost, gf, ga, points, movement.name, newDivision, prizeCoins, prizeGold, prizeReputation, finishedAt.toString(), leagueId.toString())
 fun com.arenacity.domain.model.Trophy.toDto() = TrophyDto(kind.name, division, seasonNo, createdAt.toString())
 fun ClubHistory.toDto() = ClubHistoryResponse(seasons.map { it.toDto() }, trophies.map { it.toDto() })
-fun PublicClub.toDto() = PublicClubDto(club.toRef(), club.reputation, squadOverall, pitchLevel, sections.map { it.name }, sectionOverall.mapKeys { it.key.name })

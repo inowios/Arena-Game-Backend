@@ -6,8 +6,8 @@ import com.arenacity.domain.model.HeroSource
 import com.arenacity.domain.model.StoryProgress
 import com.arenacity.domain.rules.ChapterState
 import com.arenacity.domain.rules.Story
-import com.arenacity.domain.usecase.athlete.CardMatchReport
-import com.arenacity.domain.usecase.athlete.CardMatchUseCases
+import com.arenacity.domain.usecase.arena.ArenaReport
+import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
 import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
@@ -28,11 +28,11 @@ class StoryUseCasesTest {
     private val heroUse = HeroUseCases(service, heroes, clock)
     private val story = StoryUseCases(service, clubs, stories, heroUse, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(heroUse)))
-    private val cards = CardMatchUseCases(service, clubs, athletes, clock, heroes = heroUse, stories = story)
+    private val cards = ArenaMatchUseCases(service, clubs, clock, heroes = heroUse, stories = story)
     private val u1 = UUID.randomUUID()
 
     private fun match(won: Boolean, gf: Int, ga: Int, vararg heroes: String, story: Int? = null) =
-        CardMatchReport(7, won, !won && gf == ga, gf, ga, emptyMap(), heroes = heroes.toList(), story = story)
+        ArenaReport(7, won, !won && gf == ga, gf, ga, heroes = heroes.toList(), story = story)
 
     @Test
     fun `a new club starts chapter 1, the rest locked`() = runBlocking<Unit> {
@@ -45,7 +45,7 @@ class StoryUseCasesTest {
     }
 
     @Test
-    fun `card matches move chapter 1, claiming it opens chapter 2 and pays`() = runBlocking<Unit> {
+    fun `Arena matches move chapter 1, claiming it opens chapter 2 and pays`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         assertFailsWith<ConflictException> { story.claim(u1, 1) }   // nothing done yet
         // a won match with Kai and Itsuki, 2 goals: the pair played once of twice, 2 of 3 goals

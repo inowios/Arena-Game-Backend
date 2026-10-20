@@ -1,10 +1,7 @@
 package com.arenacity.testutil
 
 import com.arenacity.common.time.Clock
-import com.arenacity.core.auth.IdTokenVerifier
 import com.arenacity.core.auth.JwtUtil
-import com.arenacity.core.auth.VerifiedIdentity
-import com.arenacity.domain.exception.AuthenticationException
 import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.model.RefreshToken
 import com.arenacity.domain.model.User
@@ -40,10 +37,6 @@ class FakeRefreshTokenRepository : RefreshTokenRepository {
     }
     override suspend fun revokeByHash(hash: String) { rows.values.filter { it.tokenHash == hash }.forEach { rows[it.id] = it.copy(revokedAt = Instant.now()) } }
     override suspend fun revokeAllForUser(userId: UUID) { rows.values.filter { it.userId == userId }.forEach { rows[it.id] = it.copy(revokedAt = Instant.now()) } }
-}
-
-class FakeIdTokenVerifier(private val identities: Map<String, VerifiedIdentity>) : IdTokenVerifier {
-    override suspend fun verify(idToken: String) = identities[idToken] ?: throw AuthenticationException("bad token")
 }
 
 class FakeAccountRepository : com.arenacity.domain.repository.AccountRepository {

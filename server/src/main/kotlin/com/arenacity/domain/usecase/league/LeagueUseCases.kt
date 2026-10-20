@@ -25,8 +25,6 @@ data class MatchView(val fixture: Fixture, val result: MatchdayResult?, val club
 
 class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock,
                     private val heroes: com.arenacity.domain.repository.HeroRepository? = null) {
-    suspend fun view(leagueId: UUID): LeagueView = view(leagues.findById(leagueId) ?: throw NotFoundException("League not found"))
-
     suspend fun view(league: League): LeagueView {
         val members = leagues.members(league.id)
         val played = when (league.kind) {
@@ -40,12 +38,6 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
     suspend fun mine(clubId: UUID): Pair<LeagueView?, List<LeagueView>> {
         val all = leagues.listForClub(clubId)
         return all.firstOrNull { it.kind == LeagueKind.PUBLIC && it.status == LeagueStatus.ACTIVE }?.let { view(it) } to all.filter { it.kind == LeagueKind.PRIVATE }.map { view(it) }
-    }
-
-    suspend fun fixtures(leagueId: UUID, round: Int?): FixturesView {
-        val league = leagues.findById(leagueId) ?: throw NotFoundException("League not found")
-        val list = fixtures.listByLeagueSeason(league.id, league.seasonNumber, round)
-        return FixturesView(list, clubsOf(list))
     }
 
     suspend fun clubFixtures(clubId: UUID): Pair<Fixture?, FixturesView> {
@@ -103,17 +95,6 @@ class JoinPrivateLeagueUseCase(
     }
 }
 
-class LeavePrivateLeagueUseCase(private val service: ClubService, private val leagues: LeagueRepository, private val tx: Tx = NoTx, private val chat: com.arenacity.domain.usecase.social.ChatService? = null) {
-    suspend operator fun invoke(userId: UUID, leagueId: UUID) = tx {
-        val club = service.clubOf(userId)
-        val league = leagues.lockById(leagueId)?.takeIf { it.kind == LeagueKind.PRIVATE } ?: throw NotFoundException("League not found")
-        leagues.removeMember(league.id, club.id)
-        // the creator leaving hands the league to the longest-standing member
-        if (league.createdBy == club.id) leagues.members(league.id).firstOrNull()?.let { heir -> leagues.update(league.copy(createdBy = heir, updatedAt = java.time.Instant.now())) }
-        chat?.system(league.id, "leave", club.name)
-    }
-}
-
 class PlayFriendlyUseCase(private val service: ClubService, private val clubs: ClubRepository, private val fixtures: FixtureRepository, private val bots: BotService, private val runner: MatchdayRunner, private val queries: LeagueQueries, private val clock: Clock, private val tx: Tx = NoTx) {
     suspend operator fun invoke(userId: UUID, opponentClubId: UUID?): MatchView = tx {
         val club = service.lockedClubOf(userId)
@@ -133,19 +114,5 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
         fixtures.createAll(listOf(fixture))
         val p = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
         MatchView(p.fixture, p.result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(p.fixture))
-    }
-}
-
-/** [pitchLevel]: the club's stadium level (its open spots on the map, rules.MapSpots). */
-data class PublicClub(val club: Club, val squadOverall: Int, val pitchLevel: Int, val sections: List<Sport> = listOf(Sport.FOOTBALL), val sectionOverall: Map<Sport, Int> = emptyMap())
-
-class GetPublicClubUseCase(private val clubs: ClubRepository, private val athletes: AthleteRepository, private val service: com.arenacity.domain.usecase.club.ClubService, private val sections: com.arenacity.domain.usecase.athlete.SectionService? = null) {
-    suspend operator fun invoke(clubId: UUID): PublicClub {
-        val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        val squad = athletes.listByClub(clubId)
-        val pitch = service.stadiumOf(clubId)
-        val active = sections?.active(club, squad) ?: listOf(Sport.FOOTBALL)
-        fun overallOf(s: Sport) = squad.filter { it.sport == s }.sortedByDescending { it.overall }.take(com.arenacity.domain.rules.Sections.profile(s).startersCount).map { it.overall }.let { if (it.isEmpty()) 0 else it.average().toInt() }
-        return PublicClub(club, overallOf(Sport.FOOTBALL), pitch, active, active.associateWith(::overallOf))
     }
 }

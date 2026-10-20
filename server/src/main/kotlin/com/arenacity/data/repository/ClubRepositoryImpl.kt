@@ -3,7 +3,6 @@ package com.arenacity.data.repository
 import com.arenacity.common.extension.dbQuery
 import com.arenacity.data.database.ClubSpotTable
 import com.arenacity.data.database.ClubTable
-import com.arenacity.data.database.MarketPurchaseTable
 import com.arenacity.data.database.ClubRoadClaimTable
 import com.arenacity.domain.model.Club
 import com.arenacity.domain.repository.ClubRepository
@@ -29,15 +28,14 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.name] = c.name; this[ClubTable.primaryColor] = c.primaryColor; this[ClubTable.secondaryColor] = c.secondaryColor
         this[ClubTable.emblemJson] = c.emblemJson; this[ClubTable.level] = c.level; this[ClubTable.reputation] = c.reputation
         this[ClubTable.coins] = c.coins; this[ClubTable.gold] = c.gold; this[ClubTable.timezone] = c.timezone
-        this[ClubTable.academyNextAt] = c.academyNextAt; this[ClubTable.medicalNextAt] = c.medicalNextAt; this[ClubTable.updatedAt] = c.updatedAt
+        this[ClubTable.updatedAt] = c.updatedAt
         this[ClubTable.isBot] = c.isBot; this[ClubTable.division] = c.division; this[ClubTable.tzBucket] = c.tzBucket
         this[ClubTable.friendliesDate] = c.friendliesDate; this[ClubTable.friendliesPlayed] = c.friendliesPlayed
         this[ClubTable.loginDay] = c.loginDay; this[ClubTable.loginLast] = c.loginLast; this[ClubTable.streak] = c.streak
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
-        this[ClubTable.scoutSignedDate] = c.scoutSignedDate
-        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.marketSalt] = c.marketSalt; this[ClubTable.arenaChestWeek] = c.arenaChestWeek
-        this[ClubTable.energy] = c.energy; this[ClubTable.energyAt] = c.energyAt; this[ClubTable.offerDay] = c.offerDay
+        this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.arenaChestWeek] = c.arenaChestWeek
+        this[ClubTable.energy] = c.energy; this[ClubTable.energyAt] = c.energyAt
     }
 
 }
@@ -49,28 +47,18 @@ class ClubSpotRepositoryImpl : ClubSpotRepository {
     }
 }
 
-/** Row → club; shared with repositories that read the clubs table (live-match matchmaking). */
+/** Row → club; shared with repositories that read the clubs table. */
 internal fun ResultRow.toClub() = Club(
     this[ClubTable.id], this[ClubTable.userId], this[ClubTable.name], this[ClubTable.primaryColor], this[ClubTable.secondaryColor], this[ClubTable.emblemJson],
     this[ClubTable.level], this[ClubTable.reputation], this[ClubTable.coins], this[ClubTable.gold], this[ClubTable.timezone],
-    this[ClubTable.academyNextAt], this[ClubTable.medicalNextAt], this[ClubTable.createdAt], this[ClubTable.updatedAt],
+    this[ClubTable.createdAt], this[ClubTable.updatedAt],
     this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
     this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak],
     this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
-    this[ClubTable.scoutSignedDate],
-    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.marketSalt], this[ClubTable.arenaChestWeek],
-    this[ClubTable.energy], this[ClubTable.energyAt], this[ClubTable.offerDay],
+    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.arenaChestWeek],
+    this[ClubTable.energy], this[ClubTable.energyAt],
     this[ClubTable.lastSeenAt],
 )
-
-class MarketRepositoryImpl : com.arenacity.domain.repository.MarketRepository {
-    override suspend fun purchased(clubId: UUID, period: Long, salt: Int): Set<Int> = dbQuery {
-        MarketPurchaseTable.selectAll().where { (MarketPurchaseTable.clubId eq clubId) and (MarketPurchaseTable.period eq period) and (MarketPurchaseTable.salt eq salt) }.map { it[MarketPurchaseTable.idx] }.toSet()
-    }
-    override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant): Boolean = dbQuery {
-        runCatching { MarketPurchaseTable.insert { it[this.clubId] = clubId; it[this.period] = period; it[this.salt] = salt; it[this.idx] = idx; it[this.athleteId] = athleteId; it[createdAt] = at } }.isSuccess
-    }
-}
 
 class RoadRepositoryImpl : com.arenacity.domain.usecase.progress.RoadRepository {
     override suspend fun claimed(clubId: UUID) = dbQuery {

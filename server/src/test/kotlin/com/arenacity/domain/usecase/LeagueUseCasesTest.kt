@@ -37,11 +37,11 @@ class LeagueUseCasesTest {
         join(u2, priv.code!!.lowercase())
         assertFailsWith<ConflictException> { join(u2, priv.code!!) }
         runner.runDueRounds(Instant.parse("2026-10-09T20:00:00Z"))
-        val view = queries.view(priv.id)
+        val view = queries.view(leagues.rows.getValue(priv.id))
         assertEquals(2, view.table.size); assertTrue(view.table.all { it.played == 1 })
         val (pub, privs) = queries.mine(a.id)
         assertNotNull(pub); assertEquals(8, pub.table.size); assertEquals(1, privs.size)
-        assertEquals(b.id, queries.view(priv.id).clubs.getValue(b.id).id)
+        assertEquals(b.id, queries.view(leagues.rows.getValue(priv.id)).clubs.getValue(b.id).id)
     }
 
     @Test

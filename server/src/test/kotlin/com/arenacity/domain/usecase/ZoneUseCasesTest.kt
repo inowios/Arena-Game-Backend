@@ -60,12 +60,10 @@ class ZoneUseCasesTest {
         assertEquals(setOf(People.BEAST), get(user).spots.peoples)
         // its spot is open: one more open spot, stadium 5
         assertTrue(get(user).isOpen("beast_dome")); assertEquals(5, get(user).stadium)
-        // the island is the club's land now, its dome gone, its people back (and its cards in the packs)
+        // the island is the club's land now, its dome gone, its people back
         val open = get(user).spots.toLandDto()
         assertEquals(listOf("main", "beast"), open.regions); assertEquals(listOf("BEAST"), open.peoples)
         assertTrue(open.locked.none { it.id == "beast" })
-        assertTrue(Peoples.dropsInPacks(People.BEAST, get(user).spots.peoples))
-        assertFalse(Peoples.dropsInPacks(People.STONE, get(user).spots.peoples))
         assertEquals("Needs stadium level {0}", assertFailsWith<ValidationException> { zones.buy(user, People.ANDROID) }.template)   // stadium 5 < 7
         // the client's dto: the people's key in both fields
         assertEquals("BEAST", zones.list(user).first { it.spec.people == People.BEAST }.toDto().people)

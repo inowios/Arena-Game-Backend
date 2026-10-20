@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Launch KPIs from the running server (design spec §1 targets):
-#   BASE_URL=https://api.example.com ADMIN_TOKEN=… scripts/metrics.sh [days=30]
+#   BASE_URL=https://arenacity.arenaproplay.com ADMIN_TOKEN=… scripts/metrics.sh [days=30]
 set -euo pipefail
 B="${BASE_URL:-http://localhost:8080}"
 : "${ADMIN_TOKEN:?set ADMIN_TOKEN}"

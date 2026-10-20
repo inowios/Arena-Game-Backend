@@ -38,8 +38,8 @@ fun Route.apiRoutes() {
     authSessionRoutes()
     meRoutes()
     clubRoutes()
-    athleteRoutes()
     heroRoutes()
+    arenaRoutes()
     storyRoutes()
     leagueRoutes()
     economyRoutes()
@@ -49,6 +49,4 @@ fun Route.apiRoutes() {
     liveOpsRoutes()
     analyticsRoutes()
     cupRoutes()
-    liveRoutes()
-    marketRoutes()
 }

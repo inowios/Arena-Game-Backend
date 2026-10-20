@@ -4,7 +4,6 @@ import com.arenacity.domain.model.User
 import kotlinx.serialization.Serializable
 
 @Serializable data class GuestLoginRequest(val deviceId: String)
-@Serializable data class OAuthLoginRequest(val idToken: String)
 @Serializable data class RefreshRequest(val refreshToken: String)
 @Serializable data class UserDto(val id: String, val provider: String, val email: String?, val displayName: String?, val avatarUrl: String?, val locale: String? = null)
 @Serializable data class UpdateMeRequest(val locale: String? = null)

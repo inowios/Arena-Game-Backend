@@ -3,7 +3,6 @@ package com.arenacity.it
 import com.arenacity.common.tx.DbTx
 import com.arenacity.data.repository.*
 import com.arenacity.domain.exception.DomainException
-import com.arenacity.domain.model.AttributeKind
 import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.model.User
 import com.arenacity.domain.rules.MapSpots
@@ -26,13 +25,11 @@ import kotlin.test.assertTrue
 class ConcurrencyIT {
     private val clock = FixedClock()
     private val users = UserRepositoryImpl(); private val clubs = ClubRepositoryImpl()
-    private val athletes = AthleteRepositoryImpl(); private val trainings = TrainingRepositoryImpl()
+    private val athletes = AthleteRepositoryImpl()
     private val spots = ClubSpotRepositoryImpl()
     private val service = ClubService(clubs, clock, spots, ZoneRepositoryImpl())
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)), tx = DbTx)
     private val unlock = UnlockSpotUseCase(service, spots, clock, tx = DbTx)
-    private val squads = SquadService(service, athletes, trainings, clock)
-    private val train = StartTrainingUseCase(service, squads, athletes, trainings, clock, tx = DbTx)
     private val userId = UUID.randomUUID()
 
     @BeforeEach
@@ -65,14 +62,5 @@ class ConcurrencyIT {
         assertEquals(results.count { it.isSuccess }, opened.size, "results: $results")
         assertTrue(club.coins >= 0)
         assertEquals(9_000L - MapSpots.BUYABLE.filter { it.id in opened }.sumOf { it.cost }, club.coins)
-    }
-
-    @Test
-    fun `a finished training is applied once even when the squad is read in parallel`() {
-        val athlete = runBlocking { squads.squad(userId).athletes.minBy { it.mental } }   // stays under the stadium's cap
-        runBlocking { train(userId, athlete.id, AttributeKind.MENTAL) }
-        clock.advanceSeconds(3600)
-        parallel(12) { squads.squad(userId) }
-        assertEquals(athlete.mental + 1, runBlocking { athletes.findById(athlete.id)!!.mental })
     }
 }

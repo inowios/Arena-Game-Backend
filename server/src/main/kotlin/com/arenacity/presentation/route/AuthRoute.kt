@@ -3,7 +3,6 @@ package com.arenacity.presentation.route
 import com.arenacity.common.response.toSuccessResponse
 import com.arenacity.core.plugins.AUTH_JWT
 import com.arenacity.domain.exception.AuthorizationException
-import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.usecase.auth.*
 import com.arenacity.presentation.dto.*
 import io.ktor.server.auth.*
@@ -19,7 +18,6 @@ fun RoutingCall.userId(): UUID = principal<JWTPrincipal>()?.subject?.let { UUID.
 
 fun Route.authLoginRoutes() {
     val guestLogin: GuestLoginUseCase by inject()
-    val oauthLogin: OAuthLoginUseCase by inject()
     val transfer: com.arenacity.domain.usecase.account.TransferUseCases by inject()
     route("/auth") {
         /** Redeem a transfer code from the old device: this device now signs in to that account. */
@@ -38,29 +36,15 @@ fun Route.authLoginRoutes() {
             val r = guestLogin(call.receive<GuestLoginRequest>().deviceId)
             call.respond(AuthResponse(r.accessToken, r.refreshToken, r.user.toDto(), r.isNewUser).toSuccessResponse())
         }
-        authenticate(AUTH_JWT, optional = true) {
-            for ((path, provider) in listOf("google" to AuthProvider.GOOGLE, "apple" to AuthProvider.APPLE)) {
-                post("/oauth/$path") {
-                    val current = call.principal<JWTPrincipal>()?.subject?.let { UUID.fromString(it) }
-                    val r = oauthLogin(provider, call.receive<OAuthLoginRequest>().idToken, current)
-                    call.respond(AuthResponse(r.accessToken, r.refreshToken, r.user.toDto(), r.isNewUser).toSuccessResponse())
-                }
-            }
-        }
     }
 }
 
 fun Route.authSessionRoutes() {
     val refresh: RefreshTokenUseCase by inject()
-    val logout: LogoutUseCase by inject()
     route("/auth") {
         post("/refresh") {
             val t = refresh(call.receive<RefreshRequest>().refreshToken)
             call.respond(TokenResponse(t.accessToken, t.refreshToken).toSuccessResponse())
-        }
-        post("/logout") { logout.logout(call.receive<RefreshRequest>().refreshToken); call.respond(mapOf("ok" to true).toSuccessResponse()) }
-        authenticate(AUTH_JWT) {
-            post("/logout-all") { logout.logoutAll(call.userId()); call.respond(mapOf("ok" to true).toSuccessResponse()) }
         }
     }
 }

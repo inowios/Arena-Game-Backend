@@ -29,7 +29,6 @@ class SocialTest {
     private val invites = InviteTracker(social, clubs, clock)
     private val createPrivate = CreatePrivateLeagueUseCase(service, leagues, clock)
     private val join = JoinPrivateLeagueUseCase(service, leagues, invites = invites, chat = chat)
-    private val leave = LeavePrivateLeagueUseCase(service, leagues, chat = chat)
     private val admin = PrivateLeagueAdmin(service, leagues, clubs, social, queries, chat, clock)
     private val challenges = ChallengeUseCases(service, clubs, fixtures, social, runner, queries, clock)
     private val h2h = HeadToHeadUseCase(service, clubs, fixtures)
@@ -65,19 +64,13 @@ class SocialTest {
     }
 
     @Test
-    fun `creator restarts a private season and can remove members, the league passes on when the creator leaves`() = runBlocking<Unit> {
+    fun `the creator can remove members of a private league`() = runBlocking<Unit> {
         val (u1, _) = user("Alpha"); val (u2, b) = user("Bravo"); val (u3, c) = user("Charlie")
         val league = createPrivate(u1, "Office"); join(u2, league.code!!); join(u3, league.code!!)
         runner.runDueRounds(Instant.parse("2026-10-09T20:00:00Z"))
-        val restarted = admin.restart(u1, league.id)
-        assertEquals(2, restarted.seasonNumber)
-        val history = admin.history(u2, league.id)
-        assertEquals(1, history.size); assertEquals(1, history.single().seasonNumber)
-        assertFailsWith<AuthorizationException> { admin.restart(u2, league.id) }
+        assertFailsWith<AuthorizationException> { admin.kick(u2, league.id, c.id) }
         admin.kick(u1, league.id, c.id)
         assertFalse(c.id in leagues.members(league.id))
-        leave(u1, league.id)
-        assertEquals(b.id, leagues.rows.getValue(league.id).createdBy)
         assertEquals(1, social.invites.count { it.kind == InviteKind.LEAGUE && it.inviteeClubId == b.id })
     }
 

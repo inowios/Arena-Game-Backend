@@ -27,10 +27,6 @@ class CareerTest {
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val careers = CareerService(athletes, trainings, clock)
-    private val release = ReleaseAthleteUseCase(service, athletes, trainings, clock)
-    private val scouting = ScoutingUseCases(service, clubs, athletes, sections, clock)
-    private val squads = SquadService(service, athletes, trainings, clock)
-    private val train = StartTrainingUseCase(service, squads, athletes, trainings, clock)
     private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = sections)
     private val user = UUID.randomUUID()
 
@@ -73,53 +69,6 @@ class CareerTest {
         assertTrue(squad().none { it.id == veteran.id })
         assertTrue(veteran.id in athletes.namesByClubs(listOf(club().id)), "retired players keep their names in old highlights")
         assertTrue(squad().filter { it.id != result.youth.single().id }.all { it.age >= 18 })
-    }
-
-    @Test
-    fun `release keeps a playable section`() = runBlocking<Unit> {
-        setup()
-        val keepers = squad().filter { it.position == Position.GK }
-        assertEquals(2, keepers.size)
-        release(user, keepers[0].id)
-        assertFailsWith<ValidationException> { release(user, keepers[1].id) }   // last goalkeeper
-        squad().filter { it.position != Position.GK }.take(2).forEach { release(user, it.id) }
-        assertEquals(11, squad().size)
-        assertFailsWith<ValidationException> { release(user, squad().first { it.position == Position.MID }.id) }
-        Unit
-    }
-
-    @Test
-    fun `scouting needs the lighthouse and signs one player a day`() = runBlocking<Unit> {
-        setup()
-        assertEquals("Open the lighthouse first", assertFailsWith<ValidationException> { scouting.report(user) }.template)
-        spots.open(club().id, MapSpots.ACADEMY)
-        assertFailsWith<ValidationException> { scouting.report(user) }   // another spot does not do
-        spots.open(club().id, MapSpots.LIGHTHOUSE)
-        val r = scouting.report(user)
-        assertEquals(listOf("PROSPECT", "PRIME", "VETERAN"), r.offers.map { it.kind })
-        assertTrue(r.offers[0].athlete.age in 17..19 && r.offers[2].athlete.age in 30..32)
-        assertEquals(r.offers.map { it.athlete.name }, scouting.report(user).offers.map { it.athlete.name }, "same offers all day")
-        val before = squad().size
-        val signed = scouting.sign(user, 1)
-        assertEquals(r.offers[1].athlete.name, signed.name); assertEquals(before + 1, squad().size)
-        assertFailsWith<ConflictException> { scouting.sign(user, 0) }
-        assertTrue(scouting.report(user).signedToday)
-        clock.advanceSeconds(86_400)
-        assertNotEquals(r.offers.map { it.athlete.name }, scouting.report(user).offers.map { it.athlete.name })
-        // squad limit
-        repeat(Careers.squadMax(Sport.FOOTBALL) - squad().size) { athletes.createAll(listOf(AthleteFactory.create(100L + it, club().id, Sport.FOOTBALL, 40, 45, null, clock.now()))) }
-        assertFailsWith<ConflictException> { scouting.sign(user, 0) }
-        Unit
-    }
-
-    @Test
-    fun `training stops at potential`() = runBlocking<Unit> {
-        setup()   // training belongs to the stadium: nothing to open
-        val a = squad().first { it.position == Position.MID && it.attack < 58 }
-        athletes.update(a.copy(potential = a.attributeAverage))
-        assertFailsWith<ValidationException> { train(user, a.id, AttributeKind.ATTACK) }
-        athletes.update(a.copy(potential = a.attributeAverage + 3))
-        train(user, a.id, AttributeKind.ATTACK); Unit
     }
 
     @Test

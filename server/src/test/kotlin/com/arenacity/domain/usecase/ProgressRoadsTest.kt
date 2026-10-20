@@ -15,15 +15,13 @@ import java.util.UUID
 class ProgressRoadsTest {
     private val clock = FixedClock()
     private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository()
     private val inventory = FakeInventoryRepository()
     private val spots = FakeClubSpotRepository()
     private val service = ClubService(clubs, clock, spots)
     private val cosmetics = CosmeticsService(inventory, clock)
     private val create = CreateClubUseCase(clubs, clock, emptyList())
-    private val roads = RoadUseCases(service, clubs, FakeRoadRepository(), cosmetics, athletes, clock)
+    private val roads = RoadUseCases(service, clubs, FakeRoadRepository(), cosmetics, clock)
     private val collections = CollectionsUseCases(service, cosmetics)
-    private val museum = MuseumService(clubs, service, AchievementService(FakeAchievementRepository(), service, FakeSeasonRepository()))
     private val user = UUID.randomUUID()
     private fun club() = clubs.rows.values.first { it.userId == user }
 
@@ -57,9 +55,8 @@ class ProgressRoadsTest {
         assertTrue("kit_halves" in cosmetics.owned(club().id))
         val g0 = club().gold
         val step6 = roads.claim(user, Road.TROPHY, 6)   // 500: gold, not a pack
-        assertNull(step6.athlete); assertEquals(g0 + 30, club().gold)
-        assertTrue(athletes.listByClub(club().id).isEmpty())
-        assertTrue((Roads.TROPHY + Roads.LEVEL).none { it.reward.pack || it.reward.item?.startsWith("decor_") == true })
+        assertEquals(30, step6.gold); assertEquals(g0 + 30, club().gold)
+        assertTrue((Roads.TROPHY + Roads.LEVEL).none { it.reward.item?.startsWith("decor_") == true })
         // the level road's last step: frame_gold; owned already -> gold instead
         clubs.update(club().copy(level = 10))
         cosmetics.grant(club().id, Cosmetics.find("frame_gold")!!, CosmeticSource.SHOP)
@@ -77,17 +74,6 @@ class ProgressRoadsTest {
         val (sets, pct) = collections.list(user)
         assertEquals(2, pct); assertTrue(sets.single { it.complete }.set.id == "frames")
         assertTrue(Collections.ALL.none { s -> s.items.any { it.startsWith("decor_") } })   // no town decorations
-    }
-
-    @Test
-    fun `the hall of fame holds as many honours as the stadium level allows`() = runBlocking<Unit> {
-        newClub()
-        val v1 = museum.of(club().id)
-        assertEquals(1, v1.level); assertEquals(3, v1.capacity)                     // stadium 1: three exhibits
-        spots.open(club().id, MapSpots.ACADEMY, MapSpots.HOSPITAL)
-        val v3 = museum.of(club().id)
-        assertEquals(3, v3.level); assertEquals(MuseumRules.capacity(3), v3.capacity); assertEquals(9, v3.capacity)
-        assertTrue(v3.exhibits.size <= 9)
     }
 }
 

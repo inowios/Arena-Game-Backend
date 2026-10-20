@@ -31,12 +31,6 @@ class FakeClubSpotRepository : ClubSpotRepository {
     fun stadium(clubId: UUID, level: Int) = open(clubId, *com.arenacity.domain.rules.MapSpots.BUYABLE.take(level - 1).map { it.id }.toTypedArray())
 }
 
-class FakeMarketRepository : com.arenacity.domain.repository.MarketRepository {
-    val rows = mutableSetOf<String>()
-    override suspend fun purchased(clubId: UUID, period: Long, salt: Int) = rows.filter { it.startsWith("$clubId:$period:$salt:") }.map { it.substringAfterLast(':').toInt() }.toSet()
-    override suspend fun markPurchased(clubId: UUID, period: Long, salt: Int, idx: Int, athleteId: UUID, at: java.time.Instant) = rows.add("$clubId:$period:$salt:$idx")
-}
-
 class FakeZoneRepository : com.arenacity.domain.repository.ZoneRepository {
     val rows = mutableListOf<com.arenacity.domain.model.ClubZone>()
     override suspend fun listByClub(clubId: UUID) = rows.filter { it.clubId == clubId }

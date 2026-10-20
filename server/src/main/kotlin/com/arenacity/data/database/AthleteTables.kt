@@ -45,9 +45,3 @@ object LineupTable : Table("lineups") {
     val updatedAt = timestamp("updated_at")
     override val primaryKey = PrimaryKey(clubId, sport)
 }
-
-object PackOpenTable : Table("pack_opens") {
-    val id = uuid("id"); val clubId = uuid("club_id"); val kind = varchar("kind", 12); val priceCoins = long("price_coins"); val priceGold = integer("price_gold")
-    val tiers = varchar("tiers", 64); val athleteIds = text("athlete_ids"); val createdAt = timestamp("created_at")
-    override val primaryKey = PrimaryKey(id)
-}

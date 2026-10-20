@@ -20,11 +20,8 @@ fun Route.clubRoutes() {
     val updateClub: UpdateClubUseCase by inject()
     val roads: com.arenacity.domain.usecase.progress.RoadUseCases by inject()
     val collections: com.arenacity.domain.usecase.progress.CollectionsUseCases by inject()
-    val museum: com.arenacity.domain.usecase.progress.MuseumService by inject()
     val sections: com.arenacity.domain.usecase.athlete.SectionService by inject()
     val inbox: com.arenacity.domain.usecase.account.InboxService by inject()
-    val readiness: com.arenacity.domain.usecase.live.LiveReadinessUseCase by inject()
-    val rest: com.arenacity.domain.usecase.live.RestSquadUseCase by inject()
     val zonesUc: com.arenacity.domain.usecase.club.ZoneUseCases by inject()
     val energy: EnergyUseCases by inject()
 
@@ -44,12 +41,12 @@ fun Route.clubRoutes() {
             }
             get {
                 val st = getClub(call.userId())
-                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id), readiness.of(st.club).toDto()).toSuccessResponse())
+                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id)).toSuccessResponse())
             }
             // opens a main-island spot for its coins; answers the club as GET /club does
             post("/spots/{id}/unlock") {
                 val st = unlockSpot(call.userId(), call.parameters["id"].orEmpty())
-                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id), readiness.of(st.club).toDto()).toSuccessResponse())
+                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id)).toSuccessResponse())
             }
             // energy (rules.Energy): what the club has now, and filling it up for gems
             get("/energy") { call.respond(energy.state(call.userId()).toDto().toSuccessResponse()) }
@@ -57,7 +54,6 @@ fun Route.clubRoutes() {
                 val (club, e) = energy.refill(call.userId())
                 call.respond(EnergyRefillResponse(e.toDto(), club.toDto()).toSuccessResponse())
             }
-            post("/rest") { call.respond(rest(call.userId()).toDto().toSuccessResponse()) }
             // the bridges to the peoples' islands (rules.Zones); {people}: BEAST, STONE, ANDROID, SHADOW (an old client's sport name reads as its island's people)
             get("/zones") { call.respond(zonesUc.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }
             post("/zones/{sport}/buy") {
@@ -75,10 +71,9 @@ fun Route.clubRoutes() {
                 val road = runCatching { com.arenacity.domain.rules.Road.valueOf(call.parameters["road"]!!.uppercase()) }.getOrElse { throw ValidationException("Unknown reward") }
                 val step = call.parameters["step"]?.toIntOrNull() ?: throw ValidationException("Unknown reward")
                 val r = roads.claim(call.userId(), road, step)
-                call.respond(r.toDto(java.time.Instant.now()).toSuccessResponse())
+                call.respond(r.toDto().toSuccessResponse())
             }
             get("/collections") { call.respond(collections.list(call.userId()).toDto().toSuccessResponse()) }
-            get("/museum") { call.respond(museum.of(getClub(call.userId()).club.id).toDto().toSuccessResponse()) }
         }
     }
 }

@@ -1,13 +1,10 @@
 package com.arenacity.domain.usecase.athlete
 
-import com.arenacity.common.time.Clock
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.Athlete
 import com.arenacity.domain.model.Lineup
 import com.arenacity.domain.model.Sport
-import com.arenacity.domain.repository.LineupRepository
 import com.arenacity.domain.rules.Sections
-import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.engine.model.Position
 import com.arenacity.engine.model.Tactics
 import java.time.Instant
@@ -88,26 +85,6 @@ object LineupRules {
             }
         }
         return valid.copy(starters = starters, bench = valid.bench.filter { it !in used })
-    }
-}
-
-class GetLineupUseCase(private val service: ClubService, private val squads: SquadService, private val lineups: LineupRepository, private val clock: Clock) {
-    suspend operator fun invoke(userId: UUID, sport: Sport): Pair<Lineup, List<Athlete>> {
-        val club = service.clubOf(userId)
-        val squad = squads.squad(userId).athletes
-        val stored = lineups.find(club.id, sport)?.takeIf { l -> runCatching { LineupRules.validate(sport, l.starters, l.bench, squad) }.isSuccess }
-        return (stored ?: LineupRules.defaultFor(club.id, sport, squad, clock.now())) to squad.filter { it.sport == sport }
-    }
-}
-
-class SetLineupUseCase(private val service: ClubService, private val squads: SquadService, private val lineups: LineupRepository, private val clock: Clock, private val progress: com.arenacity.domain.usecase.economy.ProgressTracker = com.arenacity.domain.usecase.economy.ProgressTracker { _, _ -> }) {
-    suspend operator fun invoke(userId: UUID, sport: Sport, starters: List<UUID>, bench: List<UUID>, tactics: Tactics): Lineup {
-        val club = service.clubOf(userId)
-        LineupRules.validate(sport, starters, bench, squads.squad(userId).athletes)
-        if (tactics.formation !in LineupRules.FORMATIONS) throw ValidationException("Unknown formation")
-        val saved = lineups.upsert(Lineup(club.id, sport, starters, bench, tactics, clock.now()))
-        progress.record(club.id, com.arenacity.domain.rules.ProgressEvent.LINEUP_SAVED)
-        return saved
     }
 }
 

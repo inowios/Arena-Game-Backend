@@ -43,7 +43,7 @@ class ApiIT {
     private fun JsonElement.strings() = jsonArray.map { it.jsonPrimitive.content }
 
     @Test
-    fun `club, map spots and squad over HTTP`() = testApplication {
+    fun `club, map spots and the routes that went over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-0001", "Api FC")
@@ -60,12 +60,12 @@ class ApiIT {
         assertEquals(404, client.get("/api/v1/catalog/buildings").status.value)
         assertEquals(404, client.get("/api/v1/catalog/land").status.value)
         assertEquals(404, client.post("/api/v1/club/buildings") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
-        val squad = call(HttpMethod.Get, "/club/athletes", t).data.o()
-        assertEquals(14, squad["athletes"]!!.jsonArray.size); assertEquals(1, squad["trainingSlots"]!!.jsonPrimitive.int)
-        val lineup = call(HttpMethod.Get, "/club/lineup/football", t).data.o()["lineup"]!!.o()
-        assertEquals(11, lineup["starters"]!!.jsonArray.size)
-        // the academy graduates once it is open; opening it costs 3 000 coins
-        assertEquals("Спочатку відкрийте академію", call(HttpMethod.Post, "/club/academy/claim", t, expect = 400, lang = "uk").o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
+        // the athletes' management, packs, the market, the old live match, the museum and OAuth went (20 October 2026)
+        for (path in listOf("/api/v1/club/athletes", "/api/v1/club/packs", "/api/v1/club/offer", "/api/v1/market", "/api/v1/live/recent", "/api/v1/club/museum", "/api/v1/club/scouting", "/api/v1/club/lineup/football", "/api/v1/store/offers", "/api/v1/club/blocks"))
+            assertEquals(404, client.get(path) { header(HttpHeaders.Authorization, "Bearer $t") }.status.value, path)
+        for (path in listOf("/api/v1/club/academy/claim", "/api/v1/club/trainings", "/api/v1/club/rest", "/api/v1/live/start", "/api/v1/club/medical/speedup", "/api/v1/auth/oauth/google", "/api/v1/auth/logout", "/api/v1/challenges/mine"))
+            assertEquals(404, client.post(path) { header(HttpHeaders.Authorization, "Bearer $t") }.status.value, path)
+        // opening the academy costs 3 000 coins
         call(HttpMethod.Post, "/club/spots/academy/unlock", t, expect = 402)
         sql("UPDATE clubs SET coins = 10000 WHERE name = 'Api FC'")
         val opened = call(HttpMethod.Post, "/club/spots/academy/unlock", t).data.o()
@@ -74,8 +74,7 @@ class ApiIT {
         call(HttpMethod.Post, "/club/spots/academy/unlock", t, expect = 409)
         call(HttpMethod.Post, "/club/spots/castle/unlock", t, expect = 404)
         call(HttpMethod.Post, "/club/spots/beast_dome/unlock", t, expect = 400)
-        call(HttpMethod.Post, "/club/academy/claim", t, expect = 201)
-        assertEquals(15, call(HttpMethod.Get, "/club/athletes", t).data.o()["athletes"]!!.jsonArray.size)
+        assertTrue("academyNextAt" !in opened["club"]!!.o() && "live" !in opened)
     }
 
     @Test
@@ -102,7 +101,7 @@ class ApiIT {
     }
 
     @Test
-    fun `roads, collections and the hall of fame over HTTP`() = testApplication {
+    fun `roads and collections over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-fence", "Fence FC")
@@ -110,9 +109,8 @@ class ApiIT {
         assertEquals(listOf("TROPHY", "LEVEL"), roads.map { it.o()["road"]!!.jsonPrimitive.content })
         call(HttpMethod.Post, "/club/roads/trophy/1/claim", t, expect = 400)   // 0 trophies
         assertEquals(0, call(HttpMethod.Get, "/club/collections", t).data.o()["incomePct"]!!.jsonPrimitive.int)
-        assertEquals(3, call(HttpMethod.Get, "/club/museum", t).data.o()["capacity"]!!.jsonPrimitive.int)   // stadium 1
-        val id = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
-        call(HttpMethod.Get, "/clubs/$id/museum", t)
+        val step = roads[0].o()["steps"]!!.jsonArray[0].o()
+        assertEquals(300, step["reward"]!!.o()["coins"]!!.jsonPrimitive.int); assertTrue("pack" !in step["reward"]!!.o())
     }
 
     @Test
@@ -141,12 +139,9 @@ class ApiIT {
         call(HttpMethod.Post, "/club/alliance/leave", b)
         call(HttpMethod.Post, "/club/alliance/leave", a)
         call(HttpMethod.Get, "/alliances/$id", a, expect = 404)
-        // live game: events, mail, offers
+        // live game: events, mail
         call(HttpMethod.Get, "/events", a)
         assertEquals(0, call(HttpMethod.Get, "/club/mail", a).data.jsonArray.size)
-        val offers = call(HttpMethod.Get, "/store/offers", a).data.o()
-        assertTrue(offers["starterAvailable"]!!.jsonPrimitive.boolean)
-        assertEquals(listOf("COINS", "COINS"), offers["daily"]!!.jsonArray.map { it.o()["kind"]!!.jsonPrimitive.content })   // no cosmetic «LOOK» offer
     }
 
     @Test
@@ -214,7 +209,7 @@ class ApiIT {
     }
 
     @Test
-    fun `energy and the daily pack offer over HTTP`() = testApplication {
+    fun `energy and the Arena match start over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-energy", "Energy FC")
@@ -222,23 +217,21 @@ class ApiIT {
         assertEquals(30, e0["current"]!!.jsonPrimitive.int); assertEquals(30, e0["max"]!!.jsonPrimitive.int)
         assertEquals(JsonNull, e0["nextAt"]); assertEquals(40, e0["refillPrice"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/club/energy/refill", t, expect = 409)   // already full
-        assertEquals(25, call(HttpMethod.Post, "/club/cards/start", t).data.o()["energy"]!!.o()["current"]!!.jsonPrimitive.int)
+        assertEquals(25, call(HttpMethod.Post, "/club/arena/start", t).data.o()["energy"]!!.o()["current"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/friendlies", t, "{}", expect = 201)
         val e1 = call(HttpMethod.Get, "/club/energy", t).data.o()
         assertEquals(22, e1["current"]!!.jsonPrimitive.int); assertTrue(e1["nextAt"] !is JsonNull)
-        repeat(4) { call(HttpMethod.Post, "/club/cards/start", t) }
-        val short = call(HttpMethod.Post, "/club/cards/start", t, expect = 400, lang = "uk")
+        repeat(3) { call(HttpMethod.Post, "/club/arena/start", t) }
+        call(HttpMethod.Post, "/club/cards/start", t)   // the card era's path, an alias for one client version
+        val short = call(HttpMethod.Post, "/club/arena/start", t, expect = 400, lang = "uk")
         assertEquals("Недостатньо енергії — зачекайте, поки вона відновиться, або поповніть її", short.o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
         val refill = call(HttpMethod.Post, "/club/energy/refill", t).data.o()   // 50 gems at the start
         assertEquals(30, refill["energy"]!!.o()["current"]!!.jsonPrimitive.int); assertEquals(10, refill["club"]!!.o()["gold"]!!.jsonPrimitive.int)
-        // the day's offer: a new club (level 1) sees the first gem pack, locked until club level 3
-        val offer = call(HttpMethod.Get, "/club/offer", t).data.o()
-        assertEquals("TOURNAMENT", offer["packId"]!!.jsonPrimitive.content)
-        assertTrue(offer["discountPercent"]!!.jsonPrimitive.int in 30..50)
-        assertEquals(60, offer["oldPrice"]!!.jsonPrimitive.int); assertTrue(offer["price"]!!.jsonPrimitive.int < 60)
-        assertEquals(false, offer["open"]!!.jsonPrimitive.boolean); assertEquals(false, offer["bought"]!!.jsonPrimitive.boolean)
-        assertTrue(offer["endsAt"]!!.jsonPrimitive.content.endsWith("T00:00:00Z"))
-        call(HttpMethod.Post, "/club/offer/buy", t, expect = 400)
+        // the weekly arena chest by the trophies: open once a week
+        val chest = call(HttpMethod.Get, "/live/chest", t).data.o()
+        assertEquals("YARD", chest["arena"]!!.jsonPrimitive.content); assertEquals(true, chest["available"]!!.jsonPrimitive.boolean)
+        assertEquals(false, call(HttpMethod.Post, "/live/chest/claim", t).data.o()["available"]!!.jsonPrimitive.boolean)
+        call(HttpMethod.Post, "/live/chest/claim", t, expect = 409)
     }
 
     @Test
@@ -268,13 +261,13 @@ class ApiIT {
         call(HttpMethod.Post, "/club/heroes/p012/unlock", t, expect = 400)   // the beasts need stadium 4
         call(HttpMethod.Post, "/club/heroes/p999/unlock", t, expect = 404)
         assertEquals(7, call(HttpMethod.Get, "/club/heroes", t).data.o()["owned"]!!.jsonPrimitive.int)
-        // a card match result: the heroes who played earn by the result
-        val result = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p010"]}""").data.o()
+        // an Arena match result: the heroes who played earn by the result
+        val result = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p010"]}""").data.o()
         assertEquals(50, result["heroXp"]!!.jsonPrimitive.int)
         assertEquals(listOf("p001", "p006"), result["heroes"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
         assertEquals(50, result["heroes"]!!.jsonArray[0].o()["xp"]!!.jsonPrimitive.int)
         val eleven = (1..11).joinToString(",") { "\"p%03d\"".format(it) }
-        call(HttpMethod.Post, "/club/cards/result", t, """{"seed":6,"won":true,"heroes":[$eleven]}""", expect = 400)
+        call(HttpMethod.Post, "/club/arena/result", t, """{"seed":6,"won":true,"heroes":[$eleven]}""", expect = 400)
         // the «Склад» lineup: none saved, then saved and validated
         val none = call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()
         assertEquals(false, none["saved"]!!.jsonPrimitive.boolean); assertEquals(0, none["field"]!!.jsonArray.size); assertEquals(5, none["maxField"]!!.jsonPrimitive.int)
@@ -303,7 +296,7 @@ class ApiIT {
     }
 
     @Test
-    fun `story - chapter goals from card match reports, claiming a chapter, the story hero over HTTP`() = testApplication {
+    fun `story - chapter goals from Arena match reports, claiming a chapter, the story hero over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
         val t = guestWithClub("it-device-story", "Story FC")
@@ -317,9 +310,9 @@ class ApiIT {
         assertEquals("p010", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
         // a match with Kai and Itsuki, 3 goals; then the chapter's story match
-        val r1 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":1,"won":true,"goalsFor":3,"goalsAgainst":1,"heroes":["p001","p003"]}""").data.o()
+        val r1 = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":1,"won":true,"goalsFor":3,"goalsAgainst":1,"heroes":["p001","p003"]}""").data.o()
         assertEquals(listOf("c1.o2"), r1["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
-        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"goalsFor":1,"goalsAgainst":0,"heroes":["p001","p003"],"story":1}""").data.o()
+        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"goalsFor":1,"goalsAgainst":0,"heroes":["p001","p003"],"story":1}""").data.o()   // the alias path
         assertEquals(listOf("c1.o1", "c1.o3"), r2["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(true, r2["story"]!!.o()["chapterDone"]!!.jsonPrimitive.boolean)
         assertEquals("DONE", r2["story"]!!.o()["chapter"]!!.o()["state"]!!.jsonPrimitive.content)
@@ -392,8 +385,6 @@ class ApiIT {
         // no rewarded placements any more (the double income and the free speed-up went with the builder); unsigned callbacks are refused
         assertEquals(404, client.post("/api/v1/ads/reward") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
         assertEquals(403, client.get("/api/v1/ads/ssv?transaction_id=1&user_id=x").status.value)
-        // speed-ups need something running
-        call(HttpMethod.Post, "/club/medical/speedup", t, expect = 409)
     }
     @Test
     fun `admin, metrics, analytics events and legal pages over HTTP`() = testApplication {

@@ -72,7 +72,6 @@ class ClubUseCasesTest {
         assertEquals(listOf(500, 26_000), listOf(MapSpots.seats(1), MapSpots.seats(10)))
         assertEquals(40..55, TrainingRules.graduateQuality(1)); assertEquals(6 * 3600L, TrainingRules.graduateIntervalSeconds(10))
         assertEquals(5 * 3600L, TrainingRules.medicalCooldownSeconds(1)); assertEquals(5, TrainingRules.slots(10))
-        assertEquals(3, MuseumRules.capacity(1)); assertEquals(45, MuseumRules.capacity(10))
     }
 
     @Test
@@ -85,7 +84,7 @@ class ClubUseCasesTest {
         assertEquals(3, unlock(user, MapSpots.HOSPITAL).stadium)
         assertEquals(1_000, clubs.rows.values.first().coins)
         // the response is GET /club's shape
-        val body = get(user).toResponse(listOf("FOOTBALL"), 0, null)
+        val body = get(user).toResponse(listOf("FOOTBALL"), 0)
         assertEquals(3, body.stadium); assertEquals(listOf("stadium", "academy", "hospital"), body.spots)
         assertEquals(listOf("main"), body.land!!.regions)
     }

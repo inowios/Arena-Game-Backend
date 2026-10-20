@@ -197,7 +197,7 @@ class CupTest {
     fun `push texts`() {
         val n = CupNotifier()
         val now = clock.now()
-        val home = Club(UUID.randomUUID(), UUID.randomUUID(), "Lions", "#000000", "#FFFFFF", null, 1, 0, 0, 0, "UTC", null, null, now, now)
+        val home = Club(UUID.randomUUID(), UUID.randomUUID(), "Lions", "#000000", "#FFFFFF", null, 1, 0, 0, 0, "UTC", now, now)
         val away = home.copy(id = UUID.randomUUID(), name = "Wolves")
         val f = Fixture(UUID.randomUUID(), null, FixtureKind.CUP, 0, 2, now, home.id, away.id, FixtureStatus.PLAYED, 1, 1, 1L, null, now, now, 1, 1)
         val d = com.arenacity.domain.usecase.cup.DecidedTie(CupTie(UUID.randomUUID(), 2, 0, home.id, away.id, f.id, away.id), f,

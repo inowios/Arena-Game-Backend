@@ -5,18 +5,15 @@ package com.arenacity.domain.rules
  *
  * Roads: rewards laid along a scale, every next one visible (Clash Royale's trophy road). The trophy road pays out as the
  * arena trophies climb; the club-level road as the club levels up. A step is claimed once and stays claimed when the
- * trophies later drop. [RoadReward.pack]: a new player (no step gives one since heroes replaced cards and packs, 18 October
- * 2026: gold instead); a town decoration neither (they went with the city builder).
+ * trophies later drop. A step gives coins, gold or a cosmetic (a player pack went with cards and packs, a town decoration
+ * with the city builder).
  */
 enum class Road { TROPHY, LEVEL }
 
-data class RoadReward(val coins: Long = 0, val gold: Int = 0, val item: String? = null, val pack: Boolean = false)
+data class RoadReward(val coins: Long = 0, val gold: Int = 0, val item: String? = null)
 data class RoadStep(val road: Road, val index: Int, val at: Int, val reward: RoadReward)
 
 object Roads {
-    /** Gold instead of a pack when the squad is full. */
-    const val PACK_FALLBACK_GOLD = 30
-
     private fun steps(road: Road, vararg s: Pair<Int, RoadReward>) = s.mapIndexed { i, (at, r) -> RoadStep(road, i + 1, at, r) }
 
     val TROPHY: List<RoadStep> = steps(Road.TROPHY,
@@ -78,15 +75,6 @@ object Collections {
     )
     fun complete(owned: Set<String>) = ALL.filter { s -> s.items.all { it in owned } }
     fun incomePct(owned: Set<String>) = complete(owned).sumOf { it.incomePct }
-}
-
-/**
- * The hall of fame (the trophy museum, А11): the shelves of the club's honours — every achievement tier reached, league
- * titles, cups, the highest arena. No building since the five islands map (17 October 2026): it belongs to the stadium,
- * and the stadium level (the club's open spots, rules.MapSpots) is how many exhibits fit ([capacity]).
- */
-object MuseumRules {
-    fun capacity(stadium: Int) = listOf(0, 3, 6, 9, 12, 16, 20, 25, 30, 37, 45)[stadium.coerceIn(0, 10)]
 }
 
 /**
