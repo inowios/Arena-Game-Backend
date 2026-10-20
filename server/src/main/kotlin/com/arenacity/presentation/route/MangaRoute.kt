@@ -13,7 +13,7 @@ import java.io.File
  * The «ARENA: The Great Games» manga read in the game (Team → «Манга»). Public, no auth.
  * [dir] (config manga.dir, env MANGA_DIR) holds catalog.json and epNN/NN.jpg, written by the mobile repo's tools/publish_manga.py.
  * GET /api/v1/manga → the catalog (empty when the folder or catalog.json is missing);
- * GET /manga/{ep}/{file} → a page JPEG; strict names, so nothing outside [dir] can be read.
+ * GET /manga/{ep}/{file} → a page JPEG (NN.jpg) or its thumbnail (tNN.jpg); strict names, so nothing outside [dir] can be read.
  */
 fun Route.mangaCatalogRoutes(dir: File) {
     get("/manga") { call.respond(readCatalog(dir).toSuccessResponse()) }
@@ -34,7 +34,7 @@ fun Route.mangaFileRoutes(dir: File) {
 fun Application.mangaDir(): File = File(environment.config.propertyOrNull("manga.dir")?.getString()?.trim()?.ifEmpty { null } ?: "manga")
 
 private val EP = Regex("ep\\d{2}")
-private val PAGE = Regex("\\d{2,3}\\.jpg")
+private val PAGE = Regex("t?\\d{2,3}\\.jpg")   // NN.jpg a page, tNN.jpg its thumbnail (the Манга page grid)
 
 /** catalog.json re-read only when the file changes, so a publish needs no restart. */
 private object CatalogCache {

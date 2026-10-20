@@ -38,7 +38,7 @@ class MangaRouteTest {
         File(dir, "catalog.json").writeText(
             """{"episodes":[{"id":"ep01","number":1,"title":"The Boy with the Spark","lang":"en","pages":[{"n":1,"v":"ab12cd34"},{"n":2,"v":"ef56ab78"}]}]}""")
         val page = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3)
-        File(dir, "ep01").mkdirs(); File(dir, "ep01/01.jpg").writeBytes(page)
+        File(dir, "ep01").mkdirs(); File(dir, "ep01/01.jpg").writeBytes(page); File(dir, "ep01/t01.jpg").writeBytes(page)
         File(dir, "secret.txt").writeText("no")
         app(dir) {
             val cat = client.get("/api/v1/manga").bodyAsText()
@@ -49,6 +49,8 @@ class MangaRouteTest {
             assertContentEquals(page, ok.readRawBytes())
             assertTrue(ok.headers[HttpHeaders.CacheControl].orEmpty().contains("max-age"))
 
+            assertEquals(HttpStatusCode.OK, client.get("/manga/ep01/t01.jpg").status)   // the grid's thumbnail
+            assertEquals(HttpStatusCode.NotFound, client.get("/manga/ep01/x01.jpg").status)
             assertEquals(HttpStatusCode.NotFound, client.get("/manga/ep01/02.jpg").status)
             assertEquals(HttpStatusCode.NotFound, client.get("/manga/ep01/..%2Fsecret.txt").status)
             assertEquals(HttpStatusCode.NotFound, client.get("/manga/..%2F/secret.txt").status)
