@@ -71,11 +71,12 @@ val appModule = module {
     single<SeasonRepository> { SeasonRepositoryImpl() }
     single { CareerService(get(), get(), get()) }
     single<HeroRepository> { HeroRepositoryImpl() }
-    single { com.arenacity.domain.usecase.hero.HeroUseCases(get(), get(), get(), tx = get()) }
+    single { com.arenacity.domain.usecase.hero.HeroUseCases(get(), get(), get(), tx = get(), progress = get<EconomyService>()) }
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("heroes")) { com.arenacity.domain.usecase.hero.StartHeroesInitializer(get()) }
     single<com.arenacity.domain.repository.StoryRepository> { com.arenacity.data.repository.StoryRepositoryImpl() }
     single { com.arenacity.domain.usecase.story.StoryUseCases(get(), get(), get(), get(), get(), tx = get()) }
-    single { com.arenacity.domain.usecase.arena.ArenaMatchUseCases(get(), get(), get(), tx = get(), heroes = get(), stories = get()) }
+    single<com.arenacity.domain.repository.ArenaMatchRepository> { com.arenacity.data.repository.ArenaMatchRepositoryImpl() }
+    single { com.arenacity.domain.usecase.arena.ArenaMatchUseCases(get(), get(), get(), get(), tx = get(), heroes = get(), stories = get(), progress = get<EconomyService>()) }
     single { com.arenacity.domain.usecase.arena.ArenaChestUseCase(get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.club.EnergyUseCases(get(), get(), get(), tx = get()) }
     single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }

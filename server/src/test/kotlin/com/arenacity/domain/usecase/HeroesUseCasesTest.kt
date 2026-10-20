@@ -26,7 +26,7 @@ class HeroesUseCasesTest {
     private val service = ClubService(clubs, clock, spots)
     private val use = HeroUseCases(service, heroes, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(use)))
-    private val cards = ArenaMatchUseCases(service, clubs, clock, heroes = use)
+    private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock, heroes = use)
     private val u1 = UUID.randomUUID()
 
     private suspend fun gold(clubId: UUID, gold: Int) = clubs.update(clubs.findById(clubId)!!.copy(gold = gold))
@@ -85,7 +85,10 @@ class HeroesUseCasesTest {
     @Test
     fun `heroes who played an Arena match earn experience by the result, capped a day`() = runBlocking<Unit> {
         create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        fun report(won: Boolean, vararg ids: String) = ArenaReport(7, won = won, draw = false, goalsFor = if (won) 2 else 0, goalsAgainst = 1, heroes = ids.toList())
+        suspend fun report(won: Boolean, vararg ids: String): ArenaReport {
+            clubs.update(clubs.findByUserId(u1)!!.copy(energy = 30, energyAt = null))   // energy is not the point here
+            return ArenaReport(cards.start(u1).match.id, won = won, heroes = ids.toList())
+        }
         val o = cards.report(u1, report(true, "p001", "p003", "p001", "p010"))
         assertEquals(50, o.heroXp)
         assertEquals(listOf("p001", "p003"), o.heroes.map { it.spec.id })   // not owned / unknown ids are skipped, duplicates count once
@@ -104,7 +107,7 @@ class HeroesUseCasesTest {
         assertEquals(50, cards.report(u1, report(true, "p003")).heroes.single().owned!!.xpToday)
         assertFailsWith<ValidationException> { cards.report(u1, report(true, "p001", "p003", "p007", "p009")) }   // a triple at most
         // a conceded match gives nothing
-        assertEquals(0, cards.report(u1, ArenaReport(1, false, false, 0, 3, conceded = true, heroes = listOf("p001"))).heroXp)
+        assertEquals(0, cards.report(u1, report(false, "p001").copy(conceded = true)).heroXp)
     }
 
     @Test

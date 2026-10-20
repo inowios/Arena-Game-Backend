@@ -29,6 +29,8 @@ object ClubTable : BaseTable("clubs") {
     val trophies = integer("trophies")
     val liveStreak = integer("live_streak")
     val arenaChestWeek = integer("arena_chest_week")
+    val arenaDay = date("arena_day").nullable()
+    val arenaRewarded = integer("arena_rewarded")
     val energy = integer("energy")
     val energyAt = timestamp("energy_at").nullable()
     /** When the owner was last seen (V42); written only by [com.arenacity.domain.repository.ClubRepository.touchSeen]. */

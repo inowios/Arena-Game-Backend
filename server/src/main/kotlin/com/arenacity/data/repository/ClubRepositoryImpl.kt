@@ -35,6 +35,7 @@ class ClubRepositoryImpl : ClubRepository {
         this[ClubTable.seasonNo] = c.seasonNo
         this[ClubTable.kit] = c.kit; this[ClubTable.emblemFrame] = c.emblemFrame; this[ClubTable.celebration] = c.celebration
         this[ClubTable.trophies] = c.trophies; this[ClubTable.liveStreak] = c.liveStreak; this[ClubTable.arenaChestWeek] = c.arenaChestWeek
+        this[ClubTable.arenaDay] = c.arenaDay; this[ClubTable.arenaRewarded] = c.arenaRewarded
         this[ClubTable.energy] = c.energy; this[ClubTable.energyAt] = c.energyAt
     }
 
@@ -55,7 +56,7 @@ internal fun ResultRow.toClub() = Club(
     this[ClubTable.isBot], this[ClubTable.division], this[ClubTable.tzBucket], this[ClubTable.friendliesDate], this[ClubTable.friendliesPlayed],
     this[ClubTable.loginDay], this[ClubTable.loginLast], this[ClubTable.streak],
     this[ClubTable.seasonNo], this[ClubTable.kit], this[ClubTable.emblemFrame], this[ClubTable.celebration],
-    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.arenaChestWeek],
+    this[ClubTable.trophies], this[ClubTable.liveStreak], this[ClubTable.arenaDay], this[ClubTable.arenaRewarded], this[ClubTable.arenaChestWeek],
     this[ClubTable.energy], this[ClubTable.energyAt],
     this[ClubTable.lastSeenAt],
 )

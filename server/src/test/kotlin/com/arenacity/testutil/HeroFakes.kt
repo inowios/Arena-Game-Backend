@@ -19,6 +19,14 @@ class FakeHeroRepository : HeroRepository {
     override suspend fun saveLineup(lineup: HeroLineup): HeroLineup { lineups[lineup.clubId] = lineup; return lineup }
 }
 
+class FakeArenaMatchRepository : com.arenacity.domain.repository.ArenaMatchRepository {
+    val rows = linkedMapOf<UUID, com.arenacity.domain.model.ArenaMatch>()
+    override suspend fun create(match: com.arenacity.domain.model.ArenaMatch) = match.also { rows[it.id] = it }
+    override suspend fun find(id: UUID) = rows[id]
+    override suspend fun findOpen(clubId: UUID) = rows.values.filter { it.clubId == clubId && it.status == com.arenacity.domain.model.ArenaMatchStatus.OPEN }
+    override suspend fun update(match: com.arenacity.domain.model.ArenaMatch) = match.also { rows[it.id] = it }
+}
+
 class FakeStoryRepository : com.arenacity.domain.repository.StoryRepository {
     val rows = linkedMapOf<UUID, com.arenacity.domain.model.StoryProgress>()
     override suspend fun get(clubId: UUID) = rows[clubId]

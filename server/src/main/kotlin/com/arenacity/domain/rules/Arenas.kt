@@ -19,15 +19,10 @@ object Arenas {
     fun of(trophies: Int): Arena = ALL.last { trophies >= it.trophies }
     fun byKey(key: String) = ALL.firstOrNull { it.key == key } ?: ALL[0]
 
-    /** Trophy change for the attacker: bigger for beating a stronger side, smaller for beating a weaker one; losses the other way round. */
-    fun delta(outcome: Outcome, myOverall: Int, oppOverall: Int): Int {
-        val edge = (oppOverall - myOverall).coerceIn(-10, 10)
-        return when (outcome) {
-            Outcome.WIN -> 25 + edge
-            Outcome.DRAW -> if (edge > 0) 4 else 0
-            Outcome.LOSS -> -(18 - edge).coerceAtLeast(8)
-        }
-    }
+    /** Trophies an Arena match moves: a win up, a loss (or a concession) down; never below zero (usecase.arena.ArenaMatchUseCases). */
+    const val TROPHIES_WIN = 25
+    const val TROPHIES_LOSS = 18
+    fun trophies(won: Boolean): Int = if (won) TROPHIES_WIN else -TROPHIES_LOSS
 
     /** The weekly chest of the arena you stand in: coins and gold scale with the rung. */
     fun chestCoins(arena: Arena): Long = (400 * arena.rewardK).toLong()

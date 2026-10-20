@@ -20,7 +20,7 @@ class EnergyTest {
     private val service = ClubService(clubs, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
     private val energy = EnergyUseCases(service, clubs, clock)
-    private val cards = ArenaMatchUseCases(service, clubs, clock)
+    private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock)
     private val u1 = UUID.randomUUID()
 
     @Test
@@ -53,7 +53,7 @@ class EnergyTest {
     @Test
     fun `an Arena match start costs five, refused with a clear error when short, and gems refill it`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
-        assertEquals(25, cards.start(u1).current)
+        assertEquals(25, cards.start(u1).energy.current)
         assertEquals(25, energy.state(u1).current)
         repeat(5) { cards.start(u1) }
         assertEquals(0, energy.state(u1).current)
@@ -61,7 +61,7 @@ class EnergyTest {
         assertEquals("Not enough energy", e.template)
         assertEquals("Недостаточно энергии — подождите, пока она восстановится, или пополните её", e.localized("ru"))
         clock.advanceSeconds(5 * Energy.REGEN_SECONDS)
-        assertEquals(0, cards.start(u1).current)
+        assertEquals(0, cards.start(u1).energy.current)
         // refill: 40 gems, to full; not when full, not without the gems
         clubs.update(clubs.findById(club.id)!!.copy(gold = 39))
         assertFailsWith<ValidationException> { energy.refill(u1) }

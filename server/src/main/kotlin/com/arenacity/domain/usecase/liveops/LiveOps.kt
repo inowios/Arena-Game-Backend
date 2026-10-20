@@ -59,18 +59,18 @@ object EventCalendar {
         while (!d.isAfter(end)) {
             if (d.dayOfWeek == DayOfWeek.SATURDAY)
                 out += GameEvent("weekend-$d", "city_weekend", day(d), day(d.plusDays(2)), incomePct = 150,
-                    goal = ProgressEvent.LIVE_PLAYED, goalTarget = 10, rewardCoins = 1_000, rewardGold = 10)
+                    goal = ProgressEvent.ARENA_PLAYED, goalTarget = 10, rewardCoins = 1_000, rewardGold = 10)
             if (d.dayOfWeek == DayOfWeek.WEDNESDAY)
-                // the goals that were income collections and obstacles (gone with the city builder): trainings, goals
+                // the goals that were income collections and obstacles (gone with the city builder): hero trainings, knockouts
                 out += GameEvent("builders-$d", "builders_day", day(d), day(d.plusDays(1)), buildTimePct = 70,
                     goal = ProgressEvent.TRAINING_STARTED, goalTarget = 3, rewardGold = 15)
             if (d.monthValue == 10 && d.dayOfMonth == 24)
                 out += GameEvent("halloween-${d.year}", "halloween", day(d), day(d.plusDays(10)), obstacleGoldPct = 200,
-                    goal = ProgressEvent.GOAL_SCORED, goalTarget = 15,
+                    goal = ProgressEvent.KNOCKOUT, goalTarget = 15,
                     rewardGold = 60)
             if (d.monthValue == 12 && d.dayOfMonth == 24)
                 out += GameEvent("newyear-${d.year}", "new_year", day(d), day(d.plusDays(15)), incomePct = 125,
-                    goal = ProgressEvent.LIVE_WON, goalTarget = 10, rewardGold = 100)
+                    goal = ProgressEvent.ARENA_WON, goalTarget = 10, rewardGold = 100)
             d = d.plusDays(1)
         }
         return out.filter { it.endsAt.isAfter(from) && it.startsAt.isBefore(to) }

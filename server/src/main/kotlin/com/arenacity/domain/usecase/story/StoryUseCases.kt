@@ -52,6 +52,9 @@ class StoryUseCases(private val service: ClubService, private val clubs: ClubRep
 
     suspend fun story(userId: UUID): StoryView = view(progressOf(service.clubOf(userId).id))
 
+    /** The chapter the club works on (Story.LAST + 1 once the season is over): the only one an Arena match can be started as the story match of. */
+    suspend fun currentChapter(clubId: UUID): Int = progressOf(clubId).chapter
+
     /**
      * Adds a finished Arena match to the club's current chapter (inside the report's transaction, the club locked). The story
      * match goal counts only when the report's «story» is that chapter. Nothing changes once the season is over or the

@@ -217,12 +217,29 @@ class ApiIT {
         assertEquals(30, e0["current"]!!.jsonPrimitive.int); assertEquals(30, e0["max"]!!.jsonPrimitive.int)
         assertEquals(JsonNull, e0["nextAt"]); assertEquals(40, e0["refillPrice"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/club/energy/refill", t, expect = 409)   // already full
-        assertEquals(25, call(HttpMethod.Post, "/club/arena/start", t).data.o()["energy"]!!.o()["current"]!!.jsonPrimitive.int)
+        val started = call(HttpMethod.Post, "/club/arena/start", t, expect = 201).data.o()
+        assertEquals(25, started["energy"]!!.o()["current"]!!.jsonPrimitive.int); assertEquals(1, started["stake"]!!.jsonPrimitive.int); assertEquals(JsonNull, started["story"])
+        val matchId = started["matchId"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/friendlies", t, "{}", expect = 201)
         val e1 = call(HttpMethod.Get, "/club/energy", t).data.o()
         assertEquals(22, e1["current"]!!.jsonPrimitive.int); assertTrue(e1["nextAt"] !is JsonNull)
-        repeat(3) { call(HttpMethod.Post, "/club/arena/start", t) }
-        call(HttpMethod.Post, "/club/cards/start", t)   // the card era's path, an alias for one client version
+        // the result needs the start's token and is taken once; the old token is abandoned by the next start
+        call(HttpMethod.Post, "/club/arena/result", t, """{"won":true}""", expect = 404)
+        call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"$matchId","won":true,"draw":true}""", expect = 400)
+        val won = call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"$matchId","won":true,"heroes":["p001","p003","p011"],"knockouts":3,"altSkills":1}""").data.o()
+        assertEquals(120, won["coins"]!!.jsonPrimitive.int); assertEquals(true, won["rewarded"]!!.jsonPrimitive.boolean); assertEquals(1, won["rewardedToday"]!!.jsonPrimitive.int); assertEquals(10, won["dailyCap"]!!.jsonPrimitive.int)
+        assertEquals(25, won["trophies"]!!.jsonPrimitive.int); assertEquals(25, won["trophiesDelta"]!!.jsonPrimitive.int); assertEquals("YARD", won["arena"]!!.jsonPrimitive.content); assertEquals(1, won["winStreak"]!!.jsonPrimitive.int)
+        assertEquals(50, won["heroXp"]!!.jsonPrimitive.int); assertEquals(listOf("p001", "p003", "p011"), won["heroes"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
+        assertEquals("Результат цього матчу вже прийнято", call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"$matchId","won":true}""", expect = 409, lang = "uk").o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
+        val stale = call(HttpMethod.Post, "/club/arena/start", t, """{"stake":2}""", expect = 201).data.o()["matchId"]!!.jsonPrimitive.content
+        call(HttpMethod.Post, "/club/arena/start", t, """{"stake":3}""", expect = 400)
+        call(HttpMethod.Post, "/club/arena/start", t, """{"story":2}""", expect = 400)   // chapter 1 is the current one
+        repeat(3) { call(HttpMethod.Post, "/club/cards/start", t, expect = 201) }   // the card era's path, an alias for one client version
+        call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"$stale","won":true}""", expect = 409)   // abandoned by the later starts
+        // the daily tasks: an Arena task and the lineup task advanced
+        val tasks = call(HttpMethod.Get, "/club/pass", t).data.o()["tasks"]!!.jsonArray.map { it.o() }
+        assertTrue(tasks.any { it["task"]!!.jsonPrimitive.content.let { k -> k.startsWith("PLAY_ARENA") || k.startsWith("WIN_ARENA") || k == "KO_5" || k == "ALT_SKILL_1" } && it["progress"]!!.jsonPrimitive.int >= 1 }, tasks.toString())
+        assertEquals(3, call(HttpMethod.Get, "/club/achievements", t).data.jsonArray.map { it.o() }.first { it["id"]!!.jsonPrimitive.content == "striker" }["value"]!!.jsonPrimitive.int)
         val short = call(HttpMethod.Post, "/club/arena/start", t, expect = 400, lang = "uk")
         assertEquals("Недостатньо енергії — зачекайте, поки вона відновиться, або поповніть її", short.o()["errors"]!!.jsonArray.single().jsonPrimitive.content)
         val refill = call(HttpMethod.Post, "/club/energy/refill", t).data.o()   // 50 gems at the start
@@ -266,11 +283,12 @@ class ApiIT {
         call(HttpMethod.Post, "/club/heroes/p999/unlock", t, expect = 404)
         assertEquals(7, call(HttpMethod.Get, "/club/heroes", t).data.o()["owned"]!!.jsonPrimitive.int)
         // an Arena match result: the heroes who played earn by the result
-        val result = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":5,"won":true,"goalsFor":2,"goalsAgainst":0,"heroes":["p001","p006","p010"]}""").data.o()
+        suspend fun ApplicationTestBuilder.start(story: Int? = null) = call(HttpMethod.Post, "/club/arena/start", t, story?.let { """{"story":$it}""" }, expect = 201).data.o()["matchId"]!!.jsonPrimitive.content
+        val result = call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"${start()}","seed":5,"won":true,"heroes":["p001","p006","p010"]}""").data.o()
         assertEquals(50, result["heroXp"]!!.jsonPrimitive.int)
         assertEquals(listOf("p001", "p006"), result["heroes"]!!.jsonArray.map { it.o()["id"]!!.jsonPrimitive.content })
         assertEquals(50, result["heroes"]!!.jsonArray[0].o()["xp"]!!.jsonPrimitive.int)
-        call(HttpMethod.Post, "/club/arena/result", t, """{"seed":6,"won":true,"heroes":["p001","p003","p007","p009"]}""", expect = 400)   // a triple at most
+        call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"${start()}","seed":6,"won":true,"heroes":["p001","p003","p007","p009"]}""", expect = 400)   // a triple at most
         // the Arena triple («Склад»): none saved, then saved and validated
         val none = call(HttpMethod.Get, "/club/heroes/lineup", t).data.o()
         assertEquals(false, none["saved"]!!.jsonPrimitive.boolean); assertEquals(0, none["heroes"]!!.jsonArray.size); assertEquals(3, none["max"]!!.jsonPrimitive.int)
@@ -312,10 +330,11 @@ class ApiIT {
         assertEquals(listOf("p002", "p008", "p004"), chapters[5]["rival"]!!.o()["heroes"]!!.strings()); assertTrue("strength" !in chapters[5]["rival"]!!.o())
         assertEquals("p010", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
-        // a win with Kai and Itsuki; then the chapter's story match (every goal counts matches: the Arena v4 is won 1:0)
-        val r1 = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":1,"won":true,"heroes":["p001","p003"]}""").data.o()
+        // a win with Kai and Itsuki; then the chapter's story match, started as such (every goal counts matches: the Arena v4 is won 1:0)
+        suspend fun ApplicationTestBuilder.start(story: Int? = null) = call(HttpMethod.Post, "/club/arena/start", t, story?.let { """{"story":$it}""" }, expect = 201).data.o()["matchId"]!!.jsonPrimitive.content
+        val r1 = call(HttpMethod.Post, "/club/arena/result", t, """{"matchId":"${start()}","seed":1,"won":true,"heroes":["p001","p003"]}""").data.o()
         assertEquals(emptyList<String>(), r1["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
-        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"heroes":["p001","p003"],"story":1}""").data.o()   // the alias path
+        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"matchId":"${start(1)}","seed":2,"won":true,"heroes":["p001","p003"]}""").data.o()   // the alias path
         assertEquals(listOf("c1.o1", "c1.o2", "c1.o3"), r2["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(true, r2["story"]!!.o()["chapterDone"]!!.jsonPrimitive.boolean)
         assertEquals("DONE", r2["story"]!!.o()["chapter"]!!.o()["state"]!!.jsonPrimitive.content)

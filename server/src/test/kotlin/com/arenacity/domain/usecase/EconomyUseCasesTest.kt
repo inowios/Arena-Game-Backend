@@ -42,11 +42,11 @@ class EconomyUseCasesTest {
         val view = pass.view(user)
         assertEquals(3, view.tasks.size); assertEquals(0, view.level)
         repeat(2) { economy.record(club.id, ProgressEvent.TRAINING_STARTED) }
-        val trainTask = pass.view(user).tasks.firstOrNull { it.task == TaskKind.TRAIN_2.name }
+        val trainTask = pass.view(user).tasks.firstOrNull { it.task == TaskKind.TRAIN_1.name }
         if (trainTask != null) {
-            assertEquals(2, trainTask.progress)
-            val after = pass.claimTask(user, TaskKind.TRAIN_2)
-            assertEquals(40, after.pass.xp); assertFailsWith<ConflictException> { pass.claimTask(user, TaskKind.TRAIN_2) }
+            assertEquals(1, trainTask.progress)   // one hero training a day, capped at the target
+            val after = pass.claimTask(user, TaskKind.TRAIN_1)
+            assertEquals(40, after.pass.xp); assertFailsWith<ConflictException> { pass.claimTask(user, TaskKind.TRAIN_1) }
         }
         repo.upsertPass(repo.passes.values.first().copy(xp = 520))
         val claimed = pass.claimLevels(user); val reward = claimed.reward; val v2 = claimed.view
@@ -72,7 +72,8 @@ class EconomyUseCasesTest {
         val club = create(user, "Lions", "#AA0000", "#FFFFFF", "UTC")
         val today = economy.today("UTC")
         repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, "COLLECT_3", 1, false))
-        repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, TaskKind.TRAIN_2.name, 0, false))
-        assertEquals(listOf(TaskKind.TRAIN_2.name), pass.view(user).tasks.map { it.task })
+        repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, "PLAY_LIVE_3", 0, false))   // the old live match's task name
+        repo.upsertTask(com.arenacity.domain.model.DailyTask(club.id, today, TaskKind.TRAIN_1.name, 0, false))
+        assertEquals(listOf(TaskKind.TRAIN_1.name), pass.view(user).tasks.map { it.task })
     }
 }

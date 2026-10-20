@@ -3,28 +3,35 @@ package com.arenacity.domain.rules
 import java.time.LocalDate
 import java.util.UUID
 
+/** The daily tasks (the client's texts are keyed by the name: task.TRAIN_1 …). The Arena ones are fed by POST /club/arena/result. */
 enum class TaskKind(val target: Int, val xp: Int, val title: String) {
-    TRAIN_2(2, 40, "Start 2 training sessions"),
+    /** «Потренувати героя»: start one hero training session (POST /club/heroes/{id}/train). */
+    TRAIN_1(1, 40, "Train a hero"),
     PLAY_FRIENDLY(1, 30, "Play a friendly"),
     WIN_MATCH(1, 60, "Win your matchday match"),
     WIN_SECTIONS(2, 70, "Win 2 sections on matchday"),
+    /** Save the Arena triple (PUT /club/heroes/lineup). */
     SET_LINEUP(1, 20, "Save your lineup"),
-    // the arena (live matches): one of these is on the list every day
-    PLAY_LIVE_3(3, 50, "Play 3 arena matches"),
-    WIN_LIVE_2(2, 70, "Win 2 arena matches"),
-    SCORE_5(5, 60, "Score 5 goals in the arena"),
-    SIGNATURE_1(1, 50, "Pull off a signature move");
+    // the Arena: one of these is on the list every day
+    PLAY_ARENA_3(3, 50, "Play 3 Arena matches"),
+    WIN_ARENA_2(2, 70, "Win 2 Arena matches"),
+    /** «Вивести 5 суперників»: knock out five rival heroes. */
+    KO_5(5, 60, "Knock out 5 rival heroes in the Arena"),
+    /** Use an alternate skill (Mirai's «p004.a0» for now). */
+    ALT_SKILL_1(1, 50, "Use an alternate skill");
 
-    val arena get() = this == PLAY_LIVE_3 || this == WIN_LIVE_2 || this == SCORE_5 || this == SIGNATURE_1
+    val arena get() = this == PLAY_ARENA_3 || this == WIN_ARENA_2 || this == KO_5 || this == ALT_SKILL_1
 }
 
 /** Gameplay events reported by other modules: they advance daily tasks and achievement counters. */
 enum class ProgressEvent(val task: TaskKind?, val metric: Metric? = null) {
-    TRAINING_STARTED(TaskKind.TRAIN_2, Metric.TRAININGS),
+    /** A hero training session started (usecase.hero.HeroUseCases.train). */
+    TRAINING_STARTED(TaskKind.TRAIN_1, Metric.TRAININGS),
     FRIENDLY_PLAYED(TaskKind.PLAY_FRIENDLY, Metric.FRIENDLIES), MATCH_WON(TaskKind.WIN_MATCH, Metric.MATCHES_WON),
     SECTION_WON(TaskKind.WIN_SECTIONS, Metric.SECTIONS_WON), LINEUP_SAVED(TaskKind.SET_LINEUP), MATCH_PLAYED(null),
     ACADEMY_GRADUATE(null, Metric.ACADEMY_GRADUATES), INVITE_JOINED(null, Metric.INVITES),
-    LIVE_PLAYED(TaskKind.PLAY_LIVE_3), LIVE_WON(TaskKind.WIN_LIVE_2), GOAL_SCORED(TaskKind.SCORE_5, Metric.GOALS), SIGNATURE_USED(TaskKind.SIGNATURE_1, Metric.SIGNATURES),
+    // the Arena match result (usecase.arena.ArenaMatchUseCases.report)
+    ARENA_PLAYED(TaskKind.PLAY_ARENA_3), ARENA_WON(TaskKind.WIN_ARENA_2), KNOCKOUT(TaskKind.KO_5, Metric.KNOCKOUTS), ALT_SKILL_USED(TaskKind.ALT_SKILL_1, Metric.ALT_SKILLS),
 }
 
 data class Reward(val coins: Long = 0, val gold: Int = 0) { operator fun plus(o: Reward) = Reward(coins + o.coins, gold + o.gold) }
@@ -40,6 +47,8 @@ object Economy {
     const val PASS_LEVELS = 30
     const val XP_PER_LEVEL = 100
     const val TASKS_PER_DAY = 3
+    /** Arena matches that pay coins a UTC day (POST /club/arena/result); after them a match still gives trophies and experience. */
+    const val ARENA_REWARDED_PER_DAY = 10
     /** Gold to finish a timer now (a training, the hospital's rest): 1 per started 10 minutes, at least 1. */
     fun speedUpGold(remainingSeconds: Long): Int = if (remainingSeconds <= 0) 0 else maxOf(1, kotlin.math.ceil(remainingSeconds / 600.0).toInt())
 

@@ -57,7 +57,8 @@ data class HeroClaimResult(val hero: HeroView, val gained: Int, val levelBefore:
  * roster, opening a hero for gold, the Arena triple, training, and the experience heroes earn in Arena matches. Every club owns the start six: a new
  * one from [StartHeroesInitializer], an older one from its first access here ([ensureStart]).
  */
-class HeroUseCases(private val service: ClubService, private val heroes: HeroRepository, private val clock: Clock, private val tx: Tx = NoTx) {
+class HeroUseCases(private val service: ClubService, private val heroes: HeroRepository, private val clock: Clock, private val tx: Tx = NoTx,
+                   private val progress: com.arenacity.domain.usecase.economy.ProgressTracker = com.arenacity.domain.usecase.economy.ProgressTracker { _, _ -> }) {
     /** The club's heroes with the start six added if any is missing (idempotent; a race only re-inserts nothing). */
     suspend fun ensureStart(clubId: UUID): List<ClubHero> {
         val have = heroes.listByClub(clubId)
@@ -158,6 +159,7 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
         val ids = picked.map { it.trim() }.filter { it.isNotEmpty() }
         Heroes.lineupError(ids, owned)?.let { (template, arg) -> throw ValidationException(template, *listOfNotNull(arg).toTypedArray()) }
         val saved = heroes.saveLineup(HeroLineup(club.id, ids, clock.now()))
+        progress.record(club.id, com.arenacity.domain.rules.ProgressEvent.LINEUP_SAVED)
         HeroLineupView(saved.heroes, true, saved.updatedAt)
     }
 
@@ -196,6 +198,7 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
         val club = service.charge(st.club, coins = price)
         val now = clock.now()
         val saved = heroes.update(hero.copy(trainingEndsAt = now.plusSeconds(Heroes.TRAINING_SECONDS), trainingXp = Heroes.trainingXp(level)))
+        progress.record(st.club.id, com.arenacity.domain.rules.ProgressEvent.TRAINING_STARTED)
         HeroTrainResult(view(spec, saved, st.stadium, club.gold), club, price, status(st.copy(club = club), owned.map { if (it.heroId == heroId) saved else it }))
     }
 

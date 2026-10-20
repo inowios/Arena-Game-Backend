@@ -189,6 +189,9 @@ Too many cards	Too many cards	Demasiadas cartas	Cartas demais	Слишком м�
 Bad score	Bad score	Resultado no válido	Placar inválido	Неверный счёт	Неправильний рахунок
 Bad stake	Bad stake	Apuesta no válida	Aposta inválida	Неверная ставка	Неправильна ставка
 No such hero	No such hero	No existe ese héroe	Não existe esse herói	Такого героя нет	Такого героя немає
+Match already reported	Match already reported	El resultado de este partido ya está registrado	O resultado desta partida já foi registrado	Результат этого матча уже принят	Результат цього матчу вже прийнято
+No draws in the Arena	No draws in the Arena	En la Arena no hay empates	Na Arena não há empates	В Арене не бывает ничьих	В Арені не буває нічиїх
+Not your current chapter	Not your current chapter	Esta no es tu capítulo actual	Este não é o seu capítulo atual	Это не ваша текущая глава	Це не ваш поточний розділ
 Too many heroes	Too many heroes	Demasiados héroes	Heróis demais	Слишком много героев	Забагато героїв
 Hero {0} is not in your club	Hero {0} is not in your club	El héroe {0} no está en tu club	O herói {0} não está no seu clube	Героя {0} нет в вашем клубе	Героя {0} немає у вашому клубі
 A hero can only be picked once	A hero can only be picked once	Un héroe solo puede elegirse una vez	Um herói só pode ser escolhido uma vez	Героя можно выбрать только один раз	Героя можна вибрати лише один раз

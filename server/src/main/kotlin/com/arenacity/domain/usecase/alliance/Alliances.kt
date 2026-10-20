@@ -281,6 +281,6 @@ class AllianceUseCases(
 /** Forwards arena wins to the alliance tournament (wired next to the economy's own progress tracking). */
 class AllianceProgress(private val alliances: () -> AllianceUseCases) : ProgressTracker {
     override suspend fun record(clubId: UUID, event: ProgressEvent) {
-        if (event == ProgressEvent.LIVE_WON) runCatching { alliances().recordWin(clubId) }
+        if (event == ProgressEvent.ARENA_WON) runCatching { alliances().recordWin(clubId) }
     }
 }

@@ -23,7 +23,7 @@ class EconomyTest {
         val t = Economy.tasksFor(c, d, includeMatch = true)
         assertEquals(3, t.size); assertEquals(3, t.toSet().size); assertEquals(t, Economy.tasksFor(c, d, true))
         assertFalse(Economy.tasksFor(c, d, includeMatch = false).contains(TaskKind.WIN_MATCH))
-        // one arena task a day, never two, and over a fortnight all four of them come round
+        // one Arena task a day, never two, and over a fortnight all four of them come round (PLAY_ARENA_3, WIN_ARENA_2, KO_5, ALT_SKILL_1)
         val seen = mutableSetOf<TaskKind>()
         for (i in 0 until 14) { val day = Economy.tasksFor(c, d.plusDays(i.toLong()), true); assertEquals(1, day.count { it.arena }, "$day"); seen += day.filter { it.arena } }
         assertEquals(4, seen.size, "$seen")

@@ -28,11 +28,14 @@ class StoryUseCasesTest {
     private val heroUse = HeroUseCases(service, heroes, clock)
     private val story = StoryUseCases(service, clubs, stories, heroUse, clock)
     private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(heroUse)))
-    private val cards = ArenaMatchUseCases(service, clubs, clock, heroes = heroUse, stories = story)
+    private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock, heroes = heroUse, stories = story)
     private val u1 = UUID.randomUUID()
 
-    private fun match(won: Boolean, gf: Int, ga: Int, vararg heroes: String, story: Int? = null) =
-        ArenaReport(7, won, !won && gf == ga, gf, ga, heroes = heroes.toList(), story = story)
+    /** Starts a match (as the chapter's story match when [story] is given) and reports it; [gf]/[ga] are the old shape, ignored. */
+    private suspend fun match(won: Boolean, gf: Int, ga: Int, vararg heroes: String, story: Int? = null): ArenaReport {
+        clubs.update(clubs.findByUserId(u1)!!.copy(energy = 30, energyAt = null))   // energy is not the point here
+        return ArenaReport(cards.start(u1, 1, story).match.id, won, heroes = heroes.toList())
+    }
 
     @Test
     fun `a new club starts chapter 1, the rest locked`() = runBlocking<Unit> {
@@ -52,8 +55,9 @@ class StoryUseCasesTest {
         val o1 = cards.report(u1, match(true, 2, 1, "p001", "p003", "p011"))
         assertTrue(o1.story!!.completed.isEmpty()); assertFalse(o1.story!!.chapterDone)
         assertEquals(1, o1.story!!.chapter.progressOf("c1.o1")); assertEquals(1, o1.story!!.chapter.progressOf("c1.o2"))
-        // a story match for another chapter does not count as the story match; a hero id the club does not own does not count either
-        assertEquals(listOf("c1.o2"), cards.report(u1, match(true, 1, 0, "p010", story = 2)).story!!.completed)
+        // a match cannot be started as another chapter's story match; a hero id the club does not own does not count
+        assertEquals("Not your current chapter", assertFailsWith<com.arenacity.domain.exception.ValidationException> { match(true, 1, 0, "p010", story = 2) }.template)
+        assertEquals(listOf("c1.o2"), cards.report(u1, match(true, 1, 0, "p010")).story!!.completed)
         assertEquals(0, story.story(u1).chapters[0].progressOf("c1.o3"))
         assertEquals(2, story.story(u1).chapters[0].progressOf("c1.o2"))
         // the chapter's story match, won with the pair: the last two goals at once

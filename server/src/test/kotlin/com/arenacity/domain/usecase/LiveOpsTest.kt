@@ -52,10 +52,10 @@ class LiveOpsTest {
     @Test
     fun `an admin event runs for its time with its goal`() = runBlocking<Unit> {
         setup()
-        ops.createEvent("goals", clock.now().minusSeconds(60), clock.now().plusSeconds(3600), 100, 200, 100, "GOAL_SCORED", 2, 0, 10, null)
+        ops.createEvent("goals", clock.now().minusSeconds(60), clock.now().plusSeconds(3600), 100, 200, 100, "KNOCKOUT", 2, 0, 10, null)
         val ev = ops.list(user).first { it.event.key == "goals" }
-        assertEquals(ProgressEvent.GOAL_SCORED, ev.event.goal); assertTrue(ev.running)
-        repeat(2) { ops.record(club().id, ProgressEvent.GOAL_SCORED) }
+        assertEquals(ProgressEvent.KNOCKOUT, ev.event.goal); assertTrue(ev.running)
+        repeat(2) { ops.record(club().id, ProgressEvent.KNOCKOUT) }
         assertEquals(10, ops.claim(user, ev.event.id).gold)
         assertFailsWith<ValidationException> { ops.createEvent("old", clock.now(), clock.now().plusSeconds(60), 100, 100, 100, "INCOME_COLLECTED", 1, 0, 0, null) }
     }

@@ -34,6 +34,9 @@ data class Club(
     /** Arena trophies (the ladder, rules.Arenas) and the current run of Arena wins. */
     val trophies: Int = 0,
     val liveStreak: Int = 0,
+    /** The UTC day of the last Arena result and how many matches paid coins that day (rules.Economy.ARENA_REWARDED_PER_DAY). */
+    val arenaDay: java.time.LocalDate? = null,
+    val arenaRewarded: Int = 0,
     /** ISO week (year*100 + week) the arena chest was last opened in. */
     val arenaChestWeek: Int = 0,
     /** Energy (rules.Energy): the amount at [energyAt], refilling on read; null [energyAt] = full. */
