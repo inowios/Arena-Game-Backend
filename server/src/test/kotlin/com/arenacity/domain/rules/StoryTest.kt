@@ -3,8 +3,8 @@ package com.arenacity.domain.rules
 import kotlin.test.*
 
 class StoryTest {
-    private fun m(won: Boolean = true, draw: Boolean = false, gf: Int = 2, ga: Int = 0, heroes: Set<String> = setOf("p001", "p003"), story: Int? = null, conceded: Boolean = false) =
-        StoryMatch(won, draw, gf, ga, heroes, story, conceded)
+    private fun m(won: Boolean = true, heroes: Set<String> = setOf("p001", "p003"), story: Int? = null, conceded: Boolean = false) =
+        StoryMatch(won, heroes, story, conceded)
 
     @Test
     fun `six chapters, each with 2-3 goals ending in its story match, giving the story heroes of rules Heroes`() {
@@ -18,14 +18,14 @@ class StoryTest {
             assertTrue(c.objectives.filter { it.kind == ObjectiveKind.PLAY_WITH || it.kind == ObjectiveKind.WIN_WITH }.all { o -> o.heroes.isNotEmpty() && o.heroes.all { HeroCatalog.of(it) != null } })
             assertTrue(c.coins > 0 && c.gems > 0)
             assertEquals("story.rival.c${c.number}", c.rival.key)
+            // the rival is a triple with Arena kits (the device builds the AI team from them), no levels
+            assertEquals(3, c.rival.heroes.size); assertTrue(c.rival.heroes.all { HeroCatalog.of(it)?.hasKit == true }, c.rival.heroes.toString())
         }
         // the hero of each chapter is the one rules.Heroes.STORY sells for that chapter
         assertEquals(Heroes.STORY, Story.CHAPTERS.mapNotNull { c -> c.hero?.let { it to c.number } }.toMap())
         assertNull(Story.chapter(1)!!.hero)
-        // the rivals grow stronger, Toya plays for the last one
-        assertEquals(Story.CHAPTERS.map { it.rival.strength }.sorted(), Story.CHAPTERS.map { it.rival.strength })
-        assertEquals("p002", Story.chapter(6)!!.rival.star)
-        assertEquals("p008", Story.chapter(5)!!.rival.star)
+        // the chapter's story hero plays for its rival: Raiga, Rei, Jun, Toya
+        for (n in 3..6) assertTrue(Story.chapter(n)!!.hero in Story.chapter(n)!!.rival.heroes, "chapter $n")
         // the heroes a goal needs are open by then: the start six, or the hero of an earlier chapter
         Story.CHAPTERS.forEach { c ->
             val open = Heroes.START + Story.CHAPTERS.filter { it.number < c.number }.mapNotNull { it.hero }
@@ -36,32 +36,35 @@ class StoryTest {
     @Test
     fun `each goal counts what a match report says`() {
         val c = Story.chapter(1)!!
-        val p1 = Story.progress(c, emptyMap(), m(gf = 2, heroes = setOf("p001", "p003", "p011")))
-        assertEquals(mapOf("c1.o1" to 1, "c1.o2" to 2, "c1.o3" to 0), p1)
-        // Itsuki on the bench: the pair did not play; a loss still scores
-        val p2 = Story.progress(c, p1, m(won = false, gf = 4, ga = 5, heroes = setOf("p001")))
-        assertEquals(mapOf("c1.o1" to 1, "c1.o2" to 3, "c1.o3" to 0), p2)   // capped at the target 3
-        assertFalse(Story.complete(c, p2))
+        val p1 = Story.progress(c, emptyMap(), m(heroes = setOf("p001", "p003", "p011")))
+        assertEquals(mapOf("c1.o1" to 1, "c1.o2" to 1, "c1.o3" to 0), p1)   // the pair played once, one win («goals» = wins in the Arena v4)
+        // Itsuki not in the triple: the pair did not play; a loss counts for nothing
+        val p2 = Story.progress(c, p1, m(won = false, heroes = setOf("p001")))
+        assertEquals(mapOf("c1.o1" to 1, "c1.o2" to 1, "c1.o3" to 0), p2)
+        // a win without the pair: the second win, capped at the target
+        val p2b = Story.progress(c, Story.progress(c, p2, m(heroes = setOf("p007"))), m(heroes = setOf("p007")))
+        assertEquals(mapOf("c1.o1" to 1, "c1.o2" to 2, "c1.o3" to 0), p2b)
+        assertFalse(Story.complete(c, p2b))
         // the story match counts only for its own chapter and only when won
-        assertEquals(0, Story.progress(c, p2, m(story = 2))["c1.o3"])
-        assertEquals(0, Story.progress(c, p2, m(won = false, draw = true, story = 1))["c1.o3"])
-        val p3 = Story.progress(c, p2, m(story = 1))
-        assertEquals(1, p3["c1.o3"]); assertTrue(Story.complete(c, p3))
+        assertEquals(0, Story.progress(c, p2b, m(story = 2))["c1.o3"])
+        assertEquals(0, Story.progress(c, p2b, m(won = false, story = 1))["c1.o3"])
+        val p3 = Story.progress(c, p2b, m(story = 1))
+        assertEquals(1, p3["c1.o3"]); assertEquals(2, p3["c1.o1"]); assertTrue(Story.complete(c, p3))
         // a conceded match counts for nothing
-        assertEquals(emptyMap<String, Int>().let { c.objectives.associate { it.id to 0 } }, Story.progress(c, emptyMap(), m(conceded = true)))
+        assertEquals(c.objectives.associate { it.id to 0 }, Story.progress(c, emptyMap(), m(conceded = true)))
     }
 
     @Test
-    fun `wins with heroes and clean sheets`() {
+    fun `wins with heroes, and every win-shaped goal is a win`() {
         val c2 = Story.chapter(2)!!
         assertEquals(1, Story.gain(c2.objectives[0], 2, m()))
-        assertEquals(0, Story.gain(c2.objectives[0], 2, m(won = false, draw = true)))
+        assertEquals(0, Story.gain(c2.objectives[0], 2, m(won = false)))
         assertEquals(0, Story.gain(c2.objectives[0], 2, m(heroes = setOf("p003"))))
         val c4 = Story.chapter(4)!!
         val clean = c4.objectives.single { it.kind == ObjectiveKind.CLEAN_WIN }
-        assertEquals(1, Story.gain(clean, 4, m(gf = 1, ga = 0)))
-        assertEquals(0, Story.gain(clean, 4, m(gf = 3, ga = 1)))
-        assertEquals(0, Story.gain(clean, 4, m(won = false, draw = true, gf = 0, ga = 0)))
+        assertEquals(1, Story.gain(clean, 4, m()))
+        assertEquals(0, Story.gain(clean, 4, m(won = false)))
+        assertEquals(1, Story.gain(c4.objectives.single { it.kind == ObjectiveKind.WIN }, 4, m(heroes = emptySet())))
     }
 
     @Test

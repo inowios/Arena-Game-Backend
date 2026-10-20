@@ -283,7 +283,7 @@ class ApiIT {
         // training: at the stadium's level (stadium 1 from the start) for coins, the experience after the timer
         java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET coins = 50000 WHERE name = 'Hero FC'") }
         val offer = call(HttpMethod.Get, "/club/heroes/training", t).data.o()
-        assertEquals(true, offer["available"]!!.jsonPrimitive.boolean); assertEquals(1, offer["slots"]!!.jsonPrimitive.int)
+        assertEquals(true, offer["available"]!!.jsonPrimitive.boolean); assertEquals(1, offer["slots"]!!.jsonPrimitive.int); assertEquals(1, offer["centerLevel"]!!.jsonPrimitive.int)
         assertEquals(200, offer["coins"]!!.jsonPrimitive.int); assertEquals(80, offer["xp"]!!.jsonPrimitive.int)
         val started = call(HttpMethod.Post, "/club/heroes/p003/train", t, expect = 201).data.o()
         assertEquals(200, started["spent"]!!.jsonPrimitive.int); assertEquals(1, started["training"]!!.o()["busy"]!!.jsonPrimitive.int)
@@ -309,14 +309,14 @@ class ApiIT {
         assertEquals(6, chapters.size)
         assertEquals(listOf("ACTIVE", "LOCKED", "LOCKED", "LOCKED", "LOCKED", "LOCKED"), chapters.map { it["state"]!!.jsonPrimitive.content })
         assertEquals("story.c1.intro", chapters[0]["introKey"]!!.jsonPrimitive.content)
-        assertEquals("p002", chapters[5]["rival"]!!.o()["star"]!!.jsonPrimitive.content)
+        assertEquals(listOf("p002", "p008", "p004"), chapters[5]["rival"]!!.o()["heroes"]!!.strings()); assertTrue("strength" !in chapters[5]["rival"]!!.o())
         assertEquals("p010", chapters[1]["reward"]!!.o()["hero"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
-        // a match with Kai and Itsuki, 3 goals; then the chapter's story match
-        val r1 = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":1,"won":true,"goalsFor":3,"goalsAgainst":1,"heroes":["p001","p003"]}""").data.o()
-        assertEquals(listOf("c1.o2"), r1["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
-        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"goalsFor":1,"goalsAgainst":0,"heroes":["p001","p003"],"story":1}""").data.o()   // the alias path
-        assertEquals(listOf("c1.o1", "c1.o3"), r2["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
+        // a win with Kai and Itsuki; then the chapter's story match (every goal counts matches: the Arena v4 is won 1:0)
+        val r1 = call(HttpMethod.Post, "/club/arena/result", t, """{"seed":1,"won":true,"heroes":["p001","p003"]}""").data.o()
+        assertEquals(emptyList<String>(), r1["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
+        val r2 = call(HttpMethod.Post, "/club/cards/result", t, """{"seed":2,"won":true,"heroes":["p001","p003"],"story":1}""").data.o()   // the alias path
+        assertEquals(listOf("c1.o1", "c1.o2", "c1.o3"), r2["story"]!!.o()["completed"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals(true, r2["story"]!!.o()["chapterDone"]!!.jsonPrimitive.boolean)
         assertEquals("DONE", r2["story"]!!.o()["chapter"]!!.o()["state"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/club/story/2/claim", t, expect = 409)

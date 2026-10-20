@@ -32,8 +32,8 @@ data class StoryUpdate(val chapter: ChapterView, val completed: List<String>, va
 data class StoryClaimResult(val story: StoryView, val club: Club, val hero: HeroStoryGrant?, val coins: Long, val gems: Int, val chapter: Int)
 
 /**
- * The story «Іскра» (rules.Story): the season's chapters with the club's progress, the progress a card match adds
- * (called from usecase.athlete.CardMatchUseCases.report, in its transaction), and claiming a finished chapter — its story
+ * The story «Іскра» (rules.Story): the season's chapters with the club's progress, the progress an Arena match adds
+ * (called from usecase.arena.ArenaMatchUseCases.report, in its transaction), and claiming a finished chapter — its story
  * hero (or experience for him when the club bought him already), its coins and gems, and the next chapter opens.
  */
 class StoryUseCases(private val service: ClubService, private val clubs: ClubRepository, private val stories: StoryRepository, private val heroes: HeroUseCases,
@@ -53,7 +53,7 @@ class StoryUseCases(private val service: ClubService, private val clubs: ClubRep
     suspend fun story(userId: UUID): StoryView = view(progressOf(service.clubOf(userId).id))
 
     /**
-     * Adds a finished card match to the club's current chapter (inside the report's transaction, the club locked). The story
+     * Adds a finished Arena match to the club's current chapter (inside the report's transaction, the club locked). The story
      * match goal counts only when the report's «story» is that chapter. Nothing changes once the season is over or the
      * chapter's goals are all reached (it waits to be claimed); null then.
      */

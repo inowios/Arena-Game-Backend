@@ -12,8 +12,8 @@ import org.koin.ktor.ext.inject
 
 /**
  * The story «Іскра» (docs/claude/HEROES-INSTEAD-OF-CARDS.md §12 in the mobile repo): the season's chapters with the
- * club's progress, and claiming a finished chapter. Progress comes with the card match result (POST /club/cards/result,
- * its «story» = the chapter of a story match).
+ * club's progress, and claiming a finished chapter. Progress comes with the Arena match result (POST /club/arena/result;
+ * the chapter's story match is started with «story» = its number).
  */
 fun Route.storyRoutes() {
     val story: StoryUseCases by inject()

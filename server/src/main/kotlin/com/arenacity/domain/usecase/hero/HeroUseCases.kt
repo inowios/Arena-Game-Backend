@@ -40,10 +40,11 @@ data class HeroUnlockResult(val hero: HeroView, val club: Club, val spent: Int)
 /** The Arena triple («Склад»): [saved] false = none saved yet (an empty list; the match then picks the best heroes itself). */
 data class HeroLineupView(val heroes: List<String>, val saved: Boolean, val updatedAt: Instant?)
 /**
- * Hero training in the training centre: [centerLevel] null = no working centre (nothing can train), then [coins] and
- * [xp] of a session at that level, [seconds] its length, [slots] heroes at once, [training] = the heroes in a session now.
+ * Hero training, always open, at the stadium's [level] (1..10, the five islands map: no training centre to build since
+ * 17 October 2026): [coins] and [xp] of a session at that level, [seconds] its length, [slots] heroes at once,
+ * [training] = the heroes in a session now.
  */
-data class HeroTrainingStatus(val centerLevel: Int?, val slots: Int, val coins: Long, val xp: Int, val seconds: Long, val training: List<HeroView>)
+data class HeroTrainingStatus(val level: Int, val slots: Int, val coins: Long, val xp: Int, val seconds: Long, val training: List<HeroView>)
 /** A session started: the hero, the club after paying, the price, and the centre as it is now. */
 data class HeroTrainResult(val hero: HeroView, val club: Club, val spent: Long, val status: HeroTrainingStatus)
 /** A story hero given: [joined] = new in the club, else he was owned and got [xp] experience. */
@@ -162,15 +163,14 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
 
     // ------------------------------------------------------------------ training in the training centre
 
-    /** The level heroes train at: the stadium level (the five islands map, 17 October 2026: the training centre went
-     *  with the city builder; rules.MapSpots keeps its slots and gain by the stadium level). Every club trains. */
+    /** The level heroes train at: the stadium level = the club's open spots (rules.MapSpots; the training centre went with
+     *  the city builder on 17 October 2026). Every club trains from stadium 1; a higher stadium costs more and gives more. */
     private fun centerLevel(st: ClubState): Int = st.stadium.coerceIn(1, MapSpots.MAX_STADIUM)
 
     private fun status(st: ClubState, owned: List<ClubHero>): HeroTrainingStatus {
         val level = centerLevel(st)
         val busy = owned.filter { it.training }.mapNotNull { h -> HeroCatalog.of(h.heroId)?.let { view(it, h, 1, 0) } }
-        return HeroTrainingStatus(level, level?.let(Heroes::trainingSlots) ?: 0, level?.let(Heroes::trainingCoins) ?: 0, level?.let(Heroes::trainingXp) ?: 0,
-            Heroes.TRAINING_SECONDS, busy)
+        return HeroTrainingStatus(level, Heroes.trainingSlots(level), Heroes.trainingCoins(level), Heroes.trainingXp(level), Heroes.TRAINING_SECONDS, busy)
     }
 
     suspend fun trainingStatus(userId: UUID): HeroTrainingStatus {
@@ -179,9 +179,9 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
     }
 
     /**
-     * Starts a session for [heroId]: the club needs a working training centre, a free slot (heroes at once = its slots),
-     * a hero it owns that is not training and below the top level, and the coins of the centre's level. The experience
-     * is fixed now (the centre's level today) and given by [claimTraining] after [Heroes.TRAINING_SECONDS].
+     * Starts a session for [heroId]: a free slot (heroes at once = the stadium's slots), a hero the club owns that is not
+     * training and below the top level, and the coins of the stadium's level. The experience is fixed now (the stadium's
+     * level today) and given by [claimTraining] after [Heroes.TRAINING_SECONDS].
      */
     suspend fun train(userId: UUID, heroId: String): HeroTrainResult = tx {
         val spec = HeroCatalog.of(heroId) ?: throw NotFoundException("No such hero")

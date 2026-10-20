@@ -59,7 +59,7 @@ class ArenaMatchUseCases(private val service: ClubService, private val clubs: Cl
         val heroXp = Heroes.matchXp(r.won, r.draw, r.conceded)
         val played = heroes?.grantMatchXp(saved, r.heroes, heroXp).orEmpty()
         // the story «Іскра» counts the match for the club's current chapter (the heroes: only its own who played)
-        val story = stories?.record(saved, StoryMatch(r.won, r.draw, r.goalsFor, r.goalsAgainst, played.map { it.spec.id }.toSet(), r.story, r.conceded))
+        val story = stories?.record(saved, StoryMatch(r.won, played.map { it.spec.id }.toSet(), r.story, r.conceded))
         ArenaOutcome(coins, saved, played, heroXp, story)
     }
 }

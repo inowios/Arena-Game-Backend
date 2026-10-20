@@ -134,7 +134,7 @@ class HeroesUseCasesTest {
         clubs.update(clubs.findById(club.id)!!.copy(coins = 50_000, gold = 500))   // stadium 1 trains (the five islands map)
         val coins = clubs.findById(club.id)!!.coins
         val st = use.trainingStatus(u1)
-        assertEquals(1, st.centerLevel); assertEquals(1, st.slots); assertEquals(200L, st.coins); assertEquals(80, st.xp); assertEquals(7200L, st.seconds)
+        assertEquals(1, st.level); assertEquals(1, st.slots); assertEquals(200L, st.coins); assertEquals(80, st.xp); assertEquals(7200L, st.seconds)
         val t = use.train(u1, "p001")
         assertEquals(200L, t.spent); assertEquals(coins - 200, t.club.coins); assertEquals(coins - 200, clubs.findById(club.id)!!.coins)
         assertEquals(80, t.hero.owned!!.trainingXp); assertEquals(7200L, t.hero.trainingLeft)

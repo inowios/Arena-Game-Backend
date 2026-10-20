@@ -48,14 +48,14 @@ class StoryUseCasesTest {
     fun `Arena matches move chapter 1, claiming it opens chapter 2 and pays`() = runBlocking<Unit> {
         val club = create(u1, "Lions", "#AA0000", "#FFFFFF", "UTC")
         assertFailsWith<ConflictException> { story.claim(u1, 1) }   // nothing done yet
-        // a won match with Kai and Itsuki, 2 goals: the pair played once of twice, 2 of 3 goals
+        // a won match with Kai and Itsuki: the pair played once of twice, 1 of 2 wins
         val o1 = cards.report(u1, match(true, 2, 1, "p001", "p003", "p011"))
         assertTrue(o1.story!!.completed.isEmpty()); assertFalse(o1.story!!.chapterDone)
-        assertEquals(1, o1.story!!.chapter.progressOf("c1.o1")); assertEquals(2, o1.story!!.chapter.progressOf("c1.o2"))
-        // a story match for another chapter does not count; a heroes' id the club does not own does not count either
+        assertEquals(1, o1.story!!.chapter.progressOf("c1.o1")); assertEquals(1, o1.story!!.chapter.progressOf("c1.o2"))
+        // a story match for another chapter does not count as the story match; a hero id the club does not own does not count either
         assertEquals(listOf("c1.o2"), cards.report(u1, match(true, 1, 0, "p010", story = 2)).story!!.completed)
         assertEquals(0, story.story(u1).chapters[0].progressOf("c1.o3"))
-        assertEquals(3, story.story(u1).chapters[0].progressOf("c1.o2"))
+        assertEquals(2, story.story(u1).chapters[0].progressOf("c1.o2"))
         // the chapter's story match, won with the pair: the last two goals at once
         val o3 = cards.report(u1, match(true, 1, 0, "p001", "p003", story = 1))
         assertEquals(listOf("c1.o1", "c1.o3"), o3.story!!.completed); assertTrue(o3.story!!.chapterDone)

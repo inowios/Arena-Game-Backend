@@ -43,10 +43,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class HeroLineupRequest(val heroes: List<String> = emptyList())
 
 /**
- * GET /club/heroes/training: [available] false = no working training centre ([centerLevel] null, nothing can train);
+ * GET /club/heroes/training: always [available] (training belongs to the stadium: [centerLevel] = the stadium level, 1..10);
  * a session costs [coins], gives [xp] and lasts [seconds]; [slots] heroes at once, [busy] of them in [heroes] now.
  */
-@Serializable data class HeroTrainingStatusDto(val available: Boolean, val centerLevel: Int?, val slots: Int, val busy: Int, val coins: Long, val xp: Int,
+@Serializable data class HeroTrainingStatusDto(val available: Boolean, val centerLevel: Int, val slots: Int, val busy: Int, val coins: Long, val xp: Int,
                                                val seconds: Long, val heroes: List<HeroDto>)
 @Serializable data class HeroTrainResponse(val hero: HeroDto, val club: ClubDto, val spent: Long, val training: HeroTrainingStatusDto)
 @Serializable data class HeroClaimResponse(val hero: HeroDto, val gained: Int, val levelBefore: Int, val training: HeroTrainingStatusDto)
@@ -64,6 +64,6 @@ fun HeroView.toDto(): HeroDto {
 fun HeroRoster.toDto() = HeroRosterResponse(heroes.map { it.toDto() }, heroes.count { it.owned != null }, club.gold, stadium, Heroes.XP_TO_NEXT, Heroes.MAX_MATCH_XP_PER_DAY)
 fun HeroUnlockResult.toDto() = HeroUnlockResponse(hero.toDto(), club.toDto(), spent)
 fun HeroLineupView.toDto() = HeroLineupDto(heroes, saved, updatedAt?.toString())
-fun HeroTrainingStatus.toDto() = HeroTrainingStatusDto(centerLevel != null, centerLevel, slots, training.size, coins, xp, seconds, training.map { it.toDto() })
+fun HeroTrainingStatus.toDto() = HeroTrainingStatusDto(true, level, slots, training.size, coins, xp, seconds, training.map { it.toDto() })
 fun HeroTrainResult.toDto() = HeroTrainResponse(hero.toDto(), club.toDto(), spent, status.toDto())
 fun HeroClaimResult.toDto() = HeroClaimResponse(hero.toDto(), gained, levelBefore, status.toDto())
