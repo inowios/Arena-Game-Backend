@@ -13,6 +13,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 
+/** The club's sections: football, the one there is (the Arena matches, 20 October 2026). */
+private val SECTIONS = listOf(com.arenacity.domain.model.Sport.FOOTBALL.name)
+
 fun Route.clubRoutes() {
     val createClub: CreateClubUseCase by inject()
     val getClub: GetClubUseCase by inject()
@@ -20,7 +23,6 @@ fun Route.clubRoutes() {
     val updateClub: UpdateClubUseCase by inject()
     val roads: com.arenacity.domain.usecase.progress.RoadUseCases by inject()
     val collections: com.arenacity.domain.usecase.progress.CollectionsUseCases by inject()
-    val sections: com.arenacity.domain.usecase.athlete.SectionService by inject()
     val inbox: com.arenacity.domain.usecase.account.InboxService by inject()
     val zonesUc: com.arenacity.domain.usecase.club.ZoneUseCases by inject()
     val energy: EnergyUseCases by inject()
@@ -41,12 +43,12 @@ fun Route.clubRoutes() {
             }
             get {
                 val st = getClub(call.userId())
-                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id)).toSuccessResponse())
+                call.respond(st.toResponse(SECTIONS, inbox.unread(st.club.id)).toSuccessResponse())
             }
             // opens a main-island spot for its coins; answers the club as GET /club does
             post("/spots/{id}/unlock") {
                 val st = unlockSpot(call.userId(), call.parameters["id"].orEmpty())
-                call.respond(st.toResponse(sections.active(st.club).map { it.name }, inbox.unread(st.club.id)).toSuccessResponse())
+                call.respond(st.toResponse(SECTIONS, inbox.unread(st.club.id)).toSuccessResponse())
             }
             // energy (rules.Energy): what the club has now, and filling it up for gems
             get("/energy") { call.respond(energy.state(call.userId()).toDto().toSuccessResponse()) }

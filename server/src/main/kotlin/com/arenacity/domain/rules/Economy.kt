@@ -61,10 +61,6 @@ object Economy {
 
     val COIN_PACKS = listOf(CoinPack("coins_small", 25, 3_000), CoinPack("coins_medium", 100, 13_000), CoinPack("coins_large", 400, 60_000)).associateBy { it.id }
 
-    /** Premium track's last level grants an elite athlete (spec §6). */
-    const val ELITE_LEVEL = 30
-    const val ELITE_QUALITY_MIN = 70
-    const val ELITE_QUALITY_MAX = 76
     /** Cosmetic on a pass level: [premium] track or free track. */
     fun passItem(level: Int, premium: Boolean): Cosmetic? = Cosmetics.ALL.firstOrNull { it.source == CosmeticSource.PASS && it.unlock == (if (premium) "premium:" else "free:") + level }
 

@@ -48,9 +48,8 @@ fun Route.economyRoutes() {
         get("/club/pass") { call.respond(pass.view(call.userId()).toDto().toSuccessResponse()) }
         post("/club/pass/tasks/{task}/claim") { call.respond(pass.claimTask(call.userId(), parseEnum<TaskKind>(call.parameters["task"]!!, "task")).toDto().toSuccessResponse()) }
         post("/club/pass/claim") {
-            val sport = runCatching { call.receive<ClaimLevelsRequest>() }.getOrNull()?.eliteSport?.let { parseEnum<com.arenacity.domain.model.Sport>(it, "sport") } ?: com.arenacity.domain.model.Sport.FOOTBALL
-            val r = pass.claimLevels(call.userId(), sport)
-            call.respond(ClaimLevelsResponse(r.reward.toDto(), r.view.toDto(), clubService.clubOf(call.userId()).toDto(), r.items, r.elite?.toDto(java.time.Instant.now())).toSuccessResponse())
+            val r = pass.claimLevels(call.userId())
+            call.respond(ClaimLevelsResponse(r.reward.toDto(), r.view.toDto(), clubService.clubOf(call.userId()).toDto(), r.items).toSuccessResponse())
         }
         post("/club/shop/coins/{pack}") { call.respond(coinPacks(call.userId(), call.parameters["pack"]!!).toDto().toSuccessResponse()) }
         get("/club/achievements") { call.respond(achievements.list(call.userId()).map { it.toDto() }.toSuccessResponse()) }

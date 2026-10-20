@@ -8,7 +8,6 @@ import com.arenacity.domain.rules.ChapterState
 import com.arenacity.domain.rules.Story
 import com.arenacity.domain.usecase.arena.ArenaReport
 import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.hero.HeroUseCases
@@ -22,12 +21,12 @@ import kotlin.test.*
 
 class StoryUseCasesTest {
     private val clock = FixedClock(Instant.parse("2026-10-17T10:00:00Z"))
-    private val clubs = FakeClubRepository(); private val spots = FakeClubSpotRepository(); private val athletes = FakeAthleteRepository(); private val heroes = FakeHeroRepository()
+    private val clubs = FakeClubRepository(); private val spots = FakeClubSpotRepository(); private val heroes = FakeHeroRepository()
     private val stories = FakeStoryRepository()
     private val service = ClubService(clubs, clock, spots)
     private val heroUse = HeroUseCases(service, heroes, clock)
     private val story = StoryUseCases(service, clubs, stories, heroUse, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(heroUse)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StartHeroesInitializer(heroUse)))
     private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock, heroes = heroUse, stories = story)
     private val u1 = UUID.randomUUID()
 

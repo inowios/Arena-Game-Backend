@@ -3,8 +3,6 @@ package com.arenacity.domain.usecase
 import com.arenacity.domain.model.*
 import com.arenacity.domain.rules.Divisions
 import com.arenacity.domain.rules.LeagueRules
-import com.arenacity.domain.usecase.athlete.SectionService
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.economy.EconomyService
 import com.arenacity.domain.usecase.economy.SeasonPassUseCases
@@ -19,15 +17,15 @@ import kotlin.test.*
 class SeasonTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val seasons = FakeSeasonRepository(); private val economyRepo = FakeEconomyRepository()
-    private val bots = BotService(users, clubs, athletes, clock, leagues)
+    private val bots = BotService(users, clubs, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val seasonService = SeasonService(leagues, fixtures, clubs, seasons, leagueService, clock)
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(athletes), seasonCloser = seasonService)
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock, seasonCloser = seasonService)
 
-    private fun newClub(name: String, rating: Int? = null, division: Int = 1): Club = runBlocking {
+    private fun newClub(name: String, division: Int = 1): Club = runBlocking {
         val user = UUID.randomUUID()
         users.create(User(user, AuthProvider.GUEST, "d-$user", null, null, null, true, clock.now(), clock.now()))
         var c = create(user, name, "#AA0000", "#FFFFFF", "UTC")
@@ -36,8 +34,16 @@ class SeasonTest {
             leagues.removeMember(l.id, c.id); fixtures.deleteScheduled(l.id, l.seasonNumber); leagueService.prepareSeason(l)
             c = clubs.update(clubs.rows.getValue(c.id).copy(division = division)); leagueService.ensurePublicMembership(c)
         }
-        if (rating != null) athletes.rows.values.filter { it.clubId == c.id }.forEach { athletes.update(it.copy(attack = rating, defense = rating, physical = rating, technique = rating, mental = rating)) }
         clubs.rows.getValue(c.id)
+    }
+
+    /** Every match of [club] this season stored as a [won] result before the scheduler gets there (an Arena match cannot be rigged by strength: every triple is the original's balance). */
+    private fun rig(club: Club, won: Boolean) = runBlocking {
+        val league = leagues.listForClub(club.id).single { it.status == LeagueStatus.ACTIVE }
+        for (f in fixtures.listByLeagueSeason(league.id, league.seasonNumber).filter { it.involves(club.id) && it.status == FixtureStatus.SCHEDULED }) {
+            val r = MatchdayResult(homeWon = (f.homeClubId == club.id) == won)
+            fixtures.rows[f.id] = f.copy(status = FixtureStatus.PLAYED, homeScore = r.homeScore, awayScore = r.awayScore, homePoints = r.homePoints, awayPoints = r.awayPoints, resultJson = r.toJson(), playedAt = clock.now())
+        }
     }
 
     private fun playSeason(): Int {
@@ -48,9 +54,9 @@ class SeasonTest {
 
     @Test
     fun `strong club wins the entry division, gets prizes, trophies and moves up`() = runBlocking<Unit> {
-        val c = newClub("Champs", rating = 95)
+        val c = newClub("Champs"); rig(c, won = true)
         val oldLeague = leagues.listForClub(c.id).single()
-        assertEquals(LeagueRules.ROUNDS * 4, playSeason())
+        assertEquals(LeagueRules.ROUNDS * 3, playSeason())   // our 28 were stored already
         assertEquals(LeagueStatus.FINISHED, leagues.rows.getValue(oldLeague.id).status)
         assertEquals(8, seasons.seasons.count { it.leagueId == oldLeague.id }, "a history row for every member")
         val rec = seasons.seasonFor(c.id, oldLeague.id)!!
@@ -70,7 +76,7 @@ class SeasonTest {
 
     @Test
     fun `weak club is relegated from division 2`() = runBlocking<Unit> {
-        val c = newClub("Strugglers", rating = 15, division = 2)
+        val c = newClub("Strugglers", division = 2); rig(c, won = false)
         val league = leagues.listForClub(c.id).single { it.status == LeagueStatus.ACTIVE }
         assertEquals(2, league.division)
         playSeason()
@@ -82,7 +88,7 @@ class SeasonTest {
 
     @Test
     fun `bots of a finished season are reused by the next league in that division`() = runBlocking<Unit> {
-        newClub("First", rating = 50)
+        newClub("First")
         playSeason()
         val botsBefore = clubs.rows.values.count { it.isBot }
         newClub("Newcomer")   // joins division 1 of the same bucket: its league is filled with freed bots
@@ -108,7 +114,7 @@ class SeasonPushTextTest {
             com.arenacity.domain.model.Movement.PROMOTED, 2, 5_000, 20, 50, java.time.Instant.EPOCH)
         val service = com.arenacity.domain.usecase.league.SeasonService(FakeLeagueRepositoryForText, com.arenacity.testutil.FakeFixtureRepository(), com.arenacity.testutil.FakeClubRepository(),
             com.arenacity.testutil.FakeSeasonRepository(), com.arenacity.domain.usecase.league.LeagueService(FakeLeagueRepositoryForText, com.arenacity.testutil.FakeFixtureRepository(), com.arenacity.testutil.FakeClubRepository(),
-                com.arenacity.domain.usecase.league.BotService(com.arenacity.testutil.FakeUserRepository(), com.arenacity.testutil.FakeClubRepository(), com.arenacity.testutil.FakeAthleteRepository(), com.arenacity.testutil.FixedClock()), com.arenacity.testutil.FixedClock()),
+                com.arenacity.domain.usecase.league.BotService(com.arenacity.testutil.FakeUserRepository(), com.arenacity.testutil.FakeClubRepository(), com.arenacity.testutil.FixedClock()), com.arenacity.testutil.FixedClock()),
             com.arenacity.testutil.FixedClock())
         val (ruTitle, ruBody) = service.message(rec, "ru")
         kotlin.test.assertEquals("Сезон окончен: вы на 1-м месте", ruTitle)

@@ -1,72 +1,43 @@
 package com.arenacity.domain.rules
 
-import com.arenacity.domain.model.Athlete
+import com.arenacity.arena.HeroPick
 import com.arenacity.domain.model.ClubHero
-import com.arenacity.domain.model.HeroGroup
 import com.arenacity.domain.model.HeroLineup
-import com.arenacity.domain.model.Rarity
-import com.arenacity.domain.model.Sport
-import com.arenacity.engine.model.Position
-import java.time.Instant
-import java.util.UUID
 
 /**
- * The heroes in the simulated matches (the owner, 18 October 2026: the league, the cup, friendlies and challenges are
- * played by the club's heroes, as «ГРАТИ МАТЧ» is). A hero enters the match simulator as an athlete of its own: a
- * stable id per club and hero ([idOf]), its name, its role as the position, attributes from its rarity and level (the
- * strength bonus up to +10 % at level 10, [levelPct]), always fresh. The eleven are filled with the club's academy
- * pupils (its athletes). The match never writes these athletes back.
+ * The triple a club fields in a simulated fixture (the league, the cup, friendlies, challenges; APP-AUDIT §2.15, 20 October
+ * 2026): its saved Arena triple (GET /club/heroes/lineup, the heroes with a kit in its order) filled up to three with its
+ * best other owned heroes with a kit — the highest level, then the most experience, then the catalog order. A club without
+ * heroes (a bot, an old club) fields a [seeded] triple of the eleven humans at level 1. The server plays the match itself
+ * (usecase.league.HeroMatch), so the level is carried for the result only: v4 kits do not scale with it.
  */
 object HeroSquad {
-    /**
-     * The base attribute of a hero by rarity: a little above the first division's athletes (their average is ~48), so a
-     * hero team is better than the bots without crushing them; the level adds up to +10 %. The heroes always start
-     * before the pupils whatever their ratings (the lineup's priority, LineupRules.defaultFor).
-     */
-    fun base(group: HeroGroup): Int = when (group) {
-        HeroGroup.COMMON -> 53
-        HeroGroup.GOOD -> 56
-        HeroGroup.STAR -> 59
-        HeroGroup.LEGEND -> 62
+    /** The ids of the humans with a kit, in catalog order. */
+    val HUMANS: List<String> = HeroCatalog.WITH_KIT.map { it.id }
+
+    /** The club's triple from what it owns and saved; fewer than three only when the club owns fewer heroes with a kit. */
+    fun triple(owned: List<ClubHero>, lineup: HeroLineup?): List<HeroPick> {
+        val withKit = owned.filter { HeroCatalog.of(it.heroId)?.hasKit == true }
+        val byId = withKit.associateBy { it.heroId }
+        val picked = lineup?.heroes.orEmpty().distinct().mapNotNull { byId[it] }.take(Heroes.MAX_HEROES_PER_MATCH).toMutableList()
+        val order = HUMANS.withIndex().associate { it.value to it.index }
+        val rest = withKit.filter { it !in picked }.sortedWith(compareByDescending<ClubHero> { it.level }.thenByDescending { it.xp }.thenBy { order[it.heroId] ?: Int.MAX_VALUE })
+        for (h in rest) { if (picked.size >= Heroes.MAX_HEROES_PER_MATCH) break; picked += h }
+        return picked.map { HeroPick(it.heroId, it.level) }
     }
 
-    /** The strength bonus of [level] in percent: 0 at level 1 up to +10 % at level 10 (the cap, so a hero never breaks a match). */
-    fun levelPct(level: Int): Int = Math.round((level.coerceIn(1, Heroes.MAX_LEVEL) - 1) * 10.0 / (Heroes.MAX_LEVEL - 1)).toInt()
-
-    /** The athlete id a hero plays under in [clubId]'s matches (its name in the match highlights comes from [names]). */
-    fun idOf(clubId: UUID, heroId: String): UUID = UUID.nameUUIDFromBytes("hero:$clubId:$heroId".toByteArray())
-
-    /**
-     * The heroes who take part: the saved Arena triple first (in its order) and then every other hero the club owns.
-     * Unknown ids are skipped.
-     */
-    fun playing(owned: List<ClubHero>, lineup: HeroLineup?): List<ClubHero> {
-        val known = owned.filter { HeroCatalog.of(it.heroId) != null }
-        val byId = known.associateBy { it.heroId }
-        val first = lineup?.heroes.orEmpty().distinct().mapNotNull { byId[it] }
-        return first + known.filter { it !in first }
+    /** Three distinct humans chosen by [seed] (a bot's or a hero-less club's triple), level 1. */
+    fun seeded(seed: Long): List<HeroPick> {
+        val rng = com.arenacity.arena.Rng(seed.toULong())
+        val ids = HUMANS.toMutableList(); val t = ArrayList<HeroPick>(3)
+        repeat(Heroes.MAX_HEROES_PER_MATCH) { t += HeroPick(ids.removeAt(rng.next(ids.size)), 1) }
+        return t
     }
 
-    /** [heroes] as athletes of [clubId] for the match simulator. */
-    fun athletes(clubId: UUID, heroes: List<ClubHero>, now: Instant): List<Athlete> = heroes.mapNotNull { h ->
-        val spec = HeroCatalog.of(h.heroId) ?: return@mapNotNull null
-        val b = base(spec.group) * (100 + levelPct(h.level)) / 100
-        fun at(d: Int) = (b + d).coerceIn(1, 99)
-        val pos = when (spec.role) { "GK" -> Position.GK; "DEF" -> Position.DEF; "MID" -> Position.MID; else -> Position.FWD }
-        val (atk, def, phy, tec, men) = when (pos) {
-            Position.GK -> listOf(at(-12), at(6), at(0), at(0), at(4))
-            Position.DEF -> listOf(at(-8), at(6), at(4), at(-2), at(0))
-            Position.MID -> listOf(at(0), at(-2), at(0), at(6), at(2))
-            else -> listOf(at(6), at(-10), at(2), at(4), at(0))
-        }
-        Athlete(idOf(clubId, h.heroId), clubId, spec.name, Sport.FOOTBALL, pos, atk, def, phy, tec, men, 18,
-            when (spec.group) { HeroGroup.COMMON -> Rarity.COMMON; HeroGroup.GOOD, HeroGroup.STAR -> Rarity.RARE; HeroGroup.LEGEND -> Rarity.ELITE },
-            0, now, null, 80, now, now, potential = 99)
+    /** [triple] when it is full, else filled with [seeded] heroes the club does not field already (a club with one or two heroes). */
+    fun fill(triple: List<HeroPick>, seed: Long): List<HeroPick> {
+        if (triple.size >= Heroes.MAX_HEROES_PER_MATCH) return triple
+        val have = triple.map { it.id }.toSet()
+        return triple + seeded(seed).filter { it.id !in have }.take(Heroes.MAX_HEROES_PER_MATCH - triple.size)
     }
-
-    /** The names of [clubId]'s heroes under their match ids (the highlights' scorers). */
-    fun names(clubId: UUID, owned: List<ClubHero>): Map<UUID, String> =
-        owned.mapNotNull { h -> HeroCatalog.of(h.heroId)?.let { idOf(clubId, h.heroId) to it.name } }.toMap()
 }
-
-private operator fun <T> List<T>.component5(): T = this[4]

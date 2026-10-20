@@ -6,7 +6,6 @@ import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.*
 import com.arenacity.domain.rules.*
-import com.arenacity.domain.usecase.athlete.*
 import com.arenacity.domain.usecase.club.*
 import com.arenacity.domain.usecase.economy.*
 import com.arenacity.domain.usecase.league.*
@@ -19,20 +18,19 @@ import kotlin.test.*
 class MonetizationTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val economyRepo = FakeEconomyRepository()
     private val inventory = FakeInventoryRepository(); private val achievementsRepo = FakeAchievementRepository(); private val seasons = FakeSeasonRepository()
     private val spots = FakeClubSpotRepository()
     private val service = ClubService(clubs, clock, spots)
     private val economy = EconomyService(economyRepo, leagues, clock, achievements = achievementsRepo)
     private val cosmetics = CosmeticsService(inventory, clock)
-    private val bots = BotService(users, clubs, athletes, clock)
+    private val bots = BotService(users, clubs, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val coinPacks = BuyCoinPackUseCase(service, clubs, clock)
     private val achievementService = AchievementService(achievementsRepo, service, seasons)
     private val achievements = AchievementUseCases(service, clubs, achievementsRepo, achievementService, cosmetics, clock)
-    private val pass = SeasonPassUseCases(service, clubs, economyRepo, economy, clock, cosmetics = cosmetics, athletes = athletes)
+    private val pass = SeasonPassUseCases(service, clubs, economyRepo, economy, clock, cosmetics = cosmetics)
     private val daily = ClaimDailyRewardUseCase(service, clubs, economy, clock)
     private val user = UUID.randomUUID()
 
@@ -104,18 +102,14 @@ class MonetizationTest {
     }
 
     @Test
-    fun `premium pass grants cosmetics and an elite athlete at the last level`() = runBlocking<Unit> {
+    fun `premium pass grants cosmetics up to the last level`() = runBlocking<Unit> {
         setup()
         pass.view(user)
         val key = economyRepo.passes.keys.first()
         economyRepo.upsertPass(economyRepo.passes.getValue(key).copy(premium = true, xp = Economy.PASS_LEVELS * Economy.XP_PER_LEVEL))
-        val squadBefore = athletes.rows.size
         val r = pass.claimLevels(user)
         assertTrue(r.items.containsAll(listOf("frame_gold", "kit_gold_trim", "kit_pinstripe", "cel_dance", "frame_flame")), r.items.toString())
         assertTrue(r.items.none { it.startsWith("decor_") })
-        val elite = assertNotNull(r.elite)
-        assertEquals(Rarity.ELITE, elite.rarity); assertEquals(Sport.FOOTBALL, elite.sport); assertTrue(elite.overall >= 60, "overall ${elite.overall}")
-        assertEquals(squadBefore + 1, athletes.rows.size)
         assertFailsWith<ConflictException> { pass.claimLevels(user) }
         // next season the same track: items already owned turn into gold
         clubs.update(club().copy(seasonNo = club().seasonNo + 1))
@@ -124,7 +118,7 @@ class MonetizationTest {
         economyRepo.upsertPass(economyRepo.passes.getValue(next).copy(premium = true, xp = 15 * Economy.XP_PER_LEVEL))
         val goldBefore = club().gold
         val r2 = pass.claimLevels(user)
-        assertTrue(r2.items.isEmpty()); assertNull(r2.elite)
+        assertTrue(r2.items.isEmpty())
         val levelGold = (1..15).sumOf { Economy.freeReward(it).gold + Economy.premiumReward(it).gold }
         assertEquals(goldBefore + levelGold + 2 * Cosmetics.DUPLICATE_GOLD, club().gold)   // frame_gold (10) + decor_statue (15)
     }

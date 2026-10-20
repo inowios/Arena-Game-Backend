@@ -4,8 +4,6 @@ import com.arenacity.common.tx.DbTx
 import com.arenacity.data.repository.*
 import com.arenacity.domain.model.*
 import com.arenacity.domain.usecase.account.InboxService
-import com.arenacity.domain.usecase.athlete.SectionService
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.cup.CupNotifier
@@ -29,12 +27,12 @@ import kotlin.test.*
 class CupIT {
     private val clock = FixedClock(Instant.parse("2026-10-08T10:00:00Z"))   // Thursday
     private val users = UserRepositoryImpl(); private val clubs = ClubRepositoryImpl()
-    private val athletes = AthleteRepositoryImpl(); private val lineups = LineupRepositoryImpl(); private val leagues = LeagueRepositoryImpl(); private val fixtures = FixtureRepositoryImpl()
+    private val leagues = LeagueRepositoryImpl(); private val fixtures = FixtureRepositoryImpl()
     private val seasons = SeasonRepositoryImpl(); private val cups = CupRepositoryImpl(); private val analytics = AnalyticsRepositoryImpl(); private val inbox = InboxRepositoryImpl()
-    private val bots = BotService(users, clubs, athletes, clock, leagues)
+    private val bots = BotService(users, clubs, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)), tx = DbTx)
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, tx = DbTx, sections = SectionService(athletes))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)), tx = DbTx)
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock, tx = DbTx)
     private val service = CupService(cups, clubs, fixtures, bots, runner, seasons, clock, tx = DbTx, notifier = CupNotifier(null, InboxService(inbox, clock)))
     private val queries = CupQueries(ClubService(clubs, clock), cups, fixtures, clubs, clock)
 

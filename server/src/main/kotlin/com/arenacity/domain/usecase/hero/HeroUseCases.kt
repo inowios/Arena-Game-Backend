@@ -116,10 +116,7 @@ class HeroUseCases(private val service: ClubService, private val heroes: HeroRep
         return heroIds.distinct().mapNotNull { id ->
             val h = owned[id] ?: return@mapNotNull null
             val spec = HeroCatalog.of(id) ?: return@mapNotNull null
-            val earnedToday = if (h.xpDay == today) h.xpToday else 0
-            val gain = minOf(xp.coerceAtLeast(0), Heroes.MAX_MATCH_XP_PER_DAY - earnedToday).coerceAtLeast(0)
-            val (level, rest) = Heroes.grow(h.level, h.xp, gain)
-            val saved = heroes.update(h.copy(level = level, xp = rest, xpDay = today, xpToday = earnedToday + gain))
+            val saved = heroes.update(Heroes.grant(h, xp, today))
             view(spec, saved, stadium = 1, gold = 0)   // owned: stadium and gold do not matter
         }
     }

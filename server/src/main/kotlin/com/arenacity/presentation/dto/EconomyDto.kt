@@ -14,12 +14,13 @@ import kotlinx.serialization.Serializable
 @Serializable data class TaskDto(val task: String, val title: String, val progress: Int, val target: Int, val xp: Int, val claimed: Boolean)
 @Serializable data class PassLevelDto(
     val level: Int, val free: RewardDto, val premium: RewardDto, val reached: Boolean, val claimedFree: Boolean, val claimedPremium: Boolean,
+    /** Always false: the elite athlete of premium 30 went with the athletes (20 October 2026); kept for one client version. */
     val freeItem: String? = null, val premiumItem: String? = null, val elite: Boolean = false,
 )
 @Serializable data class ThemeDto(val id: String, val accent: String, val accent2: String, val item: String, val itemLevel: Int)
 @Serializable data class PassResponse(val season: Int, val xp: Int, val level: Int, val xpPerLevel: Int, val premium: Boolean, val tasks: List<TaskDto>, val levels: List<PassLevelDto>, val theme: ThemeDto? = null)
 @Serializable data class ClaimLevelsRequest(val eliteSport: String? = null)
-@Serializable data class ClaimLevelsResponse(val reward: RewardDto, val pass: PassResponse, val club: ClubDto, val items: List<String> = emptyList(), val elite: AthleteDto? = null)
+@Serializable data class ClaimLevelsResponse(val reward: RewardDto, val pass: PassResponse, val club: ClubDto, val items: List<String> = emptyList())
 @Serializable data class VerifyPurchaseRequest(val store: String, val productId: String, val token: String)
 @Serializable data class PurchaseResponse(val status: String, val gold: Int, val coins: Long, val club: ClubDto)
 @Serializable data class PushTokenRequest(val token: String, val platform: String = "android")
@@ -30,14 +31,13 @@ import kotlinx.serialization.Serializable
     val claimedTier: Int, val reachedTier: Int,
 )
 @Serializable data class AchievementClaimResponse(val gold: Int, val items: List<String>, val achievements: List<AchievementDto>, val club: ClubDto)
-@Serializable data class SpeedUpTrainingResponse(val athlete: AthleteDto, val club: ClubDto)
 
 fun Reward.toDto() = RewardDto(coins, gold)
 fun DailyTask.toDto() = TaskKind.valueOf(task).let { k -> TaskDto(task, k.title, progress, k.target, k.xp, claimed) }
 fun PassView.toDto() = PassResponse(seasonNumber, pass.xp, level, Economy.XP_PER_LEVEL, pass.premium, tasks.map { it.toDto() },
     (1..Economy.PASS_LEVELS).map { l ->
         PassLevelDto(l, Economy.freeReward(l).toDto(), Economy.premiumReward(l).toDto(), l <= level, l <= pass.claimedFree, l <= pass.claimedPremium,
-            Economy.passItem(l, false)?.id, Economy.passItem(l, true)?.id, l == Economy.ELITE_LEVEL)
+            Economy.passItem(l, false)?.id, Economy.passItem(l, true)?.id, false)
     }, ThemeDto(theme.id, theme.accent, theme.accent2, theme.item, com.arenacity.domain.rules.SeasonThemes.ITEM_LEVEL))
 
 fun AchievementState.toDto() = AchievementDto(achievement.id, achievement.metric.name, value, achievement.tiers, achievement.gold,

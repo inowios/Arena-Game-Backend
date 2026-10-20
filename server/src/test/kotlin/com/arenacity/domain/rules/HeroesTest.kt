@@ -83,10 +83,18 @@ class HeroesTest {
     }
 
     @Test
-    fun `the level is strength in the simulated matches, never a new skill`() {
-        assertEquals(0, HeroSquad.levelPct(1)); assertEquals(10, HeroSquad.levelPct(10))
-        assertTrue((1..10).map { HeroSquad.levelPct(it) }.zipWithNext().all { (a, b) -> b >= a })
+    fun `the league triple is the saved lineup filled with the best owned heroes with a kit`() {
         assertEquals(hero("p001").skills, hero("p001").skills.distinct())
+        val club = java.util.UUID.randomUUID(); val now = java.time.Instant.EPOCH
+        fun own(id: String, level: Int = 1, xp: Int = 0) = com.arenacity.domain.model.ClubHero(club, id, level, xp, com.arenacity.domain.model.HeroSource.START, now)
+        val owned = listOf(own("p001"), own("p003", 2), own("p011", 2, 30), own("p007", 5), own("p009"), own("p004"), own("p012", 9))   // p012: no kit
+        val lineup = com.arenacity.domain.model.HeroLineup(club, listOf("p004", "p009"), now)
+        assertEquals(listOf("p004", "p009", "p007"), HeroSquad.triple(owned, lineup).map { it.id })          // the saved two, then the level-5 Ganji
+        assertEquals(listOf(1, 1, 5), HeroSquad.triple(owned, lineup).map { it.level })
+        assertEquals(listOf("p007", "p011", "p003"), HeroSquad.triple(owned, null).map { it.id })            // no lineup: level, then experience, then the catalog
+        assertEquals(listOf("p001"), HeroSquad.triple(listOf(own("p001"), own("p012")), null).map { it.id })  // a kit-less hero never plays
+        assertEquals(3, HeroSquad.seeded(5).map { it.id }.toSet().size); assertEquals(HeroSquad.seeded(5).map { it.id }, HeroSquad.seeded(5).map { it.id })
+        assertTrue(HeroSquad.seeded(5).all { it.id in HeroSquad.HUMANS && it.level == 1 })
     }
 
     @Test

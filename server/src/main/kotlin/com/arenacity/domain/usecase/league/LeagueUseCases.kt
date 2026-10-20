@@ -13,7 +13,6 @@ import com.arenacity.domain.rules.Schedule
 import com.arenacity.domain.rules.StandingRow
 import com.arenacity.domain.rules.Standings
 import com.arenacity.domain.usecase.club.ClubService
-import com.arenacity.engine.model.MatchResult
 import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.ZoneId
@@ -21,10 +20,10 @@ import java.util.UUID
 
 data class LeagueView(val league: League, val table: List<StandingRow>, val clubs: Map<UUID, Club>, val nextRoundAt: Instant?, val memberCount: Int)
 data class FixturesView(val fixtures: List<Fixture>, val clubs: Map<UUID, Club>)
-data class MatchView(val fixture: Fixture, val result: MatchdayResult?, val clubs: Map<UUID, Club>, val athleteNames: Map<String, String> = emptyMap())
+/** A played fixture for the result card: the Arena match it was ([result]; null for a scheduled one) and the two clubs. */
+data class MatchView(val fixture: Fixture, val result: MatchdayResult?, val clubs: Map<UUID, Club>)
 
-class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock,
-                    private val heroes: com.arenacity.domain.repository.HeroRepository? = null) {
+class LeagueQueries(private val leagues: LeagueRepository, private val fixtures: FixtureRepository, private val clubs: ClubRepository, private val clock: Clock) {
     suspend fun view(league: League): LeagueView {
         val members = leagues.members(league.id)
         val played = when (league.kind) {
@@ -50,14 +49,7 @@ class LeagueQueries(private val leagues: LeagueRepository, private val fixtures:
     suspend fun match(fixtureId: UUID): MatchView {
         val f = fixtures.findById(fixtureId) ?: throw NotFoundException("Match not found")
         val result = f.resultJson?.let { MatchdayResult.parse(it) }
-        return MatchView(f, result, clubsOf(listOf(f)), athleteNames(f))
-    }
-
-    /** The scorers' names: the clubs' athletes and their heroes under their match ids (rules.HeroSquad). */
-    suspend fun athleteNames(f: Fixture): Map<String, String> {
-        val ids = listOf(f.homeClubId, f.awayClubId)
-        val heroNames = heroes?.let { h -> ids.flatMap { c -> com.arenacity.domain.rules.HeroSquad.names(c, h.listByClub(c)).entries } }.orEmpty()
-        return (athletes.namesByClubs(ids) + heroNames.associate { it.key to it.value }).mapKeys { it.key.toString() }
+        return MatchView(f, result, clubsOf(listOf(f)))
     }
 
     private suspend fun clubsOf(list: List<Fixture>) = clubs.findByIds(list.flatMap { listOf(it.homeClubId, it.awayClubId) }.toSet()).associateBy { it.id }
@@ -113,6 +105,6 @@ class PlayFriendlyUseCase(private val service: ClubService, private val clubs: C
         val fixture = Fixture(UUID.randomUUID(), null, FixtureKind.FRIENDLY, 0, 0, now, club.id, opponent.id, FixtureStatus.SCHEDULED, null, null, now.toEpochMilli() xor club.id.leastSignificantBits, null, null, now)
         fixtures.createAll(listOf(fixture))
         val p = runner.playFixture(fixture, now) ?: throw ConflictException("Friendly could not be played")
-        MatchView(p.fixture, p.result, mapOf(club.id to club, opponent.id to opponent), queries.athleteNames(p.fixture))
+        MatchView(p.fixture, p.result, mapOf(club.id to club, opponent.id to opponent))
     }
 }

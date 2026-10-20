@@ -5,7 +5,6 @@ import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.model.LeagueKind
 import com.arenacity.domain.usecase.account.*
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.auth.GuestLoginUseCase
 import com.arenacity.domain.usecase.auth.TokenIssuer
 import com.arenacity.domain.usecase.club.*
@@ -18,13 +17,13 @@ import kotlin.test.*
 class AccountTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val refresh = FakeRefreshTokenRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val accounts = FakeAccountRepository(); private val inboxRepo = FakeInboxRepository()
     private val issuer = TokenIssuer(refresh, testJwt, clock)
     private val guest = GuestLoginUseCase(users, issuer, clock)
-    private val bots = BotService(users, clubs, athletes, clock)
+    private val bots = BotService(users, clubs, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val retirement = ClubRetirement(clubs, leagues, accounts, clock)
     private val transfer = TransferUseCases(users, clubs, accounts, issuer, retirement, clock)
     private val delete = DeleteAccountUseCase(users, clubs, accounts, refresh, retirement, clock)

@@ -2,8 +2,6 @@ package com.arenacity.domain.usecase
 
 import com.arenacity.domain.exception.*
 import com.arenacity.domain.model.*
-import com.arenacity.domain.usecase.athlete.SectionService
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.league.*
@@ -17,14 +15,14 @@ import kotlin.test.*
 class SocialTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val chatRepo = FakeChatRepository(); private val social = FakeSocialRepository()
     private val service = ClubService(clubs, clock)
-    private val bots = BotService(users, clubs, athletes, clock, leagues)
+    private val bots = BotService(users, clubs, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val queries = LeagueQueries(leagues, fixtures, clubs, athletes, clock)
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(athletes))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val queries = LeagueQueries(leagues, fixtures, clubs, clock)
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock)
     private val chat = ChatService(service, leagues, clubs, chatRepo, clock)
     private val invites = InviteTracker(social, clubs, clock)
     private val createPrivate = CreatePrivateLeagueUseCase(service, leagues, clock)

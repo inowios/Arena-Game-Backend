@@ -1,8 +1,10 @@
 package com.arenacity.domain.rules
 
+import com.arenacity.domain.model.ClubHero
 import com.arenacity.domain.model.HeroGroup
 import com.arenacity.domain.model.HeroSpec
 import com.arenacity.domain.model.People
+import java.time.LocalDate
 
 /** How a hero opens: given at the start, a chapter of the story «Іскра», or its people's island (each also for gold). */
 enum class UnlockKind { START, STORY, FOLK }
@@ -91,6 +93,14 @@ object Heroes {
         else -> XP_PLAYED
     }
 
+    /** [hero] after [xp] match experience on [today] (UTC): the day's cap [MAX_MATCH_XP_PER_DAY] cuts it, the level grows by [grow]. */
+    fun grant(hero: ClubHero, xp: Int, today: LocalDate): ClubHero {
+        val earnedToday = if (hero.xpDay == today) hero.xpToday else 0
+        val gain = minOf(xp.coerceAtLeast(0), MAX_MATCH_XP_PER_DAY - earnedToday).coerceAtLeast(0)
+        val (level, rest) = grow(hero.level, hero.xp, gain)
+        return hero.copy(level = level, xp = rest, xpDay = today, xpToday = earnedToday + gain)
+    }
+
     // --- the triple («Склад»: GET / PUT /club/heroes/lineup)
 
     /**
@@ -118,6 +128,6 @@ object Heroes {
     private fun tcIndex(trainingCenterLevel: Int) = trainingCenterLevel.coerceIn(1, TRAINING_XP.size) - 1
     fun trainingXp(trainingCenterLevel: Int): Int = TRAINING_XP[tcIndex(trainingCenterLevel)]
     fun trainingCoins(trainingCenterLevel: Int): Long = TRAINING_COINS[tcIndex(trainingCenterLevel)].toLong()
-    /** Heroes training at once: the stadium's training slots (1, 1, 2, 2, 3, 3, 4, 4, 5, 5), as athletes get (rules.TrainingRules.slots). */
-    fun trainingSlots(trainingCenterLevel: Int): Int = TrainingRules.slots(trainingCenterLevel)
+    /** Heroes training at once: the stadium's training slots (1, 1, 2, 2, 3, 3, 4, 4, 5, 5; rules.MapSpots). */
+    fun trainingSlots(trainingCenterLevel: Int): Int = MapSpots.trainingSlots(trainingCenterLevel)
 }

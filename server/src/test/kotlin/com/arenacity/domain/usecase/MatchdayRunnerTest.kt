@@ -1,8 +1,13 @@
 package com.arenacity.domain.usecase
 
+import com.arenacity.domain.model.ClubHero
 import com.arenacity.domain.model.FixtureStatus
+import com.arenacity.domain.model.HeroLineup
+import com.arenacity.domain.model.HeroSource
 import com.arenacity.domain.model.LeagueKind
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
+import com.arenacity.domain.model.MatchdayResult
+import com.arenacity.domain.rules.HeroSquad
+import com.arenacity.domain.rules.Heroes
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.league.*
 import com.arenacity.testutil.*
@@ -14,11 +19,11 @@ import kotlin.test.*
 class MatchdayRunnerTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))   // 13:00 Kyiv
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
-    private val bots = BotService(users, clubs, athletes, clock)
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val heroes = FakeHeroRepository()
+    private val bots = BotService(users, clubs, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock, heroes = heroes)
     private val user = UUID.randomUUID()
 
     @Test
@@ -33,9 +38,14 @@ class MatchdayRunnerTest {
         assertEquals(28 * 4, fixtures.rows.size); assertEquals(1, leagues.rows.getValue(league.id).currentRound)
         val mine = fixtures.rows.values.single { it.involves(club.id) && it.round == 1 }
         assertEquals(FixtureStatus.PLAYED, mine.status); assertNotNull(mine.resultJson)
+        // an Arena match: 1:0 to the winner, 3 points, two triples, a log
+        val r = MatchdayResult.parse(mine.resultJson!!)
+        assertEquals(3, r.v); assertEquals(if (r.homeWon) 1 else 0, mine.homeScore); assertEquals(if (r.homeWon) 0 else 1, mine.awayScore)
+        assertEquals(if (r.homeWon) 3 else 0, mine.homePoints); assertEquals(if (r.homeWon) 0 else 3, mine.awayPoints)
+        assertEquals(3, r.home.size); assertEquals(3, r.away.size); assertTrue(r.turns in 1..40); assertTrue(r.events.any { it.kind == "cast" } && r.events.last().kind == "end", r.events.toString())
+        assertTrue(fixtures.rows.values.filter { it.round == 1 }.all { it.homeScore!! + it.awayScore!! == 1 }, "no draws")
         val c = clubs.rows.getValue(club.id)
         assertTrue(c.reputation >= 1 && c.coins > 2500, "rewards applied: rep=${c.reputation} coins=${c.coins}")
-        assertTrue(athletes.rows.values.filter { it.clubId == club.id }.any { it.fatigue > 0 })
         assertEquals(0, runner.runDueRounds(Instant.parse("2026-10-09T17:30:00Z")))   // idempotent
     }
 
@@ -68,28 +78,56 @@ class MatchdayRunnerTest {
     }
 
     @Test
-    fun `a human club's heroes play its league match, the academy pupils fill the eleven`() = runBlocking<Unit> {
-        val heroes = FakeHeroRepository()
-        val heroRunner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, heroes = heroes)
+    fun `a human club fields its saved triple, the bots a seeded one, and the heroes who played earn experience`() = runBlocking<Unit> {
         val club = create(user, "Lions", "#AA0000", "#FFFFFF", "Europe/Kyiv")
-        for (id in com.arenacity.domain.rules.Heroes.START)
-            heroes.insertIgnore(com.arenacity.domain.model.ClubHero(club.id, id, 1, 0, com.arenacity.domain.model.HeroSource.START, clock.now()))
-        val athletesBefore = athletes.rows.values.filter { it.clubId == club.id }.map { it.id }.toSet()
-        assertEquals(4, heroRunner.runDueRounds(Instant.parse("2026-10-09T17:00:00Z")))
+        for (id in Heroes.START) heroes.insertIgnore(ClubHero(club.id, id, 1, 0, HeroSource.START, clock.now()))
+        heroes.update(heroes.listByClub(club.id).first { it.heroId == "p007" }.copy(level = 4))
+        heroes.saveLineup(HeroLineup(club.id, listOf("p004", "p001", "p011"), clock.now()))
+        assertEquals(4, runner.runDueRounds(Instant.parse("2026-10-09T17:00:00Z")))
         val mine = fixtures.rows.values.single { it.involves(club.id) && it.round == 1 }
-        val result = com.arenacity.domain.model.MatchdayResult.parse(mine.resultJson!!)
-        val heroIds = com.arenacity.domain.rules.Heroes.START.map { com.arenacity.domain.rules.HeroSquad.idOf(club.id, it).toString() }.toSet()
-        // the six heroes start: they are the best of the squad
-        val football = result.section(com.arenacity.domain.model.Sport.FOOTBALL)!!.result!!
-        val events = football.events.filter { it.team == club.id.toString() }.mapNotNull { it.athleteId }.toSet()
-        assertTrue(events.any { it in heroIds }, "our events name the heroes: $events")
-        // the heroes are not written back as athletes; the pupils' rows are the same as before
-        assertEquals(athletesBefore, athletes.rows.values.filter { it.clubId == club.id }.map { it.id }.toSet())
-        // the match highlights name the heroes
-        val names = LeagueQueries(leagues, fixtures, clubs, athletes, clock, heroes).athleteNames(mine)
-        assertEquals("Kaito Homura", names[com.arenacity.domain.rules.HeroSquad.idOf(club.id, "p001").toString()])
-        // the squad the simulator saw: heroes first by rating, pupils after
-        val squad = com.arenacity.domain.rules.HeroSquad.athletes(club.id, heroes.listByClub(club.id), clock.now())
-        assertEquals(6, squad.size); assertTrue(squad.all { it.overall in 45..75 }, squad.map { it.overall }.toString())
+        val r = MatchdayResult.parse(mine.resultJson!!)
+        val home = mine.homeClubId == club.id
+        val ours = if (home) r.home else r.away; val theirs = if (home) r.away else r.home
+        assertEquals(listOf("p004", "p001", "p011"), ours.map { it.id }, "the saved triple in its order")
+        assertEquals(listOf(1, 1, 1), ours.map { it.level })
+        assertEquals(3, theirs.size); assertEquals(3, theirs.map { it.id }.toSet().size); assertTrue(theirs.all { it.id in HeroSquad.HUMANS && it.level == 1 }, "a bot's seeded triple: $theirs")
+        // experience as for an Arena match: the three who played, nobody else
+        val won = home == r.homeWon
+        val xp = heroes.listByClub(club.id).associate { it.heroId to it.xp }
+        for (id in listOf("p004", "p001", "p011")) assertEquals(Heroes.matchXp(won, false), xp.getValue(id), "$id earned")
+        for (id in listOf("p003", "p007", "p009")) assertEquals(0, xp.getValue(id), "$id sat out")
+        assertTrue(heroes.rows.keys.none { clubs.rows.getValue(it.first).isBot }, "bots own no heroes")
+        // a short lineup is filled with the best other heroes: the level-4 Ganji first
+        heroes.saveLineup(HeroLineup(club.id, listOf("p011"), clock.now()))
+        val next = fixtures.rows.values.single { it.involves(club.id) && it.round == 2 }
+        assertEquals(listOf("p011", "p007", "p001"), runner.tripleOf(clubs.rows.getValue(club.id), next).map { it.id })
+    }
+
+    @Test
+    fun `the match is the engine's - seeded, with a log that names the heroes and the skills`() {
+        val a = HeroSquad.seeded(1); val b = HeroSquad.seeded(2)
+        val r1 = HeroMatch.play(a, b, 42); val r2 = HeroMatch.play(a, b, 42); val r3 = HeroMatch.play(a, b, 43)
+        assertEquals(r1.toJson(), r2.toJson()); assertNotEquals(r1.toJson(), r3.toJson())
+        assertEquals("HOME", r1.first); assertEquals("AWAY", HeroMatch.play(a, b, 43).first)   // the seed's parity
+        val cast = r1.events.first { it.kind == "cast" }
+        assertTrue(cast.hero in a.map { it.id } + b.map { it.id }); assertNotNull(cast.skill); assertTrue(cast.skillId!!.startsWith(cast.hero!!))
+        assertTrue(r1.events.filter { it.kind == "cast" }.sumOf { it.damage } > 0, "the casts carry their damage")
+        val loser = if (r1.homeWon) r1.away else r1.home
+        assertTrue(loser.any { it.stamina == 0 } || r1.turns >= 40, "the loser lost heroes or the turns ran out")
+        assertEquals(if (r1.homeWon) loser.count { it.stamina == 0 } else 0, r1.homeKnockouts)
+        // the fallback triples
+        assertEquals(3, HeroSquad.fill(listOf(a[0]), 7).size); assertEquals(a[0].id, HeroSquad.fill(listOf(a[0]), 7)[0].id)
+        assertEquals(3, HeroSquad.fill(listOf(a[0]), 7).map { it.id }.toSet().size)
+    }
+
+    @Test
+    fun `old results (sections, bare football) still read as a result without heroes`() {
+        val v2 = """{"v":2,"sections":[{"sport":"FOOTBALL","homeScore":2,"awayScore":1,"homePoints":3,"awayPoints":0}]}"""
+        val r = MatchdayResult.parse(v2)
+        assertTrue(r.homeWon); assertEquals(0, r.v); assertTrue(r.home.isEmpty() && r.events.isEmpty())
+        val v1 = """{"sport":"football","seed":1,"homeTeam":"h","awayTeam":"a","score":{"home":0,"away":2},"events":[],"homePossession":50,"homeShots":5,"awayShots":5}"""
+        assertFalse(MatchdayResult.parse(v1).homeWon)
+        val v3 = MatchdayResult(homeWon = false, turns = 9, first = "AWAY")
+        assertEquals(v3, MatchdayResult.parse(v3.toJson()))
     }
 }

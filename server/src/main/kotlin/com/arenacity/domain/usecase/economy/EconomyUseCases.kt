@@ -7,7 +7,6 @@ import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.NotFoundException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.model.*
-import com.arenacity.domain.repository.AthleteRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.EconomyRepository
 import com.arenacity.domain.rules.*
@@ -33,7 +32,7 @@ class ClaimDailyRewardUseCase(private val service: ClubService, private val club
 
 data class PassView(val pass: SeasonPass, val level: Int, val tasks: List<DailyTask>, val seasonNumber: Int, val theme: SeasonTheme = SeasonThemes.AUTUMN)
 
-data class PassClaim(val reward: Reward, val items: List<String>, val elite: Athlete?, val view: PassView)
+data class PassClaim(val reward: Reward, val items: List<String>, val view: PassView)
 
 class SeasonPassUseCases(
     private val service: ClubService,
@@ -43,7 +42,6 @@ class SeasonPassUseCases(
     private val clock: Clock,
     private val tx: Tx = NoTx,
     private val cosmetics: CosmeticsService? = null,
-    private val athletes: AthleteRepository? = null,
 ) {
     /** The pass follows the club's own season counter (leagues are re-formed every season, so their numbers restart). */
     private suspend fun passOf(club: Club): Pair<SeasonPass, Int> {
@@ -73,17 +71,16 @@ class SeasonPassUseCases(
 
     /**
      * Claims every reached, unclaimed level on the free track (and premium if owned): coins/gold, pass cosmetics
-     * (gold instead when already owned from an earlier season) and, at the last premium level, an elite athlete
-     * for [eliteSport] (one of the club's sections; football by default).
+     * (gold instead when already owned from an earlier season). The elite athlete of premium 30 went with the athletes
+     * (20 October 2026): that level pays its coins and gold only.
      */
-    suspend fun claimLevels(userId: UUID, eliteSport: Sport = Sport.FOOTBALL): PassClaim = tx {
+    suspend fun claimLevels(userId: UUID): PassClaim = tx {
         val club = service.lockedClubOf(userId)
         val (pass, _) = passOf(club)
         val level = Economy.passLevel(pass.xp)
         if (level <= pass.claimedFree && (!pass.premium || level <= pass.claimedPremium)) throw ConflictException("Nothing to claim")
         var total = Reward()
         val items = mutableListOf<String>()
-        var elite: Athlete? = null
         suspend fun item(l: Int, premium: Boolean) {
             val it = Economy.passItem(l, premium) ?: return
             val c = cosmetics ?: return
@@ -97,24 +94,12 @@ class SeasonPassUseCases(
         if (pass.premium) {
             for (l in pass.claimedPremium + 1..level) {
                 total += Economy.premiumReward(l); item(l, true)
-                if (l == Economy.ELITE_LEVEL) elite = eliteAthlete(club, eliteSport)
             }
             claimedPremium = level
         }
         clubs.update(club.copy(coins = club.coins + total.coins, gold = club.gold + total.gold, updatedAt = clock.now()))
         repo.upsertPass(pass.copy(claimedFree = level, claimedPremium = claimedPremium))
-        PassClaim(total, items, elite, view(userId))
-    }
-
-    private suspend fun eliteAthlete(club: Club, requested: Sport): Athlete? {
-        val repo = athletes ?: return null
-        val squad = repo.listByClub(club.id)
-        val sport = if (squad.any { it.sport == requested }) requested else Sport.FOOTBALL
-        val now = clock.now()
-        val a = com.arenacity.domain.rules.AthleteFactory.create(now.toEpochMilli() xor club.id.mostSignificantBits xor 0x5EA5_0A11L, club.id, sport, Economy.ELITE_QUALITY_MIN, Economy.ELITE_QUALITY_MAX, null, now)
-            .copy(rarity = Rarity.ELITE, age = 22)
-        repo.createAll(listOf(a))
-        return a
+        PassClaim(total, items, view(userId))
     }
 
     suspend fun unlockPremium(club: Club) { val (pass, _) = passOf(club); repo.upsertPass(pass.copy(premium = true)) }

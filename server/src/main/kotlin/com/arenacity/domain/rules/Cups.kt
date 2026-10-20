@@ -1,7 +1,6 @@
 package com.arenacity.domain.rules
 
 import com.arenacity.domain.model.Fixture
-import com.arenacity.domain.model.MatchdayResult
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -10,14 +9,13 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
-import kotlin.random.Random
 
 /**
  * Weekly knockout cup per timezone bucket (spec post-release: cups). Every club active in the last [ACTIVE_DAYS] days
  * is entered automatically; entrants are grouped by strength into 16-club cups (bots fill the last one). Draw on
  * Thursday 12:00, round of 16 Thursday 18:00, quarter-finals Friday, semi-finals Saturday, final Sunday — two hours
- * before the 20:00 league matchday, bucket time. A tie plays the sections both clubs have (like a challenge); more
- * section points wins, level ties go to a penalty shootout. Prizes by the round reached.
+ * before the 20:00 league matchday, bucket time. A tie is an Arena match of the clubs' hero triples (HeroMatch): win or
+ * loss, never level. Prizes by the round reached.
  */
 object Cups {
     const val SIZE = 16
@@ -56,32 +54,11 @@ object Cups {
         Divisions.Prize((coins[stage.ordinal] * Divisions.multiplier(division)).toLong(), gold[stage.ordinal], reputation[stage.ordinal])
 
     /** Chance to score one penalty: shooters' technique and nerve against the other side's. */
-    fun kickChance(mine: Double, theirs: Double) = (0.75 + (mine - theirs) / 250.0).coerceIn(0.55, 0.92)
-
-    /** Five kicks each (home first, stops once decided), then sudden death; never ends level. */
-    fun shootout(pHome: Double, pAway: Double, seed: Long): Pair<Int, Int> {
-        val r = Random(seed)
-        var h = 0; var a = 0
-        for (i in 1..5) {
-            if (r.nextDouble() < pHome) h++
-            if (h > a + (5 - i + 1) || a > h + (5 - i)) return h to a
-            if (r.nextDouble() < pAway) a++
-            if (h > a + (5 - i) || a > h + (5 - i)) return h to a
-        }
-        repeat(30) {
-            val x = r.nextDouble() < pHome; val y = r.nextDouble() < pAway
-            if (x) h++; if (y) a++
-            if (x != y) return h to a
-        }
-        return if (r.nextBoolean()) (h + 1) to a else h to (a + 1)
-    }
-
-    /** Winner of a played cup fixture: more section points, else the shootout. */
-    fun winner(f: Fixture, result: MatchdayResult?): UUID {
+    /** Winner of a played cup fixture: the points (an Arena match has no draws), else the score (legacy rows). */
+    fun winner(f: Fixture): UUID {
         val hp = f.homePoints ?: 0; val ap = f.awayPoints ?: 0
         if (hp != ap) return if (hp > ap) f.homeClubId else f.awayClubId
-        val so = result?.shootout ?: return if ((f.homeScore ?: 0) >= (f.awayScore ?: 0)) f.homeClubId else f.awayClubId
-        return if (so.home > so.away) f.homeClubId else f.awayClubId
+        return if ((f.homeScore ?: 0) >= (f.awayScore ?: 0)) f.homeClubId else f.awayClubId
     }
 
     fun seed(cupId: UUID, round: Int, slot: Int) = cupId.leastSignificantBits xor (round * 1_000_003L + slot * 7_919L) xor cupId.mostSignificantBits.rotateLeft(round)

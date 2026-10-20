@@ -2,7 +2,6 @@ package com.arenacity.domain.usecase
 
 import com.arenacity.domain.rules.*
 import com.arenacity.domain.usecase.account.InboxService
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.*
 import com.arenacity.domain.usecase.economy.*
 import com.arenacity.domain.usecase.league.*
@@ -16,14 +15,14 @@ import kotlin.test.*
 
 class RefundsTest {
     private val clock = FixedClock(Instant.parse("2026-10-10T10:00:00Z"))
-    private val users = FakeUserRepository(); private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository()
+    private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
     private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository(); private val repo = FakeEconomyRepository()
     private val inventory = FakeInventoryRepository(); private val inboxRepo = FakeInboxRepository()
-    private val bots = BotService(users, clubs, athletes, clock)
+    private val bots = BotService(users, clubs, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val clubService = ClubService(clubs, clock)
     private val economy = EconomyService(repo, leagues, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
     private val pass = SeasonPassUseCases(clubService, clubs, repo, economy, clock)
     private val purchase = VerifyPurchaseUseCase(clubService, clubs, repo, pass, mapOf(Store.DEV to DevReceiptVerifier()), clock)
     private val refund = RefundUseCase(clubs, repo, clock, inbox = InboxService(inboxRepo, clock))

@@ -70,8 +70,7 @@ class ClubUseCasesTest {
         // the old buildings' tables, by the stadium level now
         assertEquals(listOf(60, 99), listOf(MapSpots.attributeCap(1), MapSpots.attributeCap(10)))
         assertEquals(listOf(500, 26_000), listOf(MapSpots.seats(1), MapSpots.seats(10)))
-        assertEquals(40..55, TrainingRules.graduateQuality(1)); assertEquals(6 * 3600L, TrainingRules.graduateIntervalSeconds(10))
-        assertEquals(5 * 3600L, TrainingRules.medicalCooldownSeconds(1)); assertEquals(5, TrainingRules.slots(10))
+        assertEquals(listOf(1, 5), listOf(MapSpots.trainingSlots(1), MapSpots.trainingSlots(10)))   // the hero training slots (rules.Heroes.trainingSlots)
     }
 
     @Test

@@ -1,7 +1,6 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    application
 }
 
 group = "com.arenacity"
@@ -17,8 +16,6 @@ dependencies {
 }
 
 kotlin { jvmToolchain(17) }
-
-application { mainClass.set("com.arenacity.engine.balance.BalanceKt") }
 
 tasks.test {
     useJUnitPlatform()

@@ -6,7 +6,6 @@ import com.arenacity.domain.exception.DomainException
 import com.arenacity.domain.model.AuthProvider
 import com.arenacity.domain.model.User
 import com.arenacity.domain.rules.MapSpots
-import com.arenacity.domain.usecase.athlete.*
 import com.arenacity.domain.usecase.club.*
 import com.arenacity.testutil.FixedClock
 import kotlinx.coroutines.Dispatchers
@@ -25,10 +24,9 @@ import kotlin.test.assertTrue
 class ConcurrencyIT {
     private val clock = FixedClock()
     private val users = UserRepositoryImpl(); private val clubs = ClubRepositoryImpl()
-    private val athletes = AthleteRepositoryImpl()
     private val spots = ClubSpotRepositoryImpl()
     private val service = ClubService(clubs, clock, spots, ZoneRepositoryImpl())
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)), tx = DbTx)
+    private val create = CreateClubUseCase(clubs, clock, emptyList(), tx = DbTx)
     private val unlock = UnlockSpotUseCase(service, spots, clock, tx = DbTx)
     private val userId = UUID.randomUUID()
 

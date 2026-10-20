@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class CupTieDto(
     val round: Int, val slot: Int, val home: ClubRefDto, val away: ClubRefDto, val fixtureId: String, val status: String, val scheduledAt: String,
     val homeScore: Int? = null, val awayScore: Int? = null, val homePoints: Int? = null, val awayPoints: Int? = null,
-    /** Several sections were played: the bracket shows section points. */
+    /** Always false / null since the Arena matches (20 October 2026): kept for one client version. */
     val multi: Boolean = false, val shootout: ShootoutDto? = null, val winnerId: String? = null,
 )
 @Serializable data class CupDto(val id: String, val tier: Int, val division: Int, val weekStart: String, val currentRound: Int, val rounds: Int, val status: String, val winnerId: String?, val nextRoundAt: String?)
@@ -35,9 +35,8 @@ fun CupView.toDto(): CupViewDto {
             roundTimes.getOrNull(it.currentRound)?.takeIf { _ -> it.status.name == "ACTIVE" }?.toString()) },
         ties.map { t ->
             val f = fixtures[t.fixtureId]
-            val result = f?.resultJson?.let { runCatching { MatchdayResult.parse(it) }.getOrNull() }
             CupTieDto(t.round, t.slot, clubs.ref(t.homeClubId), clubs.ref(t.awayClubId), t.fixtureId.toString(), f?.status?.name ?: "SCHEDULED", (f?.scheduledAt ?: roundTimes[t.round - 1]).toString(),
-                f?.homeScore, f?.awayScore, f?.homePoints, f?.awayPoints, (result?.sections?.size ?: 1) > 1, result?.shootout?.let { ShootoutDto(it.home, it.away) }, t.winnerClubId?.toString())
+                f?.homeScore, f?.awayScore, f?.homePoints, f?.awayPoints, false, null, t.winnerClubId?.toString())
         },
         meDto,
         Cups.Stage.values().map { s -> Cups.prize(s, division).let { p -> CupPrizeDto(s.name, p.coins, p.gold, p.reputation) } },

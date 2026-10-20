@@ -9,7 +9,6 @@ import com.arenacity.domain.rules.Heroes
 import com.arenacity.domain.rules.UnlockKind
 import com.arenacity.domain.usecase.arena.ArenaReport
 import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.hero.HeroUseCases
@@ -22,10 +21,10 @@ import kotlin.test.*
 
 class HeroesUseCasesTest {
     private val clock = FixedClock(Instant.parse("2026-10-16T10:00:00Z"))
-    private val clubs = FakeClubRepository(); private val spots = FakeClubSpotRepository(); private val athletes = FakeAthleteRepository(); private val heroes = FakeHeroRepository()
+    private val clubs = FakeClubRepository(); private val spots = FakeClubSpotRepository(); private val heroes = FakeHeroRepository()
     private val service = ClubService(clubs, clock, spots)
     private val use = HeroUseCases(service, heroes, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), StartHeroesInitializer(use)))
+    private val create = CreateClubUseCase(clubs, clock, listOf(StartHeroesInitializer(use)))
     private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock, heroes = use)
     private val u1 = UUID.randomUUID()
 

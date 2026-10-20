@@ -3,23 +3,14 @@ package com.arenacity.domain.usecase.league
 import com.arenacity.common.time.Clock
 import com.arenacity.domain.model.*
 import com.arenacity.domain.repository.*
-import com.arenacity.domain.rules.AthleteFactory
 import com.arenacity.domain.rules.LeagueRules
 import com.arenacity.domain.rules.Schedule
-import com.arenacity.domain.usecase.athlete.EngineBridge
-import com.arenacity.domain.usecase.athlete.LineupRules
 import com.arenacity.domain.usecase.club.ClubInitializer
 import java.time.Instant
 import java.util.UUID
 
-/** Bot squad quality band by division: the entry division is beatable with a starter squad, the top one is not. */
-/** Bot athletes by division (also the arena ladder's opposition): 40..52 at the bottom, 82..94 at the top. */
-fun botQuality(division: Int): Pair<Int, Int> =
-    if (division >= com.arenacity.domain.rules.Arenas.LEGEND_DIVISION) 89 to 99
-    else (40 + (division - 1) * 7).coerceAtMost(82) to (52 + (division - 1) * 7).coerceAtMost(94)
-
-/** Creates AI-controlled clubs that fill public leagues. */
-class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val athletes: AthleteRepository, private val clock: Clock, private val leagues: LeagueRepository? = null) {
+/** Creates AI-controlled clubs that fill public leagues; a bot fields a seeded hero triple in its matches (rules.HeroSquad). */
+class BotService(private val users: UserRepository, private val clubs: ClubRepository, private val clock: Clock, private val leagues: LeagueRepository? = null) {
     /** A bot of this bucket/division that is not in any active public league (finished seasons free their bots), else a new one. */
     suspend fun acquire(tzBucket: Int, division: Int, timezone: String, index: Int, takenNames: Set<String>): Club {
         if (leagues != null) {
@@ -52,11 +43,8 @@ class BotService(private val users: UserRepository, private val clubs: ClubRepos
         users.create(User(userId, AuthProvider.BOT, "bot-$userId", null, null, null, true, now, now))
         val clubId = UUID.randomUUID()
         val (p, s) = palette[index % palette.size]
-        val club = clubs.create(Club(clubId, userId, "FC ${names[index % names.size]}", p, s, null, 1, 0, 0, 0, timezone, now, now, isBot = true, division = division, tzBucket = tzBucket,
+        return clubs.create(Club(clubId, userId, "FC ${names[index % names.size]}", p, s, null, 1, 0, 0, 0, timezone, now, now, isBot = true, division = division, tzBucket = tzBucket,
             kit = com.arenacity.domain.rules.Cosmetics.botKit(clubId.leastSignificantBits).takeUnless { com.arenacity.domain.rules.Cosmetics.isDefault(it) }))
-        val (lo, hi) = botQuality(division)
-        for (sport in com.arenacity.domain.rules.Sections.botSections(division)) athletes.createAll(AthleteFactory.squad(clubId, now, lo, hi, sport))
-        return club
     }
 }
 
@@ -112,21 +100,5 @@ class JoinPublicLeagueInitializer(private val clubs: ClubRepository, private val
     override suspend fun onClubCreated(club: Club) {
         val bucketed = clubs.update(club.copy(tzBucket = LeagueRules.tzBucket(club.timezone, clock.now())))
         leagueService.ensurePublicMembership(bucketed)
-    }
-}
-
-/** The lineup that plays for a club in one section: stored (with injured starters auto-replaced) or default. */
-class LineupService(private val athletes: AthleteRepository, private val lineups: LineupRepository) {
-    /** [stored] false: the best lineup of [squad], whatever the club saved (a hero squad: rules.HeroSquad). */
-    /** [first]: the club's heroes, who start before the pupils (rules.HeroSquad). */
-    suspend fun lineup(club: Club, sport: Sport, now: Instant, squad: List<Athlete>? = null, stored: Boolean = true, first: Set<java.util.UUID> = emptySet()): Lineup {
-        val list = squad ?: athletes.listByClub(club.id)
-        return LineupRules.effective(club.id, sport, if (stored) lineups.find(club.id, sport) else null, list, now, first)
-    }
-
-    suspend fun engineLineup(club: Club, now: Instant, sport: Sport = Sport.FOOTBALL, squad: List<Athlete>? = null, stored: Boolean = true, first: Set<java.util.UUID> = emptySet()): Pair<com.arenacity.engine.model.Lineup, List<Athlete>> {
-        val list = squad ?: athletes.listByClub(club.id)
-        val lineup = lineup(club, sport, now, list, stored, first)
-        return EngineBridge.toEngineLineup(club.id.toString(), lineup, list, now).copy(tactics = lineup.tactics) to list
     }
 }

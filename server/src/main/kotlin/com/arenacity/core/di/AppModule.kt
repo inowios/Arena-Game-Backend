@@ -7,7 +7,6 @@ import com.arenacity.data.repository.*
 import com.arenacity.domain.repository.*
 import com.arenacity.domain.usecase.auth.*
 import com.arenacity.domain.usecase.club.*
-import com.arenacity.domain.usecase.athlete.*
 import com.arenacity.domain.usecase.league.*
 import com.arenacity.domain.usecase.economy.*
 import com.arenacity.core.push.FcmSender
@@ -51,7 +50,6 @@ val appModule = module {
     single { com.arenacity.domain.usecase.liveops.LiveOps(get(), get(), get(), get(), get(), tx = get()) }
     single<com.arenacity.domain.repository.ZoneRepository> { com.arenacity.data.repository.ZoneRepositoryImpl() }
     single { com.arenacity.domain.usecase.club.ZoneUseCases(get(), get(), get(), get(), tx = get()) }
-    single { SectionService(get()) }
     single { CreateClubUseCase(get(), get(), getAll<ClubInitializer>(), tx = get()) }
     single { GetClubUseCase(get()) }
     single { UnlockSpotUseCase(get(), get(), get(), tx = get()) }
@@ -60,16 +58,11 @@ val appModule = module {
     single { com.arenacity.domain.usecase.progress.CollectionsUseCases(get(), get()) }
     single { UpdateClubUseCase(get(), get(), get(), tx = get()) }
 
-    single<AthleteRepository> { AthleteRepositoryImpl() }
-    single<TrainingRepository> { TrainingRepositoryImpl() }
-    single<LineupRepository> { LineupRepositoryImpl() }
-    single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("squad")) { StarterSquadInitializer(get(), get()) }
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("league")) { JoinPublicLeagueInitializer(get(), get(), get()) }
     single<LeagueRepository> { LeagueRepositoryImpl() }
     single<FixtureRepository> { FixtureRepositoryImpl() }
-    single { BotService(get(), get(), get(), get(), get()) }
+    single { BotService(get(), get(), get(), get()) }
     single<SeasonRepository> { SeasonRepositoryImpl() }
-    single { CareerService(get(), get(), get()) }
     single<HeroRepository> { HeroRepositoryImpl() }
     single { com.arenacity.domain.usecase.hero.HeroUseCases(get(), get(), get(), tx = get(), progress = get<EconomyService>()) }
     single<ClubInitializer>(qualifier = org.koin.core.qualifier.named("heroes")) { com.arenacity.domain.usecase.hero.StartHeroesInitializer(get()) }
@@ -79,15 +72,13 @@ val appModule = module {
     single { com.arenacity.domain.usecase.arena.ArenaMatchUseCases(get(), get(), get(), get(), tx = get(), heroes = get(), stories = get(), progress = get<EconomyService>()) }
     single { com.arenacity.domain.usecase.arena.ArenaChestUseCase(get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.club.EnergyUseCases(get(), get(), get(), tx = get()) }
-    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get(), careers = get()) }
+    single { SeasonService(get(), get(), get(), get(), get(), get(), get<FcmSender>(), inbox = get()) }
     single { GetClubHistoryUseCase(get(), get()) }
     single { LeagueService(get(), get(), get(), get(), get()) }
-    single { LineupService(get(), get()) }
     single<EconomyRepository> { EconomyRepositoryImpl() }
     single<PushTokenRepository> { PushTokenRepositoryImpl() }
     single {
-        val sections = get<SectionService>(); val clubs = get<ClubRepository>()
-        EconomyService(get(), get(), get(), { id -> clubs.findById(id)?.let { sections.active(it).size } ?: 1 }, achievements = get())
+        EconomyService(get(), get(), get(), { _ -> 1 }, achievements = get())
             .also { e -> val koin = getKoin(); e.also = listOf(com.arenacity.domain.usecase.alliance.AllianceProgress { koin.get() }, com.arenacity.domain.usecase.liveops.EventProgressTracker { koin.get() }) }
     }
     single<com.arenacity.domain.usecase.alliance.AllianceRepository> { com.arenacity.data.repository.AllianceRepositoryImpl() }
@@ -97,9 +88,9 @@ val appModule = module {
         FcmSender(get(), get(), c.propertyOrNull("push.fcm.serviceAccountJson")?.getString(), c.propertyOrNull("push.fcm.projectId")?.getString(), get<UserRepository>())
     }
     single { MatchdayNotifier(get(), get()) }
-    single { MatchdayRunner(get(), get(), get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), sections = get(), seasonCloser = get<SeasonService>(), failures = com.arenacity.core.plugins.SchedulerFailures, heroes = get()) }
+    single { MatchdayRunner(get(), get(), get(), get(), get(), get<EconomyService>(), get(), tx = get(), seasonCloser = get<SeasonService>(), failures = com.arenacity.core.plugins.SchedulerFailures, heroes = get()) }
     single { ClaimDailyRewardUseCase(get(), get(), get(), get(), tx = get()) }
-    single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get(), athletes = get()) }
+    single { SeasonPassUseCases(get(), get(), get(), get(), get(), tx = get(), cosmetics = get()) }
     single<com.arenacity.core.store.HttpGateway> { com.arenacity.core.store.KtorHttpGateway(get()) }
     single<Map<Store, ReceiptVerifier>> {
         val c = get<Application>().environment.config
@@ -135,9 +126,9 @@ val appModule = module {
     single<AchievementRepository> { AchievementRepositoryImpl() }
     single { CosmeticsService(get(), get()) }
     single { BuyCoinPackUseCase(get(), get(), get(), tx = get()) }
-    single { AchievementService(get(), get(), get(), get()) }
+    single { AchievementService(get(), get(), get()) }
     single { AchievementUseCases(get(), get(), get(), get(), get(), get(), tx = get()) }
-    single { LeagueQueries(get(), get(), get(), get(), get(), heroes = get()) }
+    single { LeagueQueries(get(), get(), get(), get()) }
     single { CreatePrivateLeagueUseCase(get(), get(), get()) }
     single { JoinPrivateLeagueUseCase(get(), get(), tx = get(), invites = get(), chat = get()) }
     single<ChatRepository> { ChatRepositoryImpl() }
@@ -145,9 +136,7 @@ val appModule = module {
     single { val koin = getKoin(); com.arenacity.domain.usecase.social.ChatService(get(), get(), get(), get(), get(), tx = get(), channels = { club, ch -> koin.get<com.arenacity.domain.usecase.alliance.AllianceUseCases>().isMember(club, ch) }) }
     single { com.arenacity.domain.usecase.social.PrivateLeagueAdmin(get(), get(), get(), get(), get(), get(), get(), tx = get()) }
     single { com.arenacity.domain.usecase.social.HeadToHeadUseCase(get(), get(), get()) }
-    single {
-        com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get(), get())
-    }
+    single { com.arenacity.domain.usecase.social.GetGroundsUseCase(get(), get()) }
     single { com.arenacity.domain.usecase.social.FriendsUseCase(get(), get(), get(), get(), get()) }
     single { com.arenacity.domain.usecase.social.ChallengeUseCases(get(), get(), get(), get(), get(), get(), get(), tx = get(), push = get(), inbox = get()) }
     single { com.arenacity.domain.usecase.social.InviteTracker(get(), get(), get(), get(), progress = get<EconomyService>(), inbox = get()) }

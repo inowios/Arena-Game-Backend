@@ -148,7 +148,7 @@ class CupService(
             val p = if (f.status == FixtureStatus.SCHEDULED) runner.playFixture(f, now)?.also { matches++ } else null
             val stored = p?.fixture ?: fixtures.findById(t.fixtureId)!!
             val result = p?.result ?: stored.resultJson?.let { MatchdayResult.parse(it) }
-            val winner = t.winnerClubId ?: Cups.winner(stored, result).also { cups.setWinner(cup.id, r, t.slot, it) }
+            val winner = t.winnerClubId ?: Cups.winner(stored).also { cups.setWinner(cup.id, r, t.slot, it) }
             DecidedTie(t.copy(winnerClubId = winner), stored, result)
         }
         val entries = cups.entries(cup.id).associateBy { it.clubId }
@@ -202,17 +202,14 @@ class CupNotifier(private val push: FcmSender? = null, private val inbox: InboxS
         }
     }
 
-    /** "Lions 2–1 Wolves" (section points when several sections were played), plus the shootout. */
+    /** "Lions 1–0 Wolves" (an Arena match: 1:0 to the winner). */
     fun score(d: DecidedTie, me: UUID, clubs: Map<UUID, Club>, lang: String): String {
         val home = d.tie.homeClubId == me
-        val multi = (d.result?.sections?.size ?: 1) > 1
         val f = d.fixture
-        val mine = (if (multi) (if (home) f.homePoints else f.awayPoints) else (if (home) f.homeScore else f.awayScore)) ?: 0
-        val theirs = (if (multi) (if (home) f.awayPoints else f.homePoints) else (if (home) f.awayScore else f.homeScore)) ?: 0
+        val mine = (if (home) f.homeScore else f.awayScore) ?: 0
+        val theirs = (if (home) f.awayScore else f.homeScore) ?: 0
         val opp = clubs[if (home) d.tie.awayClubId else d.tie.homeClubId]?.name ?: "?"
-        val line = ServerI18n.t("push.cup_score", lang, clubs[me]?.name ?: "", mine, theirs, opp)
-        val so = d.result?.shootout ?: return line
-        return ServerI18n.t("push.cup_pens", lang, line, if (home) so.home else so.away, if (home) so.away else so.home)
+        return ServerI18n.t("push.cup_score", lang, clubs[me]?.name ?: "", mine, theirs, opp)
     }
 
     fun message(d: DecidedTie, me: UUID, round: Int, clubs: Map<UUID, Club>, prize: Divisions.Prize?, lang: String): Pair<String, String> {
@@ -233,16 +230,14 @@ class CupNotifier(private val push: FcmSender? = null, private val inbox: InboxS
         for (d in ties) for (me in listOf(d.tie.homeClubId, d.tie.awayClubId)) {
             val club = clubs[me]?.takeUnless { it.isBot } ?: continue
             val home = d.tie.homeClubId == me
-            val multi = (d.result?.sections?.size ?: 1) > 1
             val f = d.fixture
             val prize = prizes[me]
             val verdict = when { d.winner != me -> "OUT"; round == Cups.ROUNDS -> "CHAMPION"; else -> "THROUGH" }
             inbox?.add(club.id, "CUP_RESULT", buildMap {
                 put("cupId", cup.id.toString()); put("fixtureId", f.id.toString()); put("round", round.toString()); put("verdict", verdict)
                 put("opponent", clubs[if (home) d.tie.awayClubId else d.tie.homeClubId]?.name ?: "?")
-                put("mine", ((if (multi) (if (home) f.homePoints else f.awayPoints) else (if (home) f.homeScore else f.awayScore)) ?: 0).toString())
-                put("theirs", ((if (multi) (if (home) f.awayPoints else f.homePoints) else (if (home) f.awayScore else f.homeScore)) ?: 0).toString())
-                d.result?.shootout?.let { put("pens", if (home) "${it.home}-${it.away}" else "${it.away}-${it.home}") }
+                put("mine", ((if (home) f.homeScore else f.awayScore) ?: 0).toString())
+                put("theirs", ((if (home) f.awayScore else f.homeScore) ?: 0).toString())
                 if (prize != null) { put("coins", prize.coins.toString()); put("gold", prize.gold.toString()) }
             })
             runCatching {

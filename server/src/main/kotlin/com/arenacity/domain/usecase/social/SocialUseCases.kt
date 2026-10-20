@@ -10,7 +10,6 @@ import com.arenacity.domain.repository.*
 import com.arenacity.domain.rules.LeagueRules
 import com.arenacity.domain.rules.StandingRow
 import com.arenacity.domain.rules.Standings
-import com.arenacity.domain.usecase.athlete.SectionService
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.league.LeagueQueries
 import com.arenacity.domain.usecase.league.MatchView
@@ -174,14 +173,14 @@ class HeadToHeadUseCase(private val service: ClubService, private val clubs: Clu
     }
 }
 
-/** A visited club's grounds: the club, what it has open on the map ([spots]) and its sections. */
-data class Grounds(val club: Club, val spots: com.arenacity.domain.usecase.club.ClubSpots, val sections: List<Sport>)
+/** A visited club's grounds: the club, what it has open on the map ([spots]) and its sections (football, the one there is). */
+data class Grounds(val club: Club, val spots: com.arenacity.domain.usecase.club.ClubSpots, val sections: List<Sport> = listOf(Sport.FOOTBALL))
 
 /** Another club's grounds, read-only (spec §5 "прогресс друга": visit the friend's club). */
-class GetGroundsUseCase(private val clubs: ClubRepository, private val service: ClubService, private val sections: SectionService) {
+class GetGroundsUseCase(private val clubs: ClubRepository, private val service: ClubService) {
     suspend operator fun invoke(clubId: UUID): Grounds {
         val club = clubs.findById(clubId) ?: throw NotFoundException("Club not found")
-        return Grounds(club, service.spotsOf(club.id), sections.active(club))
+        return Grounds(club, service.spotsOf(club.id))
     }
 }
 
@@ -248,7 +247,7 @@ class ChallengeUseCases(
                 }
             }
         }
-        return MatchView(played.fixture, played.result, mapOf(view.challenger.id to view.challenger, me.id to me), queries.athleteNames(played.fixture))
+        return MatchView(played.fixture, played.result, mapOf(view.challenger.id to view.challenger, me.id to me))
     }
 }
 

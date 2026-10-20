@@ -4,7 +4,6 @@ import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.exception.ValidationException
 import com.arenacity.domain.rules.Energy
 import com.arenacity.domain.usecase.arena.ArenaMatchUseCases
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.club.EnergyUseCases
@@ -16,9 +15,9 @@ import kotlin.test.*
 
 class EnergyTest {
     private val clock = FixedClock(Instant.parse("2026-10-14T10:00:00Z"))
-    private val clubs = FakeClubRepository(); private val athletes = FakeAthleteRepository()
+    private val clubs = FakeClubRepository()
     private val service = ClubService(clubs, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock)))
+    private val create = CreateClubUseCase(clubs, clock, emptyList())
     private val energy = EnergyUseCases(service, clubs, clock)
     private val cards = ArenaMatchUseCases(service, clubs, FakeArenaMatchRepository(), clock)
     private val u1 = UUID.randomUUID()

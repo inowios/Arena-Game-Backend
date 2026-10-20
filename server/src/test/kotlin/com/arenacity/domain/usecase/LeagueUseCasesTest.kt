@@ -3,7 +3,6 @@ package com.arenacity.domain.usecase
 import com.arenacity.domain.exception.ConflictException
 import com.arenacity.domain.model.FixtureKind
 import com.arenacity.domain.model.FixtureStatus
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.league.*
@@ -16,13 +15,13 @@ import kotlin.test.*
 class LeagueUseCasesTest {
     private val clock = FixedClock(Instant.parse("2026-10-09T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
-    private val bots = BotService(users, clubs, athletes, clock)
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
+    private val bots = BotService(users, clubs, clock)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
     private val clubService = ClubService(clubs, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock)
-    private val queries = LeagueQueries(leagues, fixtures, clubs, athletes, clock)
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock)
+    private val queries = LeagueQueries(leagues, fixtures, clubs, clock)
     private val createPrivate = CreatePrivateLeagueUseCase(clubService, leagues, clock)
     private val join = JoinPrivateLeagueUseCase(clubService, leagues)
     private val friendly = PlayFriendlyUseCase(clubService, clubs, fixtures, bots, runner, queries, clock)
@@ -74,7 +73,7 @@ class LeagueUseCasesTest {
         val (next, recent) = queries.clubFixtures(a.id)
         assertNotNull(next); assertEquals(FixtureKind.LEAGUE, next.kind); assertEquals(4, recent.fixtures.size)
         val match = queries.match(m.fixture.id)
-        assertEquals(m.result!!.primary!!.score, match.result!!.primary!!.score)
-        assertEquals(m.result!!.sections, match.result!!.sections)
+        assertEquals(m.result!!.homeWon, match.result!!.homeWon)
+        assertEquals(m.result!!.events, match.result!!.events); assertEquals(3, match.result!!.home.size)
     }
 }

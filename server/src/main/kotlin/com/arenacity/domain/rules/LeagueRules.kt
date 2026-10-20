@@ -104,7 +104,7 @@ object Standings {
         val rows = memberIds.associateWith { StandingRow(it) }.toMutableMap()
         for (f in fixtures.filter { it.status == FixtureStatus.PLAYED }) {
             val hs = f.homeScore ?: continue; val `as` = f.awayScore ?: continue
-            val hp = f.homePoints ?: Sections.points(hs, `as`); val ap = f.awayPoints ?: Sections.points(`as`, hs)
+            val hp = f.homePoints ?: points(hs, `as`); val ap = f.awayPoints ?: points(`as`, hs)
             rows[f.homeClubId]?.let { rows[f.homeClubId] = it.add(hs, `as`, hp, ap) }
             rows[f.awayClubId]?.let { rows[f.awayClubId] = it.add(`as`, hs, ap, hp) }
         }
@@ -115,6 +115,9 @@ object Standings {
         played = played + 1, won = won + if (pf > pa) 1 else 0, drawn = drawn + if (pf == pa) 1 else 0, lost = lost + if (pf < pa) 1 else 0,
         gf = this.gf + gf, ga = this.ga + ga, points = points + pf,
     )
+
+    /** Table points for a score (legacy rows without points): 3 / 1 / 0. */
+    fun points(forScore: Int, againstScore: Int) = when { forScore > againstScore -> 3; forScore == againstScore -> 1; else -> 0 }
 
     fun outcome(forScore: Int, againstScore: Int) = when { forScore > againstScore -> Outcome.WIN; forScore == againstScore -> Outcome.DRAW; else -> Outcome.LOSS }
     fun outcomeFromPoints(sectionPoints: Int) = when (sectionPoints) { 3 -> Outcome.WIN; 1 -> Outcome.DRAW; else -> Outcome.LOSS }

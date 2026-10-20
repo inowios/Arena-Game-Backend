@@ -62,7 +62,7 @@ private fun privacyEn(company: String, contact: String) = "Privacy Policy" to ""
 <h2>What we collect</h2>
 <ul>
 <li><b>Account.</b> A random identifier created on your device for guest play. If you sign in with Google or Apple, the account identifier and the e-mail address they share with us.</li>
-<li><b>Game data.</b> Your club (name, emblem, colours, buildings, athletes, lineups, matches, leagues, trophies), the messages you write in private-league chats, challenges and invites you send, and your purchase history.</li>
+<li><b>Game data.</b> Your club (name, emblem, colours, heroes, lineups, matches, leagues, trophies), the messages you write in private-league chats, challenges and invites you send, and your purchase history.</li>
 <li><b>Technical data.</b> App version, platform, language, time zone, the days on which you play and, if you allow notifications, a push token. Our servers log IP addresses and requests for security; these logs are kept for 14 days.</li>
 <li><b>Usage events.</b> Which features you use (for example tutorial steps, opening the store, watching a rewarded video) and technical errors in the app. They are linked to your pseudonymous player id, used to improve the game and deleted after 13 months, like the record of days you played.</li>
 <li><b>Purchases.</b> Payments are handled by Google Play or the App Store. We receive the order id and product to deliver your items; we never see your payment details.</li>

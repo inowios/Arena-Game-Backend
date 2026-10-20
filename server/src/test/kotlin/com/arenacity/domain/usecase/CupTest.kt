@@ -3,8 +3,6 @@ package com.arenacity.domain.usecase
 import com.arenacity.domain.model.*
 import com.arenacity.domain.rules.Cups
 import com.arenacity.domain.usecase.account.InboxService
-import com.arenacity.domain.usecase.athlete.SectionService
-import com.arenacity.domain.usecase.athlete.StarterSquadInitializer
 import com.arenacity.domain.usecase.club.ClubService
 import com.arenacity.domain.usecase.club.CreateClubUseCase
 import com.arenacity.domain.usecase.cup.CupNotifier
@@ -23,20 +21,19 @@ class CupTest {
     // Thursday 2026-10-08, 10:00 UTC: the draw is at 12:00, the round of 16 at 18:00 (bucket 0)
     private val clock = FixedClock(Instant.parse("2026-10-08T10:00:00Z"))
     private val users = FakeUserRepository(); private val clubs = FakeClubRepository()
-    private val athletes = FakeAthleteRepository(); private val lineups = FakeLineupRepository(); private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
+    private val leagues = FakeLeagueRepository(); private val fixtures = FakeFixtureRepository()
     private val seasons = FakeSeasonRepository(); private val cupRepo = FakeCupRepository(); private val inboxRepo = FakeInboxRepository()
-    private val bots = BotService(users, clubs, athletes, clock, leagues)
+    private val bots = BotService(users, clubs, clock, leagues)
     private val leagueService = LeagueService(leagues, fixtures, clubs, bots, clock)
-    private val create = CreateClubUseCase(clubs, clock, listOf(StarterSquadInitializer(athletes, clock), JoinPublicLeagueInitializer(clubs, leagueService, clock)))
-    private val runner = MatchdayRunner(leagues, fixtures, clubs, athletes, LineupService(athletes, lineups), leagueService, clock, sections = SectionService(athletes))
+    private val create = CreateClubUseCase(clubs, clock, listOf(JoinPublicLeagueInitializer(clubs, leagueService, clock)))
+    private val runner = MatchdayRunner(leagues, fixtures, clubs, leagueService, clock)
     private val cupService = CupService(cupRepo, clubs, fixtures, bots, runner, seasons, clock, notifier = CupNotifier(null, InboxService(inboxRepo, clock)))
     private val queries = CupQueries(ClubService(clubs, clock), cupRepo, fixtures, clubs, clock)
 
-    private fun newClub(name: String, timezone: String = "UTC", division: Int = 1, rating: Int? = null): Club = runBlocking {
+    private fun newClub(name: String, timezone: String = "UTC", division: Int = 1): Club = runBlocking {
         val user = UUID.randomUUID()
         users.create(User(user, AuthProvider.GUEST, "d-$user", null, null, null, true, clock.now(), clock.now()))
         val c = create(user, name, "#AA0000", "#FFFFFF", timezone)
-        if (rating != null) athletes.rows.values.filter { it.clubId == c.id }.forEach { athletes.update(it.copy(attack = rating, defense = rating, physical = rating, technique = rating, mental = rating)) }
         clubs.update(clubs.rows.getValue(c.id).copy(division = division))
     }
     private fun activate(vararg list: Club) { cupRepo.active = cupRepo.active + list.map { it.id to it.timezone } }
@@ -56,20 +53,8 @@ class CupTest {
     }
 
     @Test
-    fun `shootouts always produce a winner and favour the better takers`() {
-        var homeWins = 0
-        repeat(2_000) { seed ->
-            val (h, a) = Cups.shootout(Cups.kickChance(80.0, 40.0), Cups.kickChance(40.0, 80.0), seed.toLong())
-            assertNotEquals(h, a); assertTrue(h <= 35 && a <= 35)
-            if (h > a) homeWins++
-        }
-        assertTrue(homeWins in 1_300..1_900, "home won $homeWins of 2000")
-        assertEquals(Cups.shootout(0.75, 0.75, 42), Cups.shootout(0.75, 0.75, 42))   // deterministic
-    }
-
-    @Test
     fun `active clubs are drawn on Thursday with bots, play four rounds and the winner lifts the trophy`() = runBlocking<Unit> {
-        val me = newClub("Lions", rating = 75); val friend = newClub("Wolves"); val third = newClub("Bears")
+        val me = newClub("Lions"); val friend = newClub("Wolves"); val third = newClub("Bears")
         val idle = newClub("Sleepers")   // not active this week: not entered
         repeat(2) { bots.createBot(0, 1, "UTC", 5) }   // two free bots with the same name
         activate(me, friend, third)
@@ -103,8 +88,8 @@ class CupTest {
         for (t in cupRepo.ties(cup.id).filter { it.round == 1 }) {
             val f = fixtures.rows.getValue(t.fixtureId)
             val r = MatchdayResult.parse(f.resultJson!!)
-            assertEquals(f.homePoints == f.awayPoints, r.shootout != null, "only level ties go to penalties")
-            assertEquals(Cups.winner(f, r), t.winnerClubId)
+            assertEquals(3, r.home.size + 0); assertNotEquals(f.homePoints, f.awayPoints, "an Arena match is never level")
+            assertEquals(Cups.winner(f), t.winnerClubId)
         }
         val humanLosers = cupRepo.entries(cup.id).filter { it.outRound == 1 && !clubs.rows.getValue(it.clubId).isBot }
         humanLosers.forEach { assertEquals(300, it.prizeCoins) }
@@ -138,7 +123,7 @@ class CupTest {
         val f = fixtures.rows.getValue(t.fixtureId)
         val home = f.homeClubId == club.id
         val (h, a) = if (home) 3 to 0 else 0 to 3
-        val r = MatchdayResult(2, listOf(SectionResult("FOOTBALL", h, a, if (home) 3 else 0, if (home) 0 else 3)))
+        val r = MatchdayResult(homeWon = home)
         fixtures.rows[f.id] = f.copy(status = FixtureStatus.PLAYED, homeScore = h, awayScore = a, homePoints = if (home) 3 else 0, awayPoints = if (home) 0 else 3, resultJson = r.toJson(), playedAt = clock.now())
     }
 
@@ -199,11 +184,10 @@ class CupTest {
         val now = clock.now()
         val home = Club(UUID.randomUUID(), UUID.randomUUID(), "Lions", "#000000", "#FFFFFF", null, 1, 0, 0, 0, "UTC", now, now)
         val away = home.copy(id = UUID.randomUUID(), name = "Wolves")
-        val f = Fixture(UUID.randomUUID(), null, FixtureKind.CUP, 0, 2, now, home.id, away.id, FixtureStatus.PLAYED, 1, 1, 1L, null, now, now, 1, 1)
-        val d = com.arenacity.domain.usecase.cup.DecidedTie(CupTie(UUID.randomUUID(), 2, 0, home.id, away.id, f.id, away.id), f,
-            MatchdayResult(2, listOf(SectionResult("FOOTBALL", 1, 1, 1, 1)), Shootout(3, 4)))
+        val f = Fixture(UUID.randomUUID(), null, FixtureKind.CUP, 0, 2, now, home.id, away.id, FixtureStatus.PLAYED, 0, 1, 1L, null, now, now, 0, 3)
+        val d = com.arenacity.domain.usecase.cup.DecidedTie(CupTie(UUID.randomUUID(), 2, 0, home.id, away.id, f.id, away.id), f, MatchdayResult(homeWon = false))
         val clubs = mapOf(home.id to home, away.id to away)
-        assertEquals("Cup: knocked out" to "Lions 1–1 Wolves, penalties 3–4. Prize: 600 coins.", n.message(d, home.id, 2, clubs, Cups.prize(Cups.Stage.QUARTER_FINAL, 1), "en"))
-        assertEquals("Кубок: вы в полуфинале!" to "Wolves 1–1 Lions, пенальти 4–3. Следующий раунд завтра.", n.message(d, away.id, 2, clubs, null, "ru"))
+        assertEquals("Cup: knocked out" to "Lions 0–1 Wolves. Prize: 600 coins.", n.message(d, home.id, 2, clubs, Cups.prize(Cups.Stage.QUARTER_FINAL, 1), "en"))
+        assertEquals("Кубок: вы в полуфинале!" to "Wolves 1–0 Lions. Следующий раунд завтра.", n.message(d, away.id, 2, clubs, null, "ru"))
     }
 }

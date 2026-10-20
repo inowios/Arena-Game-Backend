@@ -11,7 +11,6 @@ import com.arenacity.domain.repository.AchievementRepository
 import com.arenacity.domain.repository.ClubRepository
 import com.arenacity.domain.repository.SeasonRepository
 import com.arenacity.domain.rules.*
-import com.arenacity.domain.usecase.athlete.SectionService
 import com.arenacity.domain.usecase.club.ClubService
 import java.util.UUID
 
@@ -27,7 +26,6 @@ class AchievementService(
     private val repo: AchievementRepository,
     private val service: ClubService,
     private val seasons: SeasonRepository,
-    private val sections: SectionService? = null,
 ) {
     suspend fun values(club: Club): Map<Metric, Long> {
         val counters = repo.counters(club.id)
@@ -41,7 +39,7 @@ class AchievementService(
                 Metric.TITLES -> trophies.count { it.kind == TrophyKind.LEAGUE_TITLE }.toLong()
                 Metric.PROMOTIONS -> trophies.count { it.kind == TrophyKind.PROMOTION }.toLong()
                 Metric.CUPS -> trophies.count { it.kind == TrophyKind.CUP }.toLong()
-                Metric.SECTIONS_OPEN -> (sections?.active(club)?.size ?: 1).toLong()
+                Metric.SECTIONS_OPEN -> 1L   // football, the one section there is
                 else -> counters[m] ?: 0L
             }
         }
