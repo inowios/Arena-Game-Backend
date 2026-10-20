@@ -61,7 +61,7 @@ private fun page(call: ApplicationCall, t: LandingText, headline: String, code: 
     val deep = "$scheme://${kind.lowercase()}/$rawCode"
     val copy = "ARENA:$kind:$rawCode"
     return """<!doctype html><html lang="${t.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arena City</title><meta property="og:title" content="Arena City"><meta property="og:description" content="${headline.replace("\"", "&quot;")}">
+<title>Arena</title><meta property="og:title" content="Arena"><meta property="og:description" content="${headline.replace("\"", "&quot;")}">
 <style>
 body{margin:0;background:#0B0F14;color:#F2F4F7;font:16px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
 main{max-width:440px;margin:0 auto;padding:48px 20px;text-align:center}
@@ -72,7 +72,7 @@ a.btn{display:block;padding:16px;border-radius:14px;margin:12px 0;font-weight:70
 a.alt{background:#1E2630;color:#F2F4F7}
 p.hint{color:#8A94A6;font-size:14px;margin-top:20px}
 </style></head><body><main>
-<h1>ARENA CITY</h1>
+<h1>ARENA</h1>
 <p class="lead">$headline</p>
 ${if (code != null) "<div class=\"code\">$code</div>" else ""}
 ${if (code != null) "<a class=\"btn\" href=\"$deep\">${t.open}</a>" else ""}
@@ -85,11 +85,11 @@ ${if (ios.isNotBlank()) "<a class=\"btn alt\" href=\"$ios\" onclick=\"cp()\">${t
 private data class LandingText(val lang: String, val league: String, val challenge: String, val notFound: String, val open: String, val play: String, val appStore: String, val hint: String) {
     companion object {
         private val all = mapOf(
-            "en" to LandingText("en", "%s invites you to the private league «%s».", "%s challenges you to a friendly!", "This invite was not found or has expired.", "Open in Arena City", "Get it on Google Play", "Download on the App Store", "New here? Install the game — the code is copied and applied on first launch."),
-            "es" to LandingText("es", "%s te invita a la liga privada «%s».", "¡%s te reta a un amistoso!", "No encontramos esta invitación o ha caducado.", "Abrir en Arena City", "Disponible en Google Play", "Descargar en el App Store", "¿Nuevo? Instala el juego: el código se copia y se aplica al abrirlo."),
-            "pt" to LandingText("pt", "%s convida você para a liga privada «%s».", "%s desafia você para um amistoso!", "Convite não encontrado ou expirado.", "Abrir no Arena City", "Disponível no Google Play", "Baixar na App Store", "Novo por aqui? Instale o jogo — o código é copiado e aplicado na primeira abertura."),
-            "ru" to LandingText("ru", "%s приглашает вас в приватную лигу «%s».", "%s вызывает вас на товарищеский матч!", "Приглашение не найдено или истекло.", "Открыть в Arena City", "Скачать в Google Play", "Загрузить в App Store", "Нет игры? Установите её — код скопирован и применится при первом запуске."),
-            "uk" to LandingText("uk", "%s запрошує вас до приватної ліги «%s».", "%s викликає вас на товариський матч!", "Запрошення не знайдено або воно застаріло.", "Відкрити в Arena City", "Завантажити з Google Play", "Завантажити в App Store", "Немає гри? Встановіть її — код скопійовано, він застосується під час першого запуску."),
+            "en" to LandingText("en", "%s invites you to the private league «%s».", "%s challenges you to a friendly!", "This invite was not found or has expired.", "Open in Arena", "Get it on Google Play", "Download on the App Store", "New here? Install the game — the code is copied and applied on first launch."),
+            "es" to LandingText("es", "%s te invita a la liga privada «%s».", "¡%s te reta a un amistoso!", "No encontramos esta invitación o ha caducado.", "Abrir en Arena", "Disponible en Google Play", "Descargar en el App Store", "¿Nuevo? Instala el juego: el código se copia y se aplica al abrirlo."),
+            "pt" to LandingText("pt", "%s convida você para a liga privada «%s».", "%s desafia você para um amistoso!", "Convite não encontrado ou expirado.", "Abrir no Arena", "Disponível no Google Play", "Baixar na App Store", "Novo por aqui? Instale o jogo — o código é copiado e aplicado na primeira abertura."),
+            "ru" to LandingText("ru", "%s приглашает вас в приватную лигу «%s».", "%s вызывает вас на товарищеский матч!", "Приглашение не найдено или истекло.", "Открыть в Arena", "Скачать в Google Play", "Загрузить в App Store", "Нет игры? Установите её — код скопирован и применится при первом запуске."),
+            "uk" to LandingText("uk", "%s запрошує вас до приватної ліги «%s».", "%s викликає вас на товариський матч!", "Запрошення не знайдено або воно застаріло.", "Відкрити в Arena", "Завантажити з Google Play", "Завантажити в App Store", "Немає гри? Встановіть її — код скопійовано, він застосується під час першого запуску."),
         )
         fun forCall(call: ApplicationCall): LandingText {
             val header = call.request.header(HttpHeaders.AcceptLanguage) ?: ""

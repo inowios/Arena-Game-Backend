@@ -8,7 +8,7 @@ object DashboardPage {
     val HTML = """
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arena City · dashboard</title>
+<title>Arena · dashboard</title>
 <style>
 :root{--bg:#0b1020;--card:#141b30;--ink:#e8eefc;--mut:#8b97b8;--cyan:#33d6ff;--mag:#ff4fd8;--amb:#ffb340;--ok:#41d67a;--bad:#ff5a6a}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
@@ -22,7 +22,7 @@ table{border-collapse:collapse;width:100%}td,th{padding:5px 8px;text-align:right
 .bar{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--cyan),var(--mag));min-width:2px}
 .kpi{display:flex;gap:18px;flex-wrap:wrap}.kpi div{min-width:90px}.kpi b{display:block;font-size:22px}.mut{color:var(--mut)}.err{color:var(--bad)}
 </style></head><body>
-<header><h1>Arena City</h1>
+<header><h1>Arena</h1>
 <input id="tok" type="password" placeholder="admin token" autocomplete="off">
 <select id="days"><option>7</option><option selected>14</option><option>30</option><option>60</option></select>
 <button id="go">Load</button><span id="msg" class="mut"></span></header>

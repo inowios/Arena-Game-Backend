@@ -39,7 +39,7 @@ private suspend fun respondLegal(call: ApplicationCall, doc: LegalDoc) {
     val nav = listOf("/privacy" to (if (ru) "Конфиденциальность" else "Privacy"), "/terms" to (if (ru) "Условия" else "Terms"), "/delete-account" to (if (ru) "Удаление аккаунта" else "Delete account"))
         .joinToString(" · ") { (href, label) -> "<a href=\"$href?lang=$lang\">$label</a>" }
     val html = """<!doctype html><html lang="$lang"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arena City — $title</title>
+<title>Arena — $title</title>
 <style>
 body{margin:0;background:#0B0F14;color:#E6E9EE;font:16px/1.6 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
 main{max-width:760px;margin:0 auto;padding:40px 20px 64px}
@@ -47,7 +47,7 @@ h1{font-size:28px;margin:0 0 4px;color:#F2F4F7} h2{font-size:19px;margin:28px 0 
 a{color:#35D07F} p.meta{color:#8A94A6;font-size:14px;margin:0 0 24px} ul{padding-left:22px} li{margin:4px 0}
 nav{font-size:14px;color:#8A94A6;margin-bottom:28px}
 </style></head><body><main>
-<nav>ARENA CITY · $nav · $other</nav>
+<nav>ARENA · $nav · $other</nav>
 <h1>$title</h1>
 <p class="meta">${if (ru) "Обновлено" else "Last updated"}: $UPDATED</p>
 $body
@@ -58,7 +58,7 @@ $body
 private fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
 private fun privacyEn(company: String, contact: String) = "Privacy Policy" to """
-<p>Arena City (“the game”) is published by $company (“we”). This policy explains what we collect when you play, why, and the choices you have. Questions: $contact.</p>
+<p>Arena (“the game”) is published by $company (“we”). This policy explains what we collect when you play, why, and the choices you have. Questions: $contact.</p>
 <h2>What we collect</h2>
 <ul>
 <li><b>Account.</b> A random identifier created on your device for guest play. If you sign in with Google or Apple, the account identifier and the e-mail address they share with us.</li>
@@ -88,7 +88,7 @@ private fun privacyEn(company: String, contact: String) = "Privacy Policy" to ""
 """
 
 private fun privacyRu(company: String, contact: String) = "Политика конфиденциальности" to """
-<p>Arena City («игра») издаёт $company («мы»). Здесь описано, какие данные мы получаем, когда вы играете, зачем и как этим управлять. Вопросы: $contact.</p>
+<p>Arena («игра») издаёт $company («мы»). Здесь описано, какие данные мы получаем, когда вы играете, зачем и как этим управлять. Вопросы: $contact.</p>
 <h2>Что мы получаем</h2>
 <ul>
 <li><b>Аккаунт.</b> Случайный идентификатор, созданный на устройстве для гостевой игры. Если вы входите через Google или Apple — идентификатор аккаунта и e-mail, которые они нам передают.</li>
@@ -118,7 +118,7 @@ private fun privacyRu(company: String, contact: String) = "Политика ко
 """
 
 private fun termsEn(company: String, contact: String) = "Terms of Service" to """
-<p>These terms are an agreement between you and $company about playing Arena City. By playing you accept them. Contact: $contact.</p>
+<p>These terms are an agreement between you and $company about playing Arena. By playing you accept them. Contact: $contact.</p>
 <h2>The game</h2>
 <p>We grant you a personal, non-transferable licence to play the game for non-commercial purposes. We keep improving the game, so features, balance and content may change.</p>
 <h2>Virtual items</h2>
@@ -137,7 +137,7 @@ private fun termsEn(company: String, contact: String) = "Terms of Service" to ""
 """
 
 private fun termsRu(company: String, contact: String) = "Условия использования" to """
-<p>Эти условия — соглашение между вами и $company об игре в Arena City. Играя, вы их принимаете. Связь: $contact.</p>
+<p>Эти условия — соглашение между вами и $company об игре в Arena. Играя, вы их принимаете. Связь: $contact.</p>
 <h2>Игра</h2>
 <p>Мы предоставляем вам личную непередаваемую лицензию на игру в некоммерческих целях. Игра развивается, поэтому функции, баланс и контент могут меняться.</p>
 <h2>Виртуальные предметы</h2>
@@ -156,7 +156,7 @@ private fun termsRu(company: String, contact: String) = "Условия испо
 """
 
 private fun deletionEn(contact: String) = "Delete your account" to """
-<p>You can delete your Arena City account and its personal data at any time.</p>
+<p>You can delete your Arena account and its personal data at any time.</p>
 <h2>In the game</h2>
 <ol><li>Tap your club emblem at the top of the screen to open your profile.</li><li>Tap <b>Settings</b>, then <b>Delete account</b>, and confirm with <b>Delete forever</b>.</li></ol>
 <p>Deletion is immediate and cannot be undone.</p>
@@ -169,7 +169,7 @@ private fun deletionEn(contact: String) = "Delete your account" to """
 """
 
 private fun deletionRu(contact: String) = "Удаление аккаунта" to """
-<p>Вы можете в любой момент удалить аккаунт Arena City и его персональные данные.</p>
+<p>Вы можете в любой момент удалить аккаунт Arena и его персональные данные.</p>
 <h2>В игре</h2>
 <ol><li>Нажмите на эмблему клуба вверху экрана — откроется профиль.</li><li>Нажмите <b>Настройки</b>, затем <b>Удалить аккаунт</b> и подтвердите кнопкой <b>Удалить навсегда</b>.</li></ol>
 <p>Удаление происходит сразу, отменить его нельзя.</p>
