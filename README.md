@@ -7,13 +7,13 @@ Kotlin backend for the Arena City mobile game. Design spec and plans live in
 
 | Module | Purpose |
 |---|---|
-| `match-engine` | Pure Kotlin, deterministic match simulator. No Ktor/DB dependencies. |
+| `match-engine` | Pure Kotlin: the Arena v4 engine (`com.arenacity.arena`, a line-for-line port of the client's C# engine) that plays every league, cup, friendly and challenge fixture on the server. No Ktor/DB dependencies. |
 | `server` | Ktor 3 API: auth, clubs and the five islands map, heroes, the story «Іскра», the Arena match, public/private leagues, matchday scheduler, friendlies, cups, alliances. |
 
 ## Commands
 
-    ./gradlew :match-engine:test              # unit + statistical balance tests
-    ./gradlew :match-engine:run --args=3000   # balance table (3000 matches per scenario)
+    ./gradlew :match-engine:test              # the client's 145 Arena cases (145/145 = a faithful port), determinism, 0 illegal bot turns
+    tools/arena/sync_skills.sh                # refresh arena_skills.json and the cases from ../Arena-Game-Mobile (ArenaDataTest fails while stale)
 
     ./gradlew :server:test                    # unit tests (fakes, no DB)
     ./gradlew :server:run                     # local server on :8080 (needs PostgreSQL `arenacity`)
@@ -52,11 +52,11 @@ All responses: `{"code", "data", "errors", "requestId"}`. Bearer JWT from `/auth
 | POST | `/api/v1/leagues/private` `{name}`, `/private/join` `{code}` | private leagues (code, max 20) |
 | GET | `/api/v1/club/fixtures` | next scheduled + last 5 played |
 | GET | `/api/v1/club/history`, `/clubs/{id}/history` | finished seasons (position, movement, prizes) and trophies |
-| GET | `/api/v1/matches/{id}` | fixture + full match result (events for highlights) |
+| GET | `/api/v1/matches/{id}` | a played fixture as the Arena match it was (the league screen's result card; `POST /friendlies` and `/challenges/{code}/accept` answer the same shape): `{id, fixture, home{id,name,emblemJson,…}, away{…}, homeWon, turns, first: HOME\|AWAY, heroes{home:[{id,name,level,stamina}], away:[…]}, events:[{turn, side: HOME\|AWAY, kind: cast\|tick\|out\|end, hero, skill, skillId, target, damage, text?}]}`; a fixture played before 20 Oct 2026 has `homeWon` but no heroes and no events |
 | POST | `/api/v1/friendlies` `{opponentClubId?}` | instant friendly (3 per day), vs bot if omitted |
-| GET | `/api/v1/cups/current` | weekly cup: `state` UPCOMING (next `drawAt`, last week's result in `previous`) / ACTIVE / FINISHED, bracket `ties` (round 1–4, slot, score or section points, `shootout`, `winnerId`, `fixtureId` → `/matches/{id}`), `me` (alive, stage, prize), prize table |
+| GET | `/api/v1/cups/current` | weekly cup: `state` UPCOMING (next `drawAt`, last week's result in `previous`) / ACTIVE / FINISHED, bracket `ties` (round 1–4, slot, score 1:0, `winnerId`, `fixtureId` → `/matches/{id}`), `me` (alive, stage, prize), prize table |
 | POST | `/api/v1/club/daily/claim` | 7-day login calendar + streak |
-| GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` `{eliteSport?}` | season pass: 3 daily tasks (one Arena task a day + TRAIN_1 «потренувати героя», PLAY_FRIENDLY, WIN_MATCH, WIN_SECTIONS, SET_LINEUP), 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) and an elite athlete at premium 30 |
+| GET | `/api/v1/club/pass`; POST `/club/pass/tasks/{task}/claim`, `/club/pass/claim` | season pass: 3 daily tasks (one Arena task a day + TRAIN_1 «потренувати героя», PLAY_FRIENDLY, WIN_MATCH, WIN_SECTIONS, SET_LINEUP), 30 levels, free/premium tracks; pass cosmetics (levels 10/15/20/25, free 30) |
 | GET | `/api/v1/catalog/products`; POST `/purchases/verify` `{store, productId, token}` | gold packs + premium pass. `GOOGLE`: Play purchase token (`purchases.products.get`, order id = idempotency key); `APPLE`: transaction id (App Store Server API, production then sandbox; optional x5c chain check against Apple Root CA G3); `DEV` with `IAP_DEV_MODE=true`, token `dev:<order>` |
 | GET | `/api/v1/catalog/coin-packs`; POST `/club/shop/coins/{pack}` | coins for gold (25 → 3 000, 100 → 13 000, 400 → 60 000) |
 | GET | `/api/v1/club/achievements`; POST `/club/achievements/{id}/claim` | tiered achievements (wins, sections, divisions, titles, the stadium level, streak, invites…): gold per tier, some tiers give cosmetics |
@@ -81,10 +81,12 @@ Monetization (spec §6): gold («кристали») buys heroes, energy refills
 reputation and league places are never sold. Store products to create: `gold_small` (100), `gold_medium` (550), `gold_large` (1200), `gold_huge` (2600) — consumables,
 `season_pass` — consumable bought once per season. AdMob SSV callback URL: `https://<host>/api/v1/ads/ssv`.
 
-Sections: football only since 15 Oct 2026 (the basketball and tennis arenas went with the sport town). A matchday is one opponent across all sections either
-club fields; a section only one club has is a walkover (3:0 / 20:0 / 2:0). Table points = sum of section points (3/1/0), so a three-sport
-club can take 9 a matchday. `GET /club` returns `sections`; fixtures carry `homePoints/awayPoints` and per-section scores; `GET /matches/{id}`
-returns `sections[]` with each sport's full result (`result` stays the football match).
+Matches on heroes (APP-AUDIT §2.15, 20 Oct 2026): every fixture — league, cup, friendly, challenge — is an Arena v4 match played by the server
+(`match-engine`, `usecase.league.HeroMatch`): the home club's triple is side 0, the away club's side 1, SmartAi on both sides, the seed is the
+fixture's (`first` = the seed's parity, so home does not always start). A human club fields its saved Arena triple (`GET /club/heroes/lineup`)
+filled with its best other heroes with a kit (level, experience, catalog order; `rules.HeroSquad`); a bot or a club without heroes fields a seeded
+triple of the eleven. Win or loss only (the 40-turn limit: more stamina wins, a tie goes to the second mover): 1:0 and 3 points in the table,
+no draws (`gd` = wins − losses). `GET /club` keeps `sections` = `["FOOTBALL"]` for the client.
 
 Seasons & divisions: 7 divisions (1 Sunday League … 7 Legends League). After round 28 the league is closed (`status=FINISHED`):
 final table → prizes by position × division, a `club_seasons` history row per member, trophies (title, promotion), top 2 promoted,
@@ -94,20 +96,16 @@ division (season starts the next day; freed bots of that division are reused). M
 Cups: every week each timezone bucket plays knockout cups. Clubs active in the last 7 days are entered automatically and grouped
 by strength (division, reputation) into 16-club brackets, bots of the group's division fill the last one; open draw on Thursday
 12:00, round of 16 Thursday 18:00, quarter-finals Friday, semi-finals Saturday, final Sunday (bucket time, two hours before the league
-matchday). A tie plays the sections both clubs have; more section points wins, level ties go to a penalty shootout (kick odds from the
-starters' technique and mental; `shootout` in the result). Fatigue like a friendly; prizes by the round reached (300 / 600 / 1 200 /
+matchday). A tie is an Arena match of the clubs' hero triples (never level; the heroes earn experience); prizes by the round reached (300 / 600 / 1 200 /
 2 500 / 5 000 coins × division multiplier, gold from the semi-final, reputation), a `CUP` trophy for the winner (achievement
 `cup_winner`); inbox `CUP_DRAW` / `CUP_RESULT` and pushes. Rounds missed during downtime are played in order on the next pass.
 
-Athletes («вихованці академії») only fill the eleven around the club's heroes in simulated matches (rules.HeroSquad); the
-club does not manage them (the squad, academy, trainings, hospital, scouting, techniques and the market went on 20 Oct 2026).
-At season end everyone ages a year — young players grow, veterans decline, 34+ may retire (replaced by a youth prospect;
-retired rows stay for old highlights, inbox `RETIREMENTS`). League matchdays move morale (+5 win / +1 draw / −4 loss for starters, −2 for those left out; the
-engine weighs morale ±10%). Squad limits: football 25, basketball 14, tennis 6.
+The athletes («вихованці академії») are gone (V60 drops `athletes`, `trainings`, `lineups`): the heroes play every match.
 
 Matchday: a scheduler tick every 5 minutes plays every public league whose next round (20:00 league-local, one round per day, 28 rounds per season)
 is due; empty slots are filled with bot clubs when the season starts; results are immutable; rewards: win 300 coins / +12 reputation,
-draw 150 / +5, loss 60 / +1; starters gain fatigue, injuries from the engine last 2 days. Single-instance scheduler (in-process lock).
+loss 60 / +1 (no draws); the three heroes who played earn experience as in an Arena match (`rules.Heroes.matchXp`, the daily cap).
+Single-instance scheduler (in-process lock).
 
 Analytics: every authenticated request marks the user active for the UTC day (`user_days`, one insert per user and day);
 the app sends product events in batches (`analytics_events`; the server adds `club_created`, `account_deleted`, `admin_grant`).
@@ -127,19 +125,12 @@ Integration tests (real PostgreSQL, skipped when the variable is unset):
 
     TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/arenacity_test TEST_DATABASE_USER=$USER ./gradlew :server:test
 
-## match-engine rules
+## match-engine: the Arena v4 engine
 
-- **Determinism.** Same lineups + tactics + sport profile + seed ⇒ identical `MatchResult`. Only `Rng` (SplittableRandom) may be a randomness source.
-- **One engine, many sports.** Sport differences live in `SportProfile` (possessions, chance rate, conversion, duration, subs). The simulator never branches on sport id.
-- **Events are the API.** `MatchResult.events` is what the client plays back as highlights; every event has a minute, type, team and optional athlete.
-- **Tuning knobs.** `SportProfile.baseChanceRate`, `baseConversion`, `homeAdvantage` and `Possession.CHANCE_EXP` / `CONVERSION_EXP`. Change them only together with the balance table and `BalanceTest` bounds.
-
-Sports: `FOOTBALL` (possession-based, 90'), `BASKETBALL` (alternating possessions, 2/3-point shots, overtime, no draws),
-`TENNIS` (`SimMode.SETS`: best of three, serve-point model, tiebreak at 6-6). Run the balance table for all three with
-`./gradlew :match-engine:run --args=3000`.
-
-### Adding a sport
-
-1. Add a `SportProfile` constant in `model/Sport.kt`.
-2. Add a scenario row in `balance/Balance.kt` `main`, run the table, tune the profile.
-3. Add a `BalanceTest` case with the sport's target ranges.
+- **One source of truth.** `com.arenacity.arena` is a line-for-line port of the client's `unity/Assets/Scripts/Cards/Arena/{Types,Skills,Engine,Ai,Cases}.cs`
+  (docs/claude/ARENA-MATCH-V3.md §16 and §18 in the mobile repo). Rules change there first; the port follows the diff.
+- **Data.** `match-engine/src/main/resources/arena/arena_skills.json` and the case files under `src/test/resources/arena/cases/` are copies of the
+  mobile files made by `tools/arena/sync_skills.sh`; `ArenaDataTest` fails while they are stale against a checkout beside this repo (`ARENA_MOBILE_DIR`).
+- **Proof.** `ArenaCasesTest` runs every client case through `CaseRunner` (145/145). `ArenaEngineTest`: the same seed gives the same event log;
+  0 illegal bot turns over 500 matches. `SmartAi` is the client's one-ply bot; a deeper one slots in as another `ArenaAi`.
+- **Determinism.** Same triples + seed + first mover ⇒ identical events and result. The only randomness is the match's `Rng` (SplitMix64) and the bots' own seeds.

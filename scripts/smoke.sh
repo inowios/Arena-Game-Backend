@@ -50,9 +50,9 @@ step "update club colours + emblem"
 curl -sf -X PATCH "$B/club" -H "$H" -H "$A" -d '{"primaryColor":"#ff6600","emblemJson":"{\"crest\":3}"}' | j "assert d['data']['primaryColor']=='#FF6600' and 'crest' in d['data']['emblemJson']"
 step "my leagues: public league with me in it"
 LID=$(curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert p and len(p['table'])>=1; print(p['league']['id'])")
-step "friendly vs bot"
-MID=$(curl -sf -X POST "$B/friendlies" -H "$H" -H "$A" -d '{}' | j "f=d['data']['fixture']; assert f['status']=='PLAYED' and d['data']['result']['events']; print(f['id'])")
-curl -sf "$B/matches/$MID" -H "$A" | j "assert d['data']['result']['events'][0]['type']=='KICKOFF'"
+step "friendly vs bot: an Arena match of the triples (ours = the saved lineup), 1:0, a log"
+MID=$(curl -sf -X POST "$B/friendlies" -H "$H" -H "$A" -d '{}' | j "m=d['data']; f=m['fixture']; assert f['status']=='PLAYED' and f['homeScore']+f['awayScore']==1 and m['homeWon'] in (True, False) and m['turns']>=1 and [h['id'] for h in m['heroes']['home']]==['p001','p011','p006'] and len(m['heroes']['away'])==3 and m['events'][-1]['kind']=='end'; print(f['id'])")
+curl -sf "$B/matches/$MID" -H "$A" | j "m=d['data']; assert m['id']=='$MID' and m['first'] in ('HOME','AWAY') and all(e['kind'] in ('cast','tick','out','end') for e in m['events']) and any(e['kind']=='cast' and e['skill'] for e in m['events'])"
 curl -sf "$B/club/fixtures" -H "$A" | j "assert len(d['data']['recent'])==1"
 step "private league create + join with a second guest"
 CODE=$(curl -sf -X POST "$B/leagues/private" -H "$H" -H "$A" -d '{"name":"Office league"}' | j "print(d['data']['code'])")
@@ -64,8 +64,12 @@ if [ "${SMOKE_MATCHDAY:-1}" = "1" ] && command -v psql >/dev/null; then
   step "force matchday: backdate season and run the scheduler tick (dev route)"
   psql -q -d "${SMOKE_DB:-arenacity}" -c "update leagues set season_start = current_date - 1 where id = '$LID'"
   curl -sf -X POST "$B/dev/matchday/run" | j "assert d['data']['played']>=4, d"
-  curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert len(p['table'])==8 and p['table'][0]['played']>=1; assert len(d['data']['private'][0]['table'])==2"
+  curl -sf "$B/leagues/mine" -H "$A" | j "p=d['data']['public']; assert len(p['table'])==8 and p['table'][0]['played']>=1 and all(r['drawn']==0 for r in p['table']); assert len(d['data']['private'][0]['table'])==2"
   curl -sf "$B/club" -H "$A" | j "assert d['data']['club']['reputation']>=1"
+  step "the league match was played on heroes: our saved triple against a seeded bot triple, experience for the three"
+  LMID=$(curl -sf "$B/club/fixtures" -H "$A" | j "r=[f for f in d['data']['recent'] if f['kind']=='LEAGUE']; assert r and r[0]['homeWon'] in (True, False); print(r[0]['id'])")
+  curl -sf "$B/matches/$LMID" -H "$A" | j "m=d['data']; me=m['heroes']['home'] if m['home']['name']=='Smoke FC' else m['heroes']['away']; assert [h['id'] for h in me]==['p001','p011','p006'] and all(h['level']>=1 and 0<=h['stamina']<=100 for h in me) and len(m['events'])>=2"
+  curl -sf "$B/club/heroes" -H "$A" | j "x={h['id']:h['xp'] for h in d['data']['heroes'] if h['owned']}; assert x['p006']>=20 and x['p011']>=20 and x['p009']==0, x"
 fi
 step "economy: daily reward, pass, dev purchase, push token"
 curl -sf -X POST "$B/club/daily/claim" -H "$A" | j "assert d['data']['day']==1 and d['data']['reward']['coins']==150"
