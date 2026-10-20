@@ -7,3 +7,6 @@ local.properties
 .env
 secrets/
 backups/
+
+# the manga pages for a local run (tools/publish_manga.py --serve-local in the mobile repo)
+/manga/
