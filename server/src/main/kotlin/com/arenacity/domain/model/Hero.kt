@@ -8,11 +8,17 @@ import java.util.UUID
 enum class HeroGroup { COMMON, GOOD, STAR, LEGEND }
 
 /**
- * One hero of the game as the catalog has it (rules.HeroCatalog, generated from the client's people.json): [people] null
- * = a human; [skills] = the ids of the three advanced skills, opened at hero levels 4 / 7 / 10 (rules.Heroes.SKILL_LEVELS).
+ * One hero of the game as the catalog has it (rules.HeroCatalog, generated from the client's people.json and
+ * arena_skills.json): [people] null = a human; the Arena v4 kit — [colour] = the hero's energy colour (speed, technique,
+ * tactics, strength; decoration), [skills] = its four skill ids (s0..s3), [alternates] = the skills that replace one of
+ * them while a state holds (aN), [passives] = always on (pN). A hero without a kit ([hasKit] false: the peoples' heroes,
+ * p012+) cannot play the Arena yet. The kit is the same at every level: the level is strength, not new skills.
  */
 data class HeroSpec(val id: String, val name: String, val people: People?, val group: HeroGroup, val position: String, val role: String,
-                    val power: String, val number: Int, val skills: List<String>)
+                    val power: String, val number: Int, val colour: String?, val skills: List<String>, val alternates: List<String> = emptyList(),
+                    val passives: List<String> = emptyList()) {
+    val hasKit: Boolean get() = skills.isNotEmpty()
+}
 
 /** How a club got a hero: the start six, a story chapter, bought for gold, or a mission (missions come later). */
 enum class HeroSource { START, STORY, CRYSTALS, MISSION }
@@ -29,7 +35,7 @@ data class ClubHero(val clubId: UUID, val heroId: String, val level: Int, val xp
 }
 
 /**
- * The club's «Стрілка» lineup («Склад»): up to five field heroes, the keeper (null = an academy pupil in goal) and up to
- * four on the bench; the places left empty are the academy's pupils (rules.Heroes.lineupError).
+ * The club's Arena triple («Склад»): up to three heroes with a kit, in order (rules.Heroes.lineupError); fewer than three
+ * = the match fills the rest with the club's best heroes itself.
  */
-data class HeroLineup(val clubId: UUID, val field: List<String>, val keeper: String?, val bench: List<String>, val updatedAt: Instant)
+data class HeroLineup(val clubId: UUID, val heroes: List<String>, val updatedAt: Instant)

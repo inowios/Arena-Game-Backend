@@ -14,8 +14,8 @@ import java.util.UUID
  * The heroes in the simulated matches (the owner, 18 October 2026: the league, the cup, friendlies and challenges are
  * played by the club's heroes, as «ГРАТИ МАТЧ» is). A hero enters the match simulator as an athlete of its own: a
  * stable id per club and hero ([idOf]), its name, its role as the position, attributes from its rarity and level (the
- * strength bonus up to +10 % at level 10, [Heroes.boostPct]), always fresh. The eleven are filled with the club's
- * academy pupils (its athletes), as the hero lineup's empty places are. The match never writes these athletes back.
+ * strength bonus up to +10 % at level 10, [levelPct]), always fresh. The eleven are filled with the club's academy
+ * pupils (its athletes). The match never writes these athletes back.
  */
 object HeroSquad {
     /**
@@ -30,23 +30,27 @@ object HeroSquad {
         HeroGroup.LEGEND -> 62
     }
 
+    /** The strength bonus of [level] in percent: 0 at level 1 up to +10 % at level 10 (the cap, so a hero never breaks a match). */
+    fun levelPct(level: Int): Int = Math.round((level.coerceIn(1, Heroes.MAX_LEVEL) - 1) * 10.0 / (Heroes.MAX_LEVEL - 1)).toInt()
+
     /** The athlete id a hero plays under in [clubId]'s matches (its name in the match highlights comes from [names]). */
     fun idOf(clubId: UUID, heroId: String): UUID = UUID.nameUUIDFromBytes("hero:$clubId:$heroId".toByteArray())
 
     /**
-     * The heroes who take part: the saved lineup's field, keeper and bench when there is one (in that order), else every
-     * hero the club owns. Unknown ids are skipped.
+     * The heroes who take part: the saved Arena triple first (in its order) and then every other hero the club owns.
+     * Unknown ids are skipped.
      */
     fun playing(owned: List<ClubHero>, lineup: HeroLineup?): List<ClubHero> {
-        val byId = owned.associateBy { it.heroId }
-        if (lineup == null) return owned.filter { HeroCatalog.of(it.heroId) != null }
-        return (lineup.field + listOfNotNull(lineup.keeper) + lineup.bench).distinct().mapNotNull { byId[it] }.filter { HeroCatalog.of(it.heroId) != null }
+        val known = owned.filter { HeroCatalog.of(it.heroId) != null }
+        val byId = known.associateBy { it.heroId }
+        val first = lineup?.heroes.orEmpty().distinct().mapNotNull { byId[it] }
+        return first + known.filter { it !in first }
     }
 
     /** [heroes] as athletes of [clubId] for the match simulator. */
     fun athletes(clubId: UUID, heroes: List<ClubHero>, now: Instant): List<Athlete> = heroes.mapNotNull { h ->
         val spec = HeroCatalog.of(h.heroId) ?: return@mapNotNull null
-        val b = base(spec.group) * (100 + Heroes.boostPct(h.level)) / 100
+        val b = base(spec.group) * (100 + levelPct(h.level)) / 100
         fun at(d: Int) = (b + d).coerceIn(1, 99)
         val pos = when (spec.role) { "GK" -> Position.GK; "DEF" -> Position.DEF; "MID" -> Position.MID; else -> Position.FWD }
         val (atk, def, phy, tec, men) = when (pos) {

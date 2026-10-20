@@ -13,9 +13,9 @@ import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 
 /**
- * Heroes instead of cards (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo): the roster, opening a hero for
- * gold, the «Склад» lineup of the card match and training in the training centre. Match experience comes with the card
- * match result (POST /club/cards/result, its «heroes»).
+ * Heroes instead of cards (docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile repo): the roster with the Arena v4 kits,
+ * opening a hero for gold, the Arena triple («Склад») and training at the stadium's level. Match experience comes with
+ * the Arena result (POST /club/arena/result, its «heroes»).
  */
 fun Route.heroRoutes() {
     val heroes: HeroUseCases by inject()
@@ -25,12 +25,9 @@ fun Route.heroRoutes() {
             get { call.respond(heroes.roster(call.userId()).toDto().toSuccessResponse()) }
             // idempotent: a hero the club already owns answers 200 with spent 0
             post("/{id}/unlock") { call.respond(heroes.unlock(call.userId(), call.parameters["id"].orEmpty()).toDto().toSuccessResponse()) }
-            // the «Склад» lineup: no saved one = saved false and empty lists (the match picks the best heroes)
+            // the Arena triple («Склад»): no saved one = saved false and an empty list (the match picks the best heroes)
             get("/lineup") { call.respond(heroes.lineup(call.userId()).toDto().toSuccessResponse()) }
-            put("/lineup") {
-                val r = call.receive<HeroLineupRequest>()
-                call.respond(heroes.saveLineup(call.userId(), r.field, r.keeper, r.bench).toDto().toSuccessResponse())
-            }
+            put("/lineup") { call.respond(heroes.saveLineup(call.userId(), call.receive<HeroLineupRequest>().heroes).toDto().toSuccessResponse()) }
             // training: the centre's offer and the heroes in a session; start one for coins; claim it after the timer
             get("/training") { call.respond(heroes.trainingStatus(call.userId()).toDto().toSuccessResponse()) }
             post("/{id}/train") { call.respond(HttpStatusCode.Created, heroes.train(call.userId(), call.parameters["id"].orEmpty()).toDto().toSuccessResponse(201)) }

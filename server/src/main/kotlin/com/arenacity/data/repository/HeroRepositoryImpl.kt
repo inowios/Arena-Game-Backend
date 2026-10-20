@@ -32,14 +32,13 @@ class HeroRepositoryImpl : HeroRepository {
 
     override suspend fun lineup(clubId: UUID): HeroLineup? = dbQuery {
         ClubHeroLineupTable.selectAll().where { ClubHeroLineupTable.clubId eq clubId }.singleOrNull()?.let {
-            HeroLineup(clubId, it[ClubHeroLineupTable.field].ids(), it[ClubHeroLineupTable.keeper], it[ClubHeroLineupTable.bench].ids(), it[ClubHeroLineupTable.updatedAt])
+            HeroLineup(clubId, it[ClubHeroLineupTable.heroes].ids(), it[ClubHeroLineupTable.updatedAt])
         }
     }
 
     override suspend fun saveLineup(lineup: HeroLineup): HeroLineup = dbQuery {
         ClubHeroLineupTable.upsert {
-            it[clubId] = lineup.clubId; it[field] = lineup.field.joinToString(","); it[keeper] = lineup.keeper
-            it[bench] = lineup.bench.joinToString(","); it[updatedAt] = lineup.updatedAt
+            it[clubId] = lineup.clubId; it[heroes] = lineup.heroes.joinToString(","); it[updatedAt] = lineup.updatedAt
         }
         lineup
     }

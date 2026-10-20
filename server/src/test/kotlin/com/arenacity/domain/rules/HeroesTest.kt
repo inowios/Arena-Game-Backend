@@ -8,22 +8,26 @@ class HeroesTest {
     private fun hero(id: String) = HeroCatalog.of(id)!!
 
     @Test
-    fun `the catalog has the 51 heroes of people json with three advanced skills each`() {
+    fun `the catalog has the 51 heroes of people json, the eleven humans with an Arena v4 kit`() {
         assertEquals(51, HeroCatalog.ALL.size)
         assertEquals(51, HeroCatalog.ALL.map { it.id }.toSet().size)
         assertEquals((1..51).map { "p%03d".format(it) }, HeroCatalog.ALL.map { it.id })
-        assertTrue(HeroCatalog.ALL.all { h -> h.skills == listOf("${h.id}.s4", "${h.id}.s5", "${h.id}.s6") })
         assertEquals(11, HeroCatalog.ALL.count { it.people == null })
         People.entries.forEach { p -> assertEquals(10, HeroCatalog.ALL.count { it.people == p }, "$p") }
         assertNull(HeroCatalog.of("p999"))
+        // the kits (arena_skills.json): four skills s0..s3 each, Mirai's alternate, three passives, a colour; the peoples' heroes none yet
+        assertEquals((1..11).map { "p%03d".format(it) }, HeroCatalog.WITH_KIT.map { it.id })
+        assertTrue(HeroCatalog.WITH_KIT.all { h -> h.hasKit && h.skills == (0..3).map { "${h.id}.s$it" } && h.colour in setOf("speed", "technique", "tactics", "strength") })
+        assertEquals(listOf("p004.a0"), HeroCatalog.WITH_KIT.flatMap { it.alternates })
+        assertEquals(listOf("p001.p0", "p002.p0", "p007.p0"), HeroCatalog.WITH_KIT.flatMap { it.passives })
+        assertTrue(HeroCatalog.ALL.filter { it.people != null }.all { !it.hasKit && it.skills.isEmpty() && it.colour == null })
+        assertEquals("GK", hero("p011").position)   // Hikaru: an ordinary pick in the Arena
     }
 
     @Test
     fun `the start six are the approved humans and are never sold`() {
         val names = Heroes.START.map { hero(it).name }
         assertEquals(listOf("Kaito Homura", "Itsuki Neiro", "Hikaru Tobita", "Ganji Tsuchiya", "Hayate Kazama", "Mirai Shion"), names)
-        assertEquals("GK", hero("p011").position)
-        assertEquals(1, Heroes.START.count { hero(it).position == "GK" })
         Heroes.START.forEach { id ->
             val rule = Heroes.rule(hero(id))
             assertEquals(UnlockKind.START, rule.kind); assertEquals(0, rule.gold)
@@ -46,10 +50,12 @@ class HeroesTest {
     }
 
     @Test
-    fun `peoples open with the stadium and cost by rarity`() {
+    fun `peoples open with the stadium and cost by rarity, but wait for their Arena kits`() {
         assertEquals(listOf(300, 500, 900, 1500), HeroGroup.entries.map { Heroes.price(it) })
         val stadium = mapOf(People.BEAST to 4, People.STONE to 5, People.ANDROID to 7, People.SHADOW to 9)   // the map's islands (rules.Zones)
+        assertTrue(HeroCatalog.WITH_KIT.all { Heroes.unavailableReason(it) == null })
         for (h in HeroCatalog.ALL.filter { it.people != null }) {
+            assertEquals(Heroes.REASON_SOON, Heroes.unavailableReason(h), h.id)
             val rule = Heroes.rule(h)
             assertEquals(UnlockKind.FOLK, rule.kind); assertNull(rule.chapter)
             assertEquals(stadium[h.people], rule.stadium, h.id); assertEquals(Heroes.price(h.group), rule.gold, h.id)
@@ -77,15 +83,10 @@ class HeroesTest {
     }
 
     @Test
-    fun `advanced skills open at levels 4, 7 and 10 and the boost reaches 10 percent`() {
-        val kai = hero("p001")
-        assertEquals(emptyList(), Heroes.unlockedSkills(kai, 3))
-        assertEquals(listOf("p001.s4"), Heroes.unlockedSkills(kai, 4))
-        assertEquals(listOf("p001.s4", "p001.s5"), Heroes.unlockedSkills(kai, 9))
-        assertEquals(kai.skills, Heroes.unlockedSkills(kai, 10))
-        assertEquals(4, Heroes.nextSkillLevel(1)); assertEquals(7, Heroes.nextSkillLevel(4)); assertNull(Heroes.nextSkillLevel(10))
-        assertEquals(0, Heroes.boostPct(1)); assertEquals(10, Heroes.boostPct(10))
-        assertTrue((1..10).map { Heroes.boostPct(it) }.zipWithNext().all { (a, b) -> b >= a })
+    fun `the level is strength in the simulated matches, never a new skill`() {
+        assertEquals(0, HeroSquad.levelPct(1)); assertEquals(10, HeroSquad.levelPct(10))
+        assertTrue((1..10).map { HeroSquad.levelPct(it) }.zipWithNext().all { (a, b) -> b >= a })
+        assertEquals(hero("p001").skills, hero("p001").skills.distinct())
     }
 
     @Test
@@ -98,21 +99,17 @@ class HeroesTest {
     }
 
     @Test
-    fun `a lineup takes owned heroes once, a goalkeeper in goal, at most five, four and ten`() {
-        val owned = (Heroes.START + "p006").associateWith { hero(it) }
-        val five = listOf("p001", "p003", "p007", "p009", "p004")
-        assertNull(Heroes.lineupError(five, "p011", listOf("p006"), owned))
-        assertNull(Heroes.lineupError(emptyList(), null, emptyList(), owned))   // the academy's pupils fill everything
-        assertNull(Heroes.lineupError(listOf("p001"), null, emptyList(), owned))
-        assertEquals("Too many heroes" to null, Heroes.lineupError(five + "p006", "p011", emptyList(), owned))
-        assertEquals("Too many heroes" to null, Heroes.lineupError(emptyList(), null, listOf("p001", "p003", "p007", "p009", "p004"), owned))
-        assertEquals("Hero {0} is not in your club" to "p010", Heroes.lineupError(listOf("p001", "p010"), "p011", emptyList(), owned))
-        assertEquals("Hero {0} is not in your club" to "p999", Heroes.lineupError(emptyList(), null, listOf("p999"), owned))
-        assertEquals("A hero can only be picked once" to null, Heroes.lineupError(listOf("p001"), "p011", listOf("p001"), owned))
-        assertEquals("The keeper must be a goalkeeper" to null, Heroes.lineupError(listOf("p003"), "p001", emptyList(), owned))
-        assertEquals("A goalkeeper only plays in goal" to null, Heroes.lineupError(listOf("p011"), null, emptyList(), owned))
-        assertEquals("A goalkeeper only plays in goal" to null, Heroes.lineupError(emptyList(), null, listOf("p011"), owned))
-        assertEquals(Heroes.MAX_HEROES_PER_MATCH, Heroes.LINEUP_FIELD + 1 + Heroes.LINEUP_BENCH)
+    fun `the Arena triple takes owned heroes with a kit once, any position, at most three`() {
+        val owned = (Heroes.START + "p006" + "p012").associateWith { hero(it) }
+        assertEquals(3, Heroes.MAX_HEROES_PER_MATCH)
+        assertNull(Heroes.lineupError(listOf("p001", "p003", "p011"), owned))   // Hikaru like anyone else
+        assertNull(Heroes.lineupError(emptyList(), owned))                       // the match fills the triple itself
+        assertNull(Heroes.lineupError(listOf("p006"), owned))
+        assertEquals("Too many heroes" to null, Heroes.lineupError(listOf("p001", "p003", "p007", "p009"), owned))
+        assertEquals("Hero {0} is not in your club" to "p010", Heroes.lineupError(listOf("p001", "p010"), owned))
+        assertEquals("Hero {0} is not in your club" to "p999", Heroes.lineupError(listOf("p999"), owned))
+        assertEquals("Hero {0} has no Arena kit yet" to "p012", Heroes.lineupError(listOf("p001", "p012"), owned))
+        assertEquals("A hero can only be picked once" to null, Heroes.lineupError(listOf("p001", "p003", "p001"), owned))
     }
 
     @Test

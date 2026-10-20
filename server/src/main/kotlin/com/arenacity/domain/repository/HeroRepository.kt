@@ -11,7 +11,7 @@ interface HeroRepository {
     suspend fun insertIgnore(hero: ClubHero): Boolean
     /** Saves the level, the experience and the training (level, xp, xpDay, xpToday, trainingEndsAt, trainingXp) of a hero the club owns. */
     suspend fun update(hero: ClubHero): ClubHero
-    /** The club's saved lineup; null = none saved (the match picks the best heroes itself). */
+    /** The club's saved Arena triple; null = none saved (the match picks the best heroes itself). */
     suspend fun lineup(clubId: UUID): HeroLineup?
     suspend fun saveLineup(lineup: HeroLineup): HeroLineup
 }

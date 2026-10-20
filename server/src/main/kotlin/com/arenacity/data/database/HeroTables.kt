@@ -19,12 +19,10 @@ object ClubHeroTable : Table("club_heroes") {
     override val primaryKey = PrimaryKey(clubId, heroId)
 }
 
-/** The club's «Стрілка» lineup (V51): hero ids comma-separated, in order; keeper null = an academy pupil. */
+/** The club's Arena triple (V51, V58): hero ids comma-separated, in order. */
 object ClubHeroLineupTable : Table("club_hero_lineups") {
     val clubId = uuid("club_id").references(ClubTable.id)
-    val field = varchar("field", 64)
-    val keeper = varchar("keeper", 8).nullable()
-    val bench = varchar("bench", 64)
+    val heroes = varchar("heroes", 64)
     val updatedAt = timestamp("updated_at")
     override val primaryKey = PrimaryKey(clubId)
 }

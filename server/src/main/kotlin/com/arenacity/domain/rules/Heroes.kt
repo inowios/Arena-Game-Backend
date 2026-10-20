@@ -15,8 +15,8 @@ data class HeroUnlock(val kind: UnlockKind, val chapter: Int? = null, val stadiu
 
 /**
  * Heroes instead of cards (approved by the owner on 16 October 2026; docs/claude/HEROES-INSTEAD-OF-CARDS.md in the mobile
- * repo): each hero is owned once, for good, and grows from level 1 to [MAX_LEVEL] by playing card matches «Стрілка».
- * Every price and threshold of the feature is here.
+ * repo): each hero is owned once, for good, and grows from level 1 to [MAX_LEVEL] by playing Arena matches and training.
+ * Its Arena v4 kit (rules.HeroCatalog) is the same at every level. Every price and threshold of the feature is here.
  */
 object Heroes {
     /** The six every new club gets (5 on the pitch + the keeper): Kai, Itsuki, Hikaru (GK), Ganji, Hayate, Mirai (the owner,
@@ -49,15 +49,16 @@ object Heroes {
     /** The hero can be bought now: it is for sale at all, the stadium is high enough and there is gold enough. */
     fun canBuy(rule: HeroUnlock, stadium: Int, gold: Int): Boolean = rule.kind != UnlockKind.START && available(rule, stadium) && gold >= rule.gold
 
+    /** Why a hero cannot be had yet (null = it can, or the club has it): SOON = no Arena kit yet (the peoples' heroes, p012+: not sold for now). */
+    fun unavailableReason(hero: HeroSpec): String? = if (hero.hasKit) null else REASON_SOON
+    const val REASON_SOON = "SOON"
+
     // --- growth
 
     const val MAX_LEVEL = 10
 
     /** Experience from one level to the next, levels 1→2 … 9→10 (4 170 in all: about 80 won matches). */
     val XP_TO_NEXT = listOf(100, 150, 220, 300, 400, 520, 660, 820, 1000)
-
-    /** The levels that open the three advanced skills (the old card OVR 65 / 75 / 85). */
-    val SKILL_LEVELS = listOf(4, 7, 10)
 
     /** Experience still needed at [level] for the next one; null at the top. */
     fun xpToNext(level: Int): Int? = if (level >= MAX_LEVEL) null else XP_TO_NEXT[level.coerceAtLeast(1) - 1]
@@ -72,26 +73,17 @@ object Heroes {
     /** All the experience a hero of [level] with [xp] into it has earned since level 1. */
     fun totalXp(level: Int, xp: Int): Int = XP_TO_NEXT.take(level.coerceIn(1, MAX_LEVEL) - 1).sum() + xp
 
-    /** The advanced skills (ids) a hero of [level] has opened, in order. */
-    fun unlockedSkills(hero: HeroSpec, level: Int): List<String> = hero.skills.filterIndexed { i, _ -> i < SKILL_LEVELS.size && level >= SKILL_LEVELS[i] }
+    // --- match experience (POST /club/arena/result)
 
-    /** The level that opens the next advanced skill; null when all are open. */
-    fun nextSkillLevel(level: Int): Int? = SKILL_LEVELS.firstOrNull { it > level }
-
-    /** The strength bonus of [level] in percent: 0 at level 1 up to +10 % at level 10 (the concept's cap, so a hero never breaks a match). */
-    fun boostPct(level: Int): Int = Math.round((level.coerceIn(1, MAX_LEVEL) - 1) * 10.0 / (MAX_LEVEL - 1)).toInt()
-
-    // --- match experience (POST /club/cards/result)
-
-    /** Heroes that may earn from one match: 5 on the pitch, the keeper and 4 substitutes. */
-    const val MAX_HEROES_PER_MATCH = 10
+    /** Heroes that play one Arena match: the triple (3 v 3). */
+    const val MAX_HEROES_PER_MATCH = 3
     const val XP_PLAYED = 20
     const val XP_WIN = 30
     const val XP_DRAW = 15
     /** At most this much match experience per hero a UTC day (12 wins): the result is reported by the device, so farming stops here. */
     const val MAX_MATCH_XP_PER_DAY = 600
 
-    /** Experience each hero who played gets: played + the result's bonus; a conceded match gives nothing. */
+    /** Experience each hero who played gets: played + the result's bonus; a conceded match gives nothing (no draws in the Arena v4). */
     fun matchXp(won: Boolean, draw: Boolean, conceded: Boolean = false): Int = when {
         conceded -> 0
         won -> XP_PLAYED + XP_WIN
@@ -99,25 +91,18 @@ object Heroes {
         else -> XP_PLAYED
     }
 
-    // --- the lineup («Склад»: GET / PUT /club/heroes/lineup)
-
-    /** Field heroes of the «Стрілка» squad (the keeper apart) and its bench; [MAX_HEROES_PER_MATCH] = 5 + 1 + 4. */
-    const val LINEUP_FIELD = 5
-    const val LINEUP_BENCH = 4
+    // --- the triple («Склад»: GET / PUT /club/heroes/lineup)
 
     /**
-     * What is wrong with a lineup (an error template and its argument), null when it is fine: at most [LINEUP_FIELD] field
-     * heroes and [LINEUP_BENCH] on the bench (10 with the keeper), every hero owned ([owned]: id → spec) and picked once,
-     * the keeper a goalkeeper and no goalkeeper in the field or on the bench (the match's bench holds field players only).
-     * Fewer heroes is fine: the academy's pupils fill the empty places.
+     * What is wrong with a triple (an error template and its argument), null when it is fine: at most
+     * [MAX_HEROES_PER_MATCH] heroes, every one owned ([owned]: id → spec), with an Arena kit, and picked once. Any
+     * position goes (Hikaru p011 is an ordinary pick). Fewer heroes is fine: the match fills the rest with the club's best.
      */
-    fun lineupError(field: List<String>, keeper: String?, bench: List<String>, owned: Map<String, HeroSpec>): Pair<String, String?>? {
-        val all = field + bench + listOfNotNull(keeper)
-        if (field.size > LINEUP_FIELD || bench.size > LINEUP_BENCH || all.size > MAX_HEROES_PER_MATCH) return "Too many heroes" to null
-        all.firstOrNull { it !in owned }?.let { return "Hero {0} is not in your club" to it }
-        if (all.toSet().size != all.size) return "A hero can only be picked once" to null
-        if (keeper != null && owned.getValue(keeper).position != "GK") return "The keeper must be a goalkeeper" to null
-        if ((field + bench).any { owned.getValue(it).position == "GK" }) return "A goalkeeper only plays in goal" to null
+    fun lineupError(heroes: List<String>, owned: Map<String, HeroSpec>): Pair<String, String?>? {
+        if (heroes.size > MAX_HEROES_PER_MATCH) return "Too many heroes" to null
+        heroes.firstOrNull { it !in owned }?.let { return "Hero {0} is not in your club" to it }
+        heroes.firstOrNull { !owned.getValue(it).hasKit }?.let { return "Hero {0} has no Arena kit yet" to it }
+        if (heroes.toSet().size != heroes.size) return "A hero can only be picked once" to null
         return null
     }
 
