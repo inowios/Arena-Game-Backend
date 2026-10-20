@@ -49,7 +49,7 @@ class CupIT {
 
     @Test
     fun `weekly cup from draw to final`() = runBlocking<Unit> {
-        val a = human("Alpha FC"); val b = human("Bravo FC"); val c = human("Charlie FC"); human("Idle FC", active = false)
+        val a = human("Alpha_FC"); val b = human("Bravo_FC"); val c = human("Charlie FC"); human("Idle FC", active = false)
         assertEquals(setOf(a.id, b.id, c.id), cups.activeHumanClubs(LocalDate.parse("2026-10-02")).map { it.first }.toSet())
         assertTrue(cups.activeHumanClubs(LocalDate.parse("2026-10-08")).isEmpty())
 

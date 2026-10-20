@@ -46,7 +46,7 @@ class ApiIT {
     fun `club, map spots and the routes that went over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-0001", "Api FC")
+        val t = guestWithClub("it-device-0001", "Api_FC")
         val club = call(HttpMethod.Get, "/club", t).data.o()
         assertEquals(2500, club["club"]!!.o()["coins"]!!.jsonPrimitive.int)
         assertEquals(1, club["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), club["spots"]!!.strings())
@@ -67,7 +67,7 @@ class ApiIT {
             assertEquals(404, client.post(path) { header(HttpHeaders.Authorization, "Bearer $t") }.status.value, path)
         // opening the academy costs 3 000 coins
         call(HttpMethod.Post, "/club/spots/academy/unlock", t, expect = 402)
-        sql("UPDATE clubs SET coins = 10000 WHERE name = 'Api FC'")
+        sql("UPDATE clubs SET coins = 10000 WHERE name = 'Api_FC'")
         val opened = call(HttpMethod.Post, "/club/spots/academy/unlock", t).data.o()
         assertEquals(7000, opened["club"]!!.o()["coins"]!!.jsonPrimitive.int)
         assertEquals(2, opened["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium", "academy"), opened["spots"]!!.strings())
@@ -81,7 +81,7 @@ class ApiIT {
     fun `no friends yet, the islands over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-friends", "Friends FC")
+        val t = guestWithClub("it-device-friends", "Friends_FC")
         assertTrue(call(HttpMethod.Get, "/friends", t).data.jsonArray.isEmpty())   // no bots, no friends yet (V55)
         // a club's grounds: its open spots and islands
         val own = call(HttpMethod.Get, "/club", t).data.o()["club"]!!.o()["id"]!!.jsonPrimitive.content
@@ -104,7 +104,7 @@ class ApiIT {
     fun `roads and collections over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-fence", "Fence FC")
+        val t = guestWithClub("it-device-fence", "Fence_FC")
         val roads = call(HttpMethod.Get, "/club/roads", t).data.jsonArray
         assertEquals(listOf("TROPHY", "LEVEL"), roads.map { it.o()["road"]!!.jsonPrimitive.content })
         call(HttpMethod.Post, "/club/roads/trophy/1/claim", t, expect = 400)   // 0 trophies
@@ -117,18 +117,18 @@ class ApiIT {
     fun `alliances over HTTP - create, join, chat, tournament, likes`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val a = guestWithClub("it-device-al-a", "Ally One")
-        val b = guestWithClub("it-device-al-b", "Ally Two")
+        val a = guestWithClub("it-device-al-a", "Ally_One")
+        val b = guestWithClub("it-device-al-b", "Ally_Two")
         call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 400)   // stadium 1
-        sql("INSERT INTO club_spots (club_id, spot, unlocked_at) SELECT id, 'academy', now() FROM clubs WHERE name = 'Ally One'")   // stadium 2
+        sql("INSERT INTO club_spots (club_id, spot, unlocked_at) SELECT id, 'academy', now() FROM clubs WHERE name = 'Ally_One'")   // stadium 2
         val id = call(HttpMethod.Post, "/alliances", a, """{"name":"Night Owls","tag":"NO"}""", expect = 201).data.o()["alliance"]!!.o()["id"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/alliances/$id/join", b)
         val members = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray
         assertEquals(2, members.size)
         // presence: both made authenticated requests just now (clubs.last_seen_at, V42)
         assertTrue(members.all { it.o()["online"]!!.jsonPrimitive.boolean && it.o()["lastSeenAt"]!!.jsonPrimitive.content.isNotEmpty() }, members.toString())
-        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET last_seen_at = now() - interval '20 minutes' WHERE name = 'Ally Two'") }
-        val two = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray.first { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content == "Ally Two" }.o()
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET last_seen_at = now() - interval '20 minutes' WHERE name = 'Ally_Two'") }
+        val two = call(HttpMethod.Get, "/club/alliance", a).data.o()["members"]!!.jsonArray.first { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content == "Ally_Two" }.o()
         assertEquals(false, two["online"]!!.jsonPrimitive.boolean)
         call(HttpMethod.Post, "/club/alliance/messages", b, """{"text":"hello allies"}""", expect = 201)
         assertEquals("hello allies", call(HttpMethod.Get, "/club/alliance/messages", a).data.jsonArray.last().o()["text"]!!.jsonPrimitive.content)
@@ -148,8 +148,8 @@ class ApiIT {
     fun `chat, challenges, invite landing pages and app links over HTTP`() = testApplication {
         environment { config = TestDb.appConfig(mapOf("links.baseUrl" to "https://arenacity.test", "links.androidCertSha256" to "AA:BB", "links.iosTeamId" to "TEAM1")) }
         application { module() }
-        val a = guestWithClub("it-device-0101", "Alpha FC")
-        val b = guestWithClub("it-device-0102", "Bravo FC")
+        val a = guestWithClub("it-device-0101", "Alpha_FC")
+        val b = guestWithClub("it-device-0102", "Bravo_FC")
         val league = call(HttpMethod.Post, "/leagues/private", a, """{"name":"Office <b>"}""", expect = 201).data.o()
         val code = league["code"]!!.jsonPrimitive.content; val leagueId = league["id"]!!.jsonPrimitive.content
         call(HttpMethod.Post, "/leagues/private/join", b, """{"code":"$code"}""")
@@ -166,8 +166,8 @@ class ApiIT {
         assertEquals(1, call(HttpMethod.Get, "/clubs/$clubA/h2h", b).data.o()["fixtures"]!!.jsonArray.size)
         // a private league mate and a challenge opponent is a friend, listed once (19 Oct 2026)
         val friendsOfB = call(HttpMethod.Get, "/friends", b).data.jsonArray
-        assertEquals(listOf("Alpha FC"), friendsOfB.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
-        assertEquals(listOf("Bravo FC"), call(HttpMethod.Get, "/friends", a).data.jsonArray.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
+        assertEquals(listOf("Alpha_FC"), friendsOfB.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
+        assertEquals(listOf("Bravo_FC"), call(HttpMethod.Get, "/friends", a).data.jsonArray.map { it.o()["club"]!!.o()["name"]!!.jsonPrimitive.content })
         val grounds = call(HttpMethod.Get, "/clubs/$clubA/grounds", b).data.o()
         assertEquals(1, grounds["stadium"]!!.jsonPrimitive.int); assertEquals(listOf("stadium"), grounds["spots"]!!.strings())
         val landing = client.get("/l/$code") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }
@@ -175,7 +175,7 @@ class ApiIT {
         assertEquals(200, landing.status.value); assertTrue(html.contains(code) && html.contains("arenacity://l/$code") && html.contains("приглашает"))
         assertTrue(html.contains("Office &lt;b&gt;"), "club and league names are escaped")
         assertEquals(404, client.get("/l/NOPE99").status.value)
-        assertTrue(client.get("/c/$cc").bodyAsText().contains("Alpha FC"))
+        assertTrue(client.get("/c/$cc").bodyAsText().contains("Alpha_FC"))
         assertTrue(client.get("/.well-known/assetlinks.json").bodyAsText().contains("\"AA:BB\""))
         assertTrue(client.get("/.well-known/apple-app-site-association").bodyAsText().contains("TEAM1.com.inowios.arenacity"))
         assertEquals("https://arenacity.test", Json.parseToJsonElement(client.get("/api/v1/config").bodyAsText()).data.o()["publicBaseUrl"]!!.jsonPrimitive.content)
@@ -183,7 +183,7 @@ class ApiIT {
         val inboxA = call(HttpMethod.Get, "/club/inbox", a).data.o()
         val kinds = inboxA["items"]!!.jsonArray.map { it.o()["kind"]!!.jsonPrimitive.content }
         assertTrue("CHALLENGE" in kinds && "LEAGUE_JOIN" in kinds, kinds.toString())
-        assertEquals("Bravo FC", inboxA["items"]!!.jsonArray.first { it.o()["kind"]!!.jsonPrimitive.content == "CHALLENGE" }.o()["data"]!!.o()["club"]!!.jsonPrimitive.content)
+        assertEquals("Bravo_FC", inboxA["items"]!!.jsonArray.first { it.o()["kind"]!!.jsonPrimitive.content == "CHALLENGE" }.o()["data"]!!.o()["club"]!!.jsonPrimitive.content)
         assertEquals(2, call(HttpMethod.Get, "/club", a).data.o()["inboxUnread"]!!.jsonPrimitive.int)
         call(HttpMethod.Post, "/club/inbox/read", a)
         assertEquals(0, call(HttpMethod.Get, "/club", a).data.o()["inboxUnread"]!!.jsonPrimitive.int)
@@ -193,11 +193,11 @@ class ApiIT {
     fun `device transfer and account deletion over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val old = guestWithClub("it-device-0301", "Mover FC")
+        val old = guestWithClub("it-device-0301", "Mover_FC")
         val code = call(HttpMethod.Post, "/auth/transfer-code", old).data.o()["code"]!!.jsonPrimitive.content
         assertTrue(Regex("^[A-Z2-9]{4}-[A-Z2-9]{4}$").matches(code), code)
         val moved = call(HttpMethod.Post, "/auth/transfer", body = """{"code":"$code","deviceId":"it-device-0302"}""").data.o()["accessToken"]!!.jsonPrimitive.content
-        assertEquals("Mover FC", call(HttpMethod.Get, "/club", moved).data.o()["club"]!!.o()["name"]!!.jsonPrimitive.content)
+        assertEquals("Mover_FC", call(HttpMethod.Get, "/club", moved).data.o()["club"]!!.o()["name"]!!.jsonPrimitive.content)
         call(HttpMethod.Post, "/auth/transfer", body = """{"code":"$code","deviceId":"it-device-0303"}""", expect = 409)
         // a guest login from the new device opens the moved account
         val again = call(HttpMethod.Post, "/auth/guest", body = """{"deviceId":"it-device-0302"}""").data.o()
@@ -212,7 +212,7 @@ class ApiIT {
     fun `energy and the Arena match start over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-energy", "Energy FC")
+        val t = guestWithClub("it-device-energy", "Energy_FC")
         val e0 = call(HttpMethod.Get, "/club", t).data.o()["energy"]!!.o()
         assertEquals(30, e0["current"]!!.jsonPrimitive.int); assertEquals(30, e0["max"]!!.jsonPrimitive.int)
         assertEquals(JsonNull, e0["nextAt"]); assertEquals(40, e0["refillPrice"]!!.jsonPrimitive.int)
@@ -255,7 +255,7 @@ class ApiIT {
     fun `heroes - the start six, unlocking for gold and match experience over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-heroes", "Hero FC")
+        val t = guestWithClub("it-device-heroes", "Hero_FC")
         val roster = call(HttpMethod.Get, "/club/heroes", t).data.o()
         val list = roster["heroes"]!!.jsonArray.map { it.o() }
         assertEquals(51, list.size); assertEquals(6, roster["owned"]!!.jsonPrimitive.int); assertEquals(1, roster["stadium"]!!.jsonPrimitive.int)
@@ -274,7 +274,7 @@ class ApiIT {
         assertEquals(false, beast["available"]!!.jsonPrimitive.boolean); assertEquals("SOON", beast["reason"]!!.jsonPrimitive.content)
         assertEquals(false, beast["hasKit"]!!.jsonPrimitive.boolean); assertEquals(0, beast["skills"]!!.jsonArray.size)
         call(HttpMethod.Post, "/club/heroes/p006/unlock", t, expect = 402)   // 500 gold, 50 owned
-        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET gold = 2000 WHERE name = 'Hero FC'") }
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET gold = 2000 WHERE name = 'Hero_FC'") }
         val rei = call(HttpMethod.Post, "/club/heroes/p006/unlock", t).data.o()
         assertEquals(500, rei["spent"]!!.jsonPrimitive.int); assertEquals(1500, rei["club"]!!.o()["gold"]!!.jsonPrimitive.int)
         assertEquals("CRYSTALS", rei["hero"]!!.o()["source"]!!.jsonPrimitive.content)
@@ -299,7 +299,7 @@ class ApiIT {
         call(HttpMethod.Put, "/club/heroes/lineup", t, """{"heroes":["p001","p003","p007","p009"]}""", expect = 400)   // four
         call(HttpMethod.Put, "/club/heroes/lineup", t, """{"heroes":["p001","p001"]}""", expect = 400)   // twice
         // training: at the stadium's level (stadium 1 from the start) for coins, the experience after the timer
-        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET coins = 50000 WHERE name = 'Hero FC'") }
+        java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use { it.createStatement().executeUpdate("UPDATE clubs SET coins = 50000 WHERE name = 'Hero_FC'") }
         val offer = call(HttpMethod.Get, "/club/heroes/training", t).data.o()
         assertEquals(true, offer["available"]!!.jsonPrimitive.boolean); assertEquals(1, offer["slots"]!!.jsonPrimitive.int); assertEquals(1, offer["centerLevel"]!!.jsonPrimitive.int)
         assertEquals(200, offer["coins"]!!.jsonPrimitive.int); assertEquals(80, offer["xp"]!!.jsonPrimitive.int)
@@ -320,7 +320,7 @@ class ApiIT {
     fun `story - chapter goals from Arena match reports, claiming a chapter, the story hero over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-story", "Story FC")
+        val t = guestWithClub("it-device-story", "Story_FC")
         val s0 = call(HttpMethod.Get, "/club/story", t).data.o()
         assertEquals("spark", s0["season"]!!.jsonPrimitive.content); assertEquals(1, s0["chapter"]!!.jsonPrimitive.int); assertEquals(false, s0["finished"]!!.jsonPrimitive.boolean)
         val chapters = s0["chapters"]!!.jsonArray.map { it.o() }
@@ -348,7 +348,7 @@ class ApiIT {
         call(HttpMethod.Post, "/club/story/1/claim", t, expect = 409)
         // chapter 2 finished (as if played): claiming brings Mirai into the club
         java.sql.DriverManager.getConnection(TestDb.url, TestDb.user, TestDb.password).use {
-            it.createStatement().executeUpdate("UPDATE club_story SET progress = 'c2.o1=2,c2.o2=5,c2.o3=1' WHERE club_id = (SELECT id FROM clubs WHERE name = 'Story FC')")
+            it.createStatement().executeUpdate("UPDATE club_story SET progress = 'c2.o1=2,c2.o2=5,c2.o3=1' WHERE club_id = (SELECT id FROM clubs WHERE name = 'Story_FC')")
         }
         val c2 = call(HttpMethod.Post, "/club/story/2/claim", t).data.o()
         assertEquals("p010", c2["hero"]!!.o()["id"]!!.jsonPrimitive.content); assertEquals(true, c2["newHero"]!!.jsonPrimitive.boolean)
@@ -361,8 +361,8 @@ class ApiIT {
     fun `leagues, friendlies and economy over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val a = guestWithClub("it-device-0002", "Alpha FC")
-        val b = guestWithClub("it-device-0003", "Bravo FC")
+        val a = guestWithClub("it-device-0002", "Alpha_FC")
+        val b = guestWithClub("it-device-0003", "Bravo_FC")
         val mine = call(HttpMethod.Get, "/leagues/mine", a).data.o()
         assertEquals(8, mine["public"]!!.o()["table"]!!.jsonArray.size)
         val friendly = call(HttpMethod.Post, "/friendlies", a, "{}", expect = 201).data.o()
@@ -382,7 +382,7 @@ class ApiIT {
     fun `coin packs, achievements and ad callbacks over HTTP`() = testApplication {
         environment { config = TestDb.appConfig() }
         application { module() }
-        val t = guestWithClub("it-device-0201", "Cosmo FC")
+        val t = guestWithClub("it-device-0201", "Cosmo_FC")
         // the cosmetics shop is gone
         assertEquals(404, client.get("/api/v1/catalog/cosmetics").status.value)
         assertEquals(404, client.post("/api/v1/club/cosmetics/kit_stripes/buy") { header(HttpHeaders.Authorization, "Bearer $t") }.status.value)
@@ -413,7 +413,7 @@ class ApiIT {
         val token = "it-admin-token-0123456789"
         environment { config = TestDb.appConfig(mapOf("admin.token" to token, "links.supportEmail" to "help@arenacity.test")) }
         application { module() }
-        val t = guestWithClub("it-device-0401", "Metric FC")
+        val t = guestWithClub("it-device-0401", "Metric_FC")
         val accepted = call(HttpMethod.Post, "/analytics/events", t,
             """{"platform":"android","appVersion":"0.1.0","events":[{"name":"session_start"},{"name":"tutorial_step","props":{"step":"build"}},{"name":"Bad Name"}]}""").data.o()
         assertEquals(2, accepted["accepted"]!!.jsonPrimitive.int)
@@ -454,7 +454,7 @@ class ApiIT {
         val page = client.get("/admin/dashboard")
         assertEquals(200, page.status.value); assertTrue(page.bodyAsText().contains("X-Admin-Token"))
         val found = admin(HttpMethod.Get, "/admin/clubs?q=metric").data.jsonArray
-        assertEquals(listOf("Metric FC"), found.map { it.o()["name"]!!.jsonPrimitive.content })
+        assertEquals(listOf("Metric_FC"), found.map { it.o()["name"]!!.jsonPrimitive.content })
         val clubId = found[0].o()["id"]!!.jsonPrimitive.content
         val card = admin(HttpMethod.Get, "/admin/clubs/$clubId").data.o()
         assertEquals("GUEST", card["user"]!!.o()["provider"]!!.jsonPrimitive.content)
