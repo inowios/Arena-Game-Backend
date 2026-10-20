@@ -37,7 +37,7 @@ class ClubUseCasesTest {
         newClub()
         val c = update(user, null, "#112233", null, """{"shape":"shield","icon":"ball"}""")
         assertEquals("Red Lions", c.name); assertEquals("#112233", c.primaryColor); assertEquals("#FFFFFF", c.secondaryColor); assertTrue(c.emblemJson!!.contains("shield"))
-        assertFailsWith<ValidationException> { update(user, "ab", null, null, null) }
+        assertFailsWith<ValidationException> { update(user, "a", null, null, null) }
         assertFailsWith<ValidationException> { update(user, null, "red", null, null) }
         Unit
     }
@@ -54,7 +54,7 @@ class ClubUseCasesTest {
         assertEquals(listOf("beast", "stone", "android", "shadow"), land.locked.map { it.id }.sortedBy { listOf("beast", "stone", "android", "shadow").indexOf(it) })
         assertTrue(land.locked.all { it.state == "LOCKED" })
         assertFailsWith<ConflictException> { create(user, "Again", "#000000", "#FFFFFF", "UTC") }
-        assertFailsWith<ValidationException> { create(UUID.randomUUID(), "ab", "#000000", "#FFFFFF", "UTC") }
+        assertFailsWith<ValidationException> { create(UUID.randomUUID(), "a", "#000000", "#FFFFFF", "UTC") }
         Unit
     }
 
