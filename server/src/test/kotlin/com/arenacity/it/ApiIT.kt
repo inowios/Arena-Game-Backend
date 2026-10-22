@@ -475,8 +475,9 @@ class ApiIT {
         // store-required public pages
         val privacy = client.get("/privacy").bodyAsText()
         assertTrue(privacy.contains("Privacy Policy") && privacy.contains("mailto:help@arenacity.test"))
-        assertTrue(client.get("/delete-account?lang=ru").bodyAsText().contains("Удаление аккаунта"))
-        assertTrue(client.get("/terms") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }.bodyAsText().contains("Условия использования"))
+        assertTrue(client.get("/delete-account").bodyAsText().contains("Delete your account"))
+        // English only, whatever the phone's language (the owner, 22 Oct 2026)
+        assertTrue(client.get("/terms") { header(HttpHeaders.AcceptLanguage, "ru-RU,ru;q=0.9") }.bodyAsText().contains("Terms of Service"))
         // account deletion erases the player's own events
         call(HttpMethod.Delete, "/me", t)
         assertEquals(1, admin(HttpMethod.Get, "/admin/stats").data.o()["counts"]!!.o()["analyticsEvents"]!!.jsonPrimitive.int)   // only the anonymous account_deleted

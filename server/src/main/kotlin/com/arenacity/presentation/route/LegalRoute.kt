@@ -8,8 +8,8 @@ import io.ktor.server.routing.*
 
 /**
  * Store-required public pages: privacy policy (/privacy), terms of service (/terms) and how to delete an account
- * (/delete-account, Google Play "data deletion" URL). English and Russian; other languages get English.
- * `?lang=ru` overrides Accept-Language. The contact address comes from SUPPORT_EMAIL, the publisher from LEGAL_COMPANY.
+ * (/delete-account, Google Play "data deletion" URL). English only (the owner, 22 Oct 2026). The contact address comes
+ * from SUPPORT_EMAIL, the publisher from LEGAL_COMPANY.
  */
 fun Route.legalRoutes() {
     get("/privacy") { respondLegal(call, LegalDoc.PRIVACY) }
@@ -25,20 +25,15 @@ private suspend fun respondLegal(call: ApplicationCall, doc: LegalDoc) {
     val cfg = call.application.environment.config
     val email = cfg.propertyOrNull("links.supportEmail")?.getString()?.trim().orEmpty()
     val company = cfg.propertyOrNull("legal.company")?.getString()?.trim()?.ifEmpty { null } ?: "Inowios"
-    val lang = call.request.queryParameters["lang"]?.lowercase()?.takeIf { it in setOf("en", "ru") }
-        ?: (call.request.header(HttpHeaders.AcceptLanguage) ?: "").split(",").map { it.substringBefore(";").trim().take(2).lowercase() }.firstOrNull { it == "ru" || it == "en" }
-        ?: "en"
-    val ru = lang == "ru"
-    val contact = if (email.isNotEmpty()) "<a href=\"mailto:${esc(email)}\">${esc(email)}</a>" else if (ru) "через раздел «Настройки» в игре" else "through Settings in the game"
+    val contact = if (email.isNotEmpty()) "<a href=\"mailto:${esc(email)}\">${esc(email)}</a>" else "through Settings in the game"
     val (title, body) = when (doc) {
-        LegalDoc.PRIVACY -> if (ru) privacyRu(esc(company), contact) else privacyEn(esc(company), contact)
-        LegalDoc.TERMS -> if (ru) termsRu(esc(company), contact) else termsEn(esc(company), contact)
-        LegalDoc.DELETION -> if (ru) deletionRu(contact) else deletionEn(contact)
+        LegalDoc.PRIVACY -> privacyEn(esc(company), contact)
+        LegalDoc.TERMS -> termsEn(esc(company), contact)
+        LegalDoc.DELETION -> deletionEn(contact)
     }
-    val other = if (ru) "<a href=\"?lang=en\">English</a>" else "<a href=\"?lang=ru\">Русский</a>"
-    val nav = listOf("/privacy" to (if (ru) "Конфиденциальность" else "Privacy"), "/terms" to (if (ru) "Условия" else "Terms"), "/delete-account" to (if (ru) "Удаление аккаунта" else "Delete account"))
-        .joinToString(" · ") { (href, label) -> "<a href=\"$href?lang=$lang\">$label</a>" }
-    val html = """<!doctype html><html lang="$lang"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    val nav = listOf("/privacy" to "Privacy", "/terms" to "Terms", "/delete-account" to "Delete account")
+        .joinToString(" · ") { (href, label) -> "<a href=\"$href\">$label</a>" }
+    val html = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Arena — $title</title>
 <style>
 body{margin:0;background:#0B0F14;color:#E6E9EE;font:16px/1.6 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
@@ -47,9 +42,9 @@ h1{font-size:28px;margin:0 0 4px;color:#F2F4F7} h2{font-size:19px;margin:28px 0 
 a{color:#35D07F} p.meta{color:#8A94A6;font-size:14px;margin:0 0 24px} ul{padding-left:22px} li{margin:4px 0}
 nav{font-size:14px;color:#8A94A6;margin-bottom:28px}
 </style></head><body><main>
-<nav>ARENA · $nav · $other</nav>
+<nav>ARENA · $nav</nav>
 <h1>$title</h1>
-<p class="meta">${if (ru) "Обновлено" else "Last updated"}: $UPDATED</p>
+<p class="meta">Last updated: $UPDATED</p>
 $body
 </main></body></html>"""
     call.respondText(html, ContentType.Text.Html)
@@ -87,36 +82,6 @@ private fun privacyEn(company: String, contact: String) = "Privacy Policy" to ""
 <p>Connections are encrypted (TLS) and access to data is restricted. If this policy changes we will update this page and the date above.</p>
 """
 
-private fun privacyRu(company: String, contact: String) = "Политика конфиденциальности" to """
-<p>Arena («игра») издаёт $company («мы»). Здесь описано, какие данные мы получаем, когда вы играете, зачем и как этим управлять. Вопросы: $contact.</p>
-<h2>Что мы получаем</h2>
-<ul>
-<li><b>Аккаунт.</b> Случайный идентификатор, созданный на устройстве для гостевой игры. Если вы входите через Google или Apple — идентификатор аккаунта и e-mail, которые они нам передают.</li>
-<li><b>Игровые данные.</b> Ваш клуб (название, эмблема, цвета, постройки, спортсмены, составы, матчи, лиги, трофеи), сообщения в чатах приватных лиг, вызовы и приглашения, история покупок.</li>
-<li><b>Технические данные.</b> Версия приложения, платформа, язык, часовой пояс, дни, в которые вы играете, и, если вы разрешили уведомления, push-токен. Серверы записывают IP-адреса и запросы для безопасности; эти журналы хранятся 14 дней.</li>
-<li><b>События использования.</b> Какими функциями вы пользуетесь (например, шаги обучения, открытие магазина, просмотр рекламы за награду) и технические ошибки приложения. Они связаны с вашим псевдонимным идентификатором игрока, нужны, чтобы улучшать игру, и удаляются через 13 месяцев, как и записи о днях игры.</li>
-<li><b>Покупки.</b> Платежи проводят Google Play или App Store. Мы получаем номер заказа и товар, чтобы выдать предметы; платёжные данные мы не видим.</li>
-<li><b>Реклама.</b> Необязательные ролики за награду показывает Google AdMob, который может использовать рекламный идентификатор устройства согласно <a href="https://policies.google.com/technologies/ads">политике Google</a>. На iOS идентификатор доступен, только если вы разрешили отслеживание. Его можно сбросить или ограничить в настройках устройства.</li>
-</ul>
-<h2>Зачем</h2>
-<ul>
-<li>Чтобы игра работала: сохранять клуб, играть матчдеи, лиги, кубки и товарищеские матчи, переносить прогресс между устройствами (исполнение договора).</li>
-<li>Чтобы отправлять уведомления — их можно отключить в игре или в настройках системы (согласие).</li>
-<li>Чтобы бороться с читерством и мошенничеством, проверять покупки и награды за рекламу, защищать сервис (законный интерес).</li>
-<li>Чтобы понимать, как играют в игру, в обобщённом виде, и отвечать на обращения (законный интерес).</li>
-</ul>
-<h2>Кто видит данные</h2>
-<p>Другие игроки видят название и эмблему клуба, результаты и ваши сообщения. Мы передаём данные только подрядчикам, которые обеспечивают работу сервиса: хостинг-провайдеру, Google (вход, оплата Google Play, Firebase Cloud Messaging, AdMob) и Apple (вход через Apple, App Store). Мы не продаём персональные данные.</p>
-<h2>Сколько храним</h2>
-<p>Пока существует аккаунт. При удалении аккаунта данные для входа, push-токены, события использования и записи о днях игры удаляются сразу; клуб остаётся в прошлых таблицах лиг как анонимный клуб под управлением компьютера. Записи о покупках хранятся столько, сколько требует налоговое законодательство.</p>
-<h2>Ваши права</h2>
-<p>Вы можете получить, исправить или удалить свои данные и возразить против их использования. Удалить аккаунт можно в игре: <b>Профиль → Настройки → Удалить аккаунт</b> (<a href="/delete-account?lang=ru">подробнее</a>). По остальным вопросам свяжитесь с нами. Жители ЕС/Великобритании также могут обратиться в надзорный орган по защите данных.</p>
-<h2>Дети</h2>
-<p>Игра не предназначена для детей младше 13 лет (или более высокого минимального возраста в вашей стране). Мы сознательно не собираем их данные; если вы считаете, что ребёнок передал нам данные, свяжитесь с нами — мы их удалим.</p>
-<h2>Безопасность и изменения</h2>
-<p>Соединения шифруются (TLS), доступ к данным ограничен. Если политика изменится, мы обновим эту страницу и дату выше.</p>
-"""
-
 private fun termsEn(company: String, contact: String) = "Terms of Service" to """
 <p>These terms are an agreement between you and $company about playing Arena. By playing you accept them. Contact: $contact.</p>
 <h2>The game</h2>
@@ -136,25 +101,6 @@ private fun termsEn(company: String, contact: String) = "Terms of Service" to ""
 <p>We may update these terms; the new version applies from the date above. If you don’t agree, stop playing and delete your account.</p>
 """
 
-private fun termsRu(company: String, contact: String) = "Условия использования" to """
-<p>Эти условия — соглашение между вами и $company об игре в Arena. Играя, вы их принимаете. Связь: $contact.</p>
-<h2>Игра</h2>
-<p>Мы предоставляем вам личную непередаваемую лицензию на игру в некоммерческих целях. Игра развивается, поэтому функции, баланс и контент могут меняться.</p>
-<h2>Виртуальные предметы</h2>
-<p>Золото, монеты, косметика и премиум-пропуск — это лицензия на использование контента в игре; они не имеют денежной стоимости и не обмениваются на деньги. Покупки окончательны, кроме случаев, предусмотренных правилами возврата магазина или законом. Золото не покупает результаты матчей: они зависят от состава, тренировок и тактики.</p>
-<h2>Честная игра</h2>
-<ul><li>Не используйте читы, ботов и ошибки игры, не мешайте работе сервиса и другим игрокам.</li>
-<li>В чатах будьте уважительны: без оскорблений, вражды, спама и чужих персональных данных. На сообщения можно пожаловаться, их удаляют, игроков можно заблокировать.</li>
-<li>Не выдавайте себя за других и не используйте оскорбительные названия клубов.</li></ul>
-<p>Мы можем приостановить или закрыть аккаунты, нарушающие эти правила.</p>
-<h2>Аккаунт</h2>
-<p>Берегите устройство и привязанный вход; чтобы перенести клуб на новое устройство, используйте код переноса. Удалить аккаунт можно в любой момент в настройках.</p>
-<h2>Ответственность</h2>
-<p>Игра предоставляется «как есть». В пределах, допустимых законом, мы не отвечаем за косвенные убытки и перерывы в работе сервиса. Ничто в этих условиях не ограничивает ваши права потребителя.</p>
-<h2>Изменения</h2>
-<p>Мы можем обновлять условия; новая редакция действует с даты выше. Если вы не согласны — прекратите игру и удалите аккаунт.</p>
-"""
-
 private fun deletionEn(contact: String) = "Delete your account" to """
 <p>You can delete your Arena account and its personal data at any time.</p>
 <h2>In the game</h2>
@@ -166,17 +112,4 @@ private fun deletionEn(contact: String) = "Delete your account" to """
 <ul><li>Sign-in data (device id, Google/Apple account id and e-mail), push tokens, usage events and the record of days played — erased right away.</li>
 <li>Your chat messages are removed; your club leaves private leagues and stays in past public-league tables as an anonymous computer-controlled club with a new name.</li>
 <li>Purchase records are kept as long as tax law requires (order id, product, date).</li></ul>
-"""
-
-private fun deletionRu(contact: String) = "Удаление аккаунта" to """
-<p>Вы можете в любой момент удалить аккаунт Arena и его персональные данные.</p>
-<h2>В игре</h2>
-<ol><li>Нажмите на эмблему клуба вверху экрана — откроется профиль.</li><li>Нажмите <b>Настройки</b>, затем <b>Удалить аккаунт</b> и подтвердите кнопкой <b>Удалить навсегда</b>.</li></ol>
-<p>Удаление происходит сразу, отменить его нельзя.</p>
-<h2>Без приложения</h2>
-<p>Если открыть игру уже нельзя, напишите нам $contact и укажите название клуба. Чтобы подтвердить, что клуб ваш, приложите код переноса из <b>Настройки → Перенести на другое устройство</b>, если он у вас есть, или e-mail привязанного аккаунта Google/Apple.</p>
-<h2>Что удаляется</h2>
-<ul><li>Данные для входа (идентификатор устройства, аккаунт Google/Apple и e-mail), push-токены, события использования и записи о днях игры — сразу.</li>
-<li>Ваши сообщения в чатах скрываются; клуб выходит из приватных лиг и остаётся в прошлых таблицах публичных лиг как анонимный клуб под управлением компьютера с новым названием.</li>
-<li>Записи о покупках хранятся столько, сколько требует налоговое законодательство (номер заказа, товар, дата).</li></ul>
 """
